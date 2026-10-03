@@ -77,6 +77,24 @@ extension EnvironmentValues {
 
 // MARK: - Bausteine
 
+/// Kapsel-Knopf. Wertet den Tipp selbst aus: in Listenzeilen lösen sonst alle Knöpfe einer Zeile gemeinsam aus.
+struct HLKapsel: PrimitiveButtonStyle {
+  var haupt = false
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .labelStyle(.titleAndIcon)
+      .font(.subheadline.weight(.semibold))
+      .lineLimit(1)
+      .fixedSize()
+      .padding(.horizontal, 14).padding(.vertical, 9)
+      .foregroundStyle(haupt ? Color.white : Color.accentColor)
+      .background(haupt ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.secondary.opacity(0.15)), in: Capsule())
+      .contentShape(Capsule())
+      .onTapGesture { configuration.trigger() }   // eigener Tipp: Listenzeilen lösen sonst alle Knöpfe aus
+  }
+}
+
 @MainActor
 final class HLBildSpeicher {
   static let shared = HLBildSpeicher()
@@ -188,12 +206,13 @@ struct HLSongZeile: View {
 
 struct HLKuenstlerBand: View {
   let liste: [HLKuenstler]
+  @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
     ScrollView(.horizontal, showsIndicators: false) {
       HStack(alignment: .top, spacing: 14) {
         ForEach(liste, id: \.id) { a in
-          NavigationLink(value: HLZiel.kuenstler(a.id)) {
+          Button { oeffnen(.kuenstler(a.id)) } label: {
             VStack(spacing: 4) {
               HLBild(pfad: a.bild, groesse: 96, rund: true)
               Text(a.name).font(.subheadline.weight(.semibold)).lineLimit(1)
@@ -213,11 +232,12 @@ struct HLKuenstlerBand: View {
 
 struct HLAlbumGitter: View {
   let liste: [HLAlbum]
+  @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
     LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 14)], spacing: 14) {
       ForEach(liste, id: \.id) { a in
-        NavigationLink(value: HLZiel.album(a.id)) {
+        Button { oeffnen(.album(a.id)) } label: {
           VStack(alignment: .leading, spacing: 3) {
             GeometryReader { g in HLBild(pfad: a.bild, groesse: g.size.width) }
               .aspectRatio(1, contentMode: .fit)
@@ -287,9 +307,9 @@ struct HLStartView: View {
             Button {
               if let id = j.song.navidromeId { oeffnen(.sender(art: "navidrome", id: id)) }
             } label: { Label("Sender starten", systemImage: "dot.radiowaves.left.and.right") }
-              .buttonStyle(.borderedProminent)
+              .buttonStyle(HLKapsel(haupt: true))
             if let k = j.song.kuenstlerId {
-              Button("Künstler entdecken") { oeffnen(.kuenstler(k)) }.buttonStyle(.bordered)
+              Button("Künstler entdecken") { oeffnen(.kuenstler(k)) }.buttonStyle(HLKapsel())
             }
           }
           .listRowSeparator(.hidden)
@@ -369,11 +389,11 @@ struct HLKuenstlerView: View {
           }
           HStack {
             Button { HLPlayer.shared.spielen(d.top, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
-              .buttonStyle(.borderedProminent)
+              .buttonStyle(HLKapsel(haupt: true))
             Button { oeffnen(.sender(art: "kuenstler", id: "\(id)")) } label: {
               Label("Sender", systemImage: "dot.radiowaves.left.and.right")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(HLKapsel())
           }
           .listRowSeparator(.hidden)
         }
@@ -417,7 +437,7 @@ struct HLAlbumView: View {
           }
           HStack {
             Button { HLPlayer.shared.spielen(d.songs, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
-              .buttonStyle(.borderedProminent)
+              .buttonStyle(HLKapsel(haupt: true))
             if fehlt > 0 {
               Button {
                 gewuenscht = true
@@ -435,7 +455,7 @@ struct HLAlbumView: View {
                 Label(gewuenscht ? "Gewünscht" : "Album wünschen (\(fehlt))",
                       systemImage: gewuenscht ? "hourglass" : "plus")
               }
-              .buttonStyle(.bordered)
+              .buttonStyle(HLKapsel())
               .disabled(gewuenscht)
             } else {
               Label("Komplett bei dir", systemImage: "checkmark").foregroundStyle(.green).font(.subheadline)
@@ -466,9 +486,9 @@ struct HLSenderView: View {
             .font(.subheadline).foregroundStyle(.secondary)
           HStack {
             Button { HLPlayer.shared.spielen(d.songs, ab: 0) } label: { Label("Abspielen", systemImage: "play.fill") }
-              .buttonStyle(.borderedProminent)
+              .buttonStyle(HLKapsel(haupt: true))
             Button { runde += 1 } label: { Label("Neu mischen", systemImage: "arrow.clockwise") }
-              .buttonStyle(.bordered)
+              .buttonStyle(HLKapsel())
           }
           .listRowSeparator(.hidden)
         }

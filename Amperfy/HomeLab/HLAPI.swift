@@ -31,7 +31,7 @@ struct HLSong: Codable, Hashable, Sendable {
   var albumId: Int?
   var bild: String?
   var bildGross: String?
-  var dauer: Int?
+  var dauer: Double?
   var vorschau: String?
   var navidromeId: String?
   var navidromeCover: String?
@@ -151,6 +151,7 @@ final class HLAPI {
 
   var account: Account?
   private var token: String?
+  private var anmeldung: Task<String, Error>?
   private let session: URLSession = {
     let c = URLSessionConfiguration.default
     c.timeoutIntervalForRequest = 25
@@ -199,7 +200,11 @@ final class HLAPI {
       token = gespeichert
       return gespeichert
     }
-    return try await anmelden()
+    if let anmeldung { return try await anmeldung.value }   // gleichzeitige Anfragen: nur einmal anmelden
+    let aufgabe = Task { try await anmelden() }
+    anmeldung = aufgabe
+    defer { anmeldung = nil }
+    return try await aufgabe.value
   }
 
   private func anmelden() async throws -> String {
