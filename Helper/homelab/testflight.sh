@@ -14,4 +14,4 @@ xcodebuild -project Amperfy.xcodeproj -scheme Amperfy -destination "generic/plat
 xcodebuild -exportArchive -archivePath .build-dd/HomeLabMusic.xcarchive \
   -exportOptionsPlist Helper/homelab/ExportOptions.plist -exportPath .build-dd/export -allowProvisioningUpdates \
   | grep -E "Upload|error" || true
-git commit -q -m "TestFlight: Build $neu" "$P" && echo "Build $neu hochgeladen und committet"
+git commit -q -m "TestFlight: Build $neu" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" "$P" && echo "Build $neu hochgeladen und committet"
