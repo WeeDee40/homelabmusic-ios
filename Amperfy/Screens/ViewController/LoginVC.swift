@@ -77,7 +77,7 @@ class LoginVC: UIViewController {
 
   fileprivate lazy var amperfyLabel: UILabel = {
     let label = UILabel()
-    label.text = "Amperfy"
+    label.text = "HomeLabMusic" // HomeLabMusic
     label.font = .systemFont(ofSize: 50, weight: .bold)
     label.textColor = .tintColor
     label.tintColor = appDelegate.storage.settings.accounts.getSetting(nil).read.themePreference
@@ -96,7 +96,8 @@ class LoginVC: UIViewController {
   fileprivate lazy var serverUrlTF: UITextField = {
     let textField = UITextField()
     textField.configuteForLogin(image: .serverUrl)
-    textField.placeholder = "https://localhost/ampache"
+    textField.placeholder = "http://100.104.108.124:30043"
+    textField.text = "http://100.104.108.124:30043" // HomeLabMusic: Navidrome über Tailscale vorausgefüllt
     textField.textContentType = .URL
     textField.keyboardType = .URL
     textField.autocorrectionType = .no
