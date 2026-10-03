@@ -283,11 +283,83 @@ struct HLLaden<T: Sendable, Inhalt: View>: View {
   }
 }
 
+/// Waagrechte Reihe neuer Alben (Startseite).
+struct HLAlbumBand: View {
+  let alben: [HLAlbum]
+  @Environment(\.hlOeffnen) private var oeffnen
+
+  var body: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(alignment: .top, spacing: 14) {
+        ForEach(alben, id: \.id) { a in
+          VStack(alignment: .leading, spacing: 3) {
+            ZStack(alignment: .topTrailing) {
+              HLBild(pfad: a.bild, groesse: 130)
+              if a.vorhanden == true {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.white, .green).font(.title3).padding(6)
+              }
+            }
+            Text(a.titel ?? "").font(.subheadline.weight(.semibold)).lineLimit(1)
+            Text(a.kuenstler ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text([a.typText, Self.datum(a.jahrDatum)].compactMap { $0 }.joined(separator: " · "))
+              .font(.caption2).foregroundStyle(.secondary)
+          }
+          .frame(width: 130)
+          .contentShape(Rectangle())
+          .onTapGesture { oeffnen(.album(a.id)) }
+        }
+      }
+      .padding(.vertical, 4)
+    }
+  }
+
+  static func datum(_ iso: String?) -> String? {
+    guard let iso, iso.count >= 10 else { return nil }
+    let t = iso.split(separator: "-")
+    return "\(t[2]).\(t[1])."
+  }
+}
+
+/// Waagrechte Reihe von Song-Vorschlägen (Startseite); Antippen spielt die Reihe ab hier.
+struct HLSongBand: View {
+  let songs: [HLSong]
+  @ObservedObject private var player = HLPlayer.shared
+
+  var body: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(alignment: .top, spacing: 14) {
+        ForEach(songs.indices, id: \.self) { i in
+          let s = songs[i]
+          VStack(alignment: .leading, spacing: 3) {
+            ZStack(alignment: .bottomTrailing) {
+              HLBild(pfad: s.bild, groesse: 130)
+                .overlay {
+                  if player.aktuell?.schluessel == s.schluessel {
+                    Image(systemName: "waveform").font(.title).foregroundStyle(.white)
+                      .padding(10).background(.black.opacity(0.35), in: Circle())
+                  }
+                }
+              HLStatusKnopf(song: s, kurz: true).padding(6)
+            }
+            Text(s.titel ?? "").font(.subheadline.weight(.semibold)).lineLimit(1)
+            Text(s.kuenstler ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+          }
+          .frame(width: 130)
+          .contentShape(Rectangle())
+          .onTapGesture { player.spielen(songs, ab: i) }
+        }
+      }
+      .padding(.vertical, 4)
+    }
+  }
+}
+
 // MARK: - Seiten
 
 struct HLStartView: View {
   @State private var jetzt: HLJetzt?
   @State private var wuensche: [HLWunsch] = []
+  @State private var reihen: [HLReihe] = []
   @State private var geladen = false
   @State private var fehler: String?
   @State private var zuletzt = Date.distantPast
@@ -314,6 +386,22 @@ struct HLStartView: View {
             }
           }
           .listRowSeparator(.hidden)
+        }
+      }
+      ForEach(reihen, id: \.self) { r in
+        Section {
+          if r.typ == "alben", let alben = r.alben {
+            HLAlbumBand(alben: alben)
+          } else if let songs = r.songs {
+            HLSongBand(songs: songs)
+          }
+        } header: {
+          VStack(alignment: .leading, spacing: 1) {
+            Text(r.titel)
+            if let u = r.untertitel { Text(u).font(.caption).textCase(nil) }
+          }
+          .contentShape(Rectangle())
+          .onTapGesture { if let k = r.kuenstlerId { oeffnen(.kuenstler(k)) } }
         }
       }
       if !wuensche.isEmpty {
@@ -369,8 +457,10 @@ struct HLStartView: View {
   private func laden() async {
     fehler = nil
     async let j = try? HLAPI.shared.jetzt()
+    async let r = try? HLAPI.shared.reihen()
     do { wuensche = try await HLAPI.shared.wuensche().wuensche } catch { fehler = error.localizedDescription }
     if let neu = await j { jetzt = neu }
+    if let neu = await r { reihen = neu.reihen }
     geladen = true
   }
 }

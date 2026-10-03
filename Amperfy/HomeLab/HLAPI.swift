@@ -61,6 +61,8 @@ struct HLAlbum: Codable, Hashable, Sendable {
   var kuenstlerId: Int?
   var anzahl: Int?
   var inBibliothek: Int?
+  var jahrDatum: String?
+  var vorhanden: Bool?                                  // Startseite: Album schon in der Bibliothek
 
   var typText: String {
     switch typ {
@@ -102,6 +104,19 @@ struct HLSender: Codable, Sendable {
 
   var sender: Kopf
   var songs: [HLSong]
+}
+
+struct HLReihe: Codable, Hashable, Sendable {
+  var typ: String                                       // "alben" oder "songs"
+  var titel: String
+  var untertitel: String?
+  var kuenstlerId: Int?
+  var alben: [HLAlbum]?
+  var songs: [HLSong]?
+}
+
+struct HLReihen: Codable, Sendable {
+  var reihen: [HLReihe]
 }
 
 struct HLWunschAntwort: Codable, Sendable {
@@ -295,6 +310,7 @@ final class HLAPI {
   }
 
   func jetzt() async throws -> HLJetzt { try await anfrage("entdecken/jetzt") }
+  func reihen() async throws -> HLReihen { try await anfrage("entdecken/reihen") }
   func suche(_ q: String) async throws -> HLSuche { try await anfrage("entdecken/suche", abfrage: ["q": q]) }
   func kuenstler(_ id: Int) async throws -> HLKuenstlerSeite { try await anfrage("entdecken/kuenstler/\(id)") }
   func album(_ id: Int) async throws -> HLAlbumSeite { try await anfrage("entdecken/album/\(id)") }
