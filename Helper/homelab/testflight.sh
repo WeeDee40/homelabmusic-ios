@@ -11,7 +11,13 @@ echo "Build $neu"
 xcodebuild -project Amperfy.xcodeproj -scheme Amperfy -destination "generic/platform=iOS" \
   -archivePath .build-dd/HomeLabMusic.xcarchive -derivedDataPath .build-dd \
   -skipPackagePluginValidation -skipMacroValidation -allowProvisioningUpdates -quiet archive
-xcodebuild -exportArchive -archivePath .build-dd/HomeLabMusic.xcarchive \
-  -exportOptionsPlist Helper/homelab/ExportOptions.plist -exportPath .build-dd/export -allowProvisioningUpdates \
-  | grep -E "Upload|error" || true
+log=$(mktemp)
+if ! xcodebuild -exportArchive -archivePath .build-dd/HomeLabMusic.xcarchive \
+  -exportOptionsPlist Helper/homelab/ExportOptions.plist -exportPath .build-dd/export -allowProvisioningUpdates >"$log" 2>&1 \
+  || ! grep -q "Upload succeeded" "$log"; then
+  grep -iE "error|fail" "$log" | head -5
+  git checkout -- "$P"                                  # Build-Nummer zurück, nichts committen
+  echo "UPLOAD FEHLGESCHLAGEN (Build $neu). Häufig: in Xcode → Einstellungen → Accounts neu anmelden."
+  exit 1
+fi
 git commit -q -m "TestFlight: Build $neu" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" "$P" && echo "Build $neu hochgeladen und committet"
