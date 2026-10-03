@@ -536,6 +536,10 @@
 		638920F02C8C8E9000932EE8 /* SettingsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 638920EF2C8C8E9000932EE8 /* SettingsList.swift */; };
 		63DCDB7A2C674B5D00522F68 /* SettingsSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63DCDB792C674B5D00522F68 /* SettingsSceneDelegate.swift */; };
 		641708592C13BF5100BA2619 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641708582C13BF5100BA2619 /* Haptics.swift */; };
+		393DBB1322E8A3437431609C /* HLAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA6C510D2BF8D984C1B3D6B /* HLAPI.swift */; };
+		E3056AC1660728722B00413C /* HLPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87306A16252BD4DB47C6E595 /* HLPlayer.swift */; };
+		07A4DD40E7B4BFC08C2F60DB /* HLTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28E0BEE2B0EC7A5350A0C0C2 /* HLTab.swift */; };
+		F37E643B306E2E2589AC762D /* HLViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93CB59B481BE869B059A5B77 /* HLViews.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1158,6 +1162,10 @@
 		641708582C13BF5100BA2619 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		643A04712CD29AB20012DEA3 /* Amperfy v39.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v39.xcdatamodel"; sourceTree = "<group>"; };
 		64C433822E1391FA0082A165 /* Amperfy v46.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v46.xcdatamodel"; sourceTree = "<group>"; };
+		BBA6C510D2BF8D984C1B3D6B /* HLAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLAPI.swift; sourceTree = "<group>"; };
+		87306A16252BD4DB47C6E595 /* HLPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLPlayer.swift; sourceTree = "<group>"; };
+		28E0BEE2B0EC7A5350A0C0C2 /* HLTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLTab.swift; sourceTree = "<group>"; };
+		93CB59B481BE869B059A5B77 /* HLViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1468,6 +1476,7 @@
 		508385E621C5965B00C4BB32 /* Amperfy */ = {
 			isa = PBXGroup;
 			children = (
+				08DDD6DE514A52B923C9F555 /* HomeLab */,
 				508385E721C5965B00C4BB32 /* AppDelegate.swift */,
 				5059A31B28A9ED680068E4D2 /* SceneDelegate.swift */,
 				63DCDB792C674B5D00522F68 /* SettingsSceneDelegate.swift */,
@@ -2173,6 +2182,17 @@
 			path = Player;
 			sourceTree = "<group>";
 		};
+		08DDD6DE514A52B923C9F555 /* HomeLab */ = {
+			isa = PBXGroup;
+			children = (
+				93CB59B481BE869B059A5B77 /* HLViews.swift */,
+				28E0BEE2B0EC7A5350A0C0C2 /* HLTab.swift */,
+				87306A16252BD4DB47C6E595 /* HLPlayer.swift */,
+				BBA6C510D2BF8D984C1B3D6B /* HLAPI.swift */,
+			);
+			path = HomeLab;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -2447,6 +2467,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F37E643B306E2E2589AC762D /* HLViews.swift in Sources */,
+				07A4DD40E7B4BFC08C2F60DB /* HLTab.swift in Sources */,
+				E3056AC1660728722B00413C /* HLPlayer.swift in Sources */,
+				393DBB1322E8A3437431609C /* HLAPI.swift in Sources */,
 				638920F02C8C8E9000932EE8 /* SettingsList.swift in Sources */,
 				50B136FA2EFC36D500738475 /* PlayableContainerTypeAppEnum.swift in Sources */,
 				50B136FB2EFC36D500738475 /* PlayIDIntent.swift in Sources */,

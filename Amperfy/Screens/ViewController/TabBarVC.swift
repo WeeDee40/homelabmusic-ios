@@ -66,6 +66,7 @@ class TabBarVC: UITabBarController {
       )
     }
     fixTabs.append(homeTab!)
+    fixTabs.append(HLTab.erstellen(account: account)) // HomeLabMusic
 
     var libraryTabs = [UITab]()
     let libraryTabsShown = appDelegate.storage.settings.accounts
