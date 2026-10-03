@@ -290,6 +290,7 @@ struct HLStartView: View {
   @State private var wuensche: [HLWunsch] = []
   @State private var geladen = false
   @State private var fehler: String?
+  @State private var zuletzt = Date.distantPast
   @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
@@ -334,18 +335,28 @@ struct HLStartView: View {
       }
     }
     .overlay { if !geladen { ProgressView() } }
-    .task { if !geladen { await laden() } }
+    .onAppear { neuLaden() }                       // beim Öffnen des Tabs und beim Zurückkehren
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+      neuLaden()                                     // App kommt wieder in den Vordergrund
+    }
     .refreshable { await laden() }
   }
 
   static let statusText = ["angefragt": "⏳ kommt bald", "geliefert": "✓ da", "gefunden": "✓ hattest du",
                            "nicht_gefunden": "– nicht gefunden"]
 
+  /// Neu laden, höchstens alle 3 Sekunden; der alte Inhalt bleibt bis dahin stehen.
+  private func neuLaden() {
+    guard Date().timeIntervalSince(zuletzt) > 3 else { return }
+    zuletzt = Date()
+    Task { await laden() }
+  }
+
   private func laden() async {
     fehler = nil
     async let j = try? HLAPI.shared.jetzt()
     do { wuensche = try await HLAPI.shared.wuensche().wuensche } catch { fehler = error.localizedDescription }
-    jetzt = await j
+    if let neu = await j { jetzt = neu }
     geladen = true
   }
 }
