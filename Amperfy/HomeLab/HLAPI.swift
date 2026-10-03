@@ -79,7 +79,15 @@ struct HLJetzt: Codable, Sendable {
   var song: HLSong
 }
 
+struct HLAbschnitt: Codable, Hashable, Sendable {
+  var titel: String
+  var untertitel: String?
+  var songs: [HLSong]
+}
+
 struct HLSuche: Codable, Sendable {
+  var abschnitte: [HLAbschnitt]?                        // Genre oder Stimmung erkannt
+  var schwerpunkt: String?                              // "genre", "stimmung" oder nil
   var kuenstler: [HLKuenstler]
   var songs: [HLSong]
   var alben: [HLAlbum]

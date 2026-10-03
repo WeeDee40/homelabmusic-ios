@@ -32,7 +32,7 @@ struct HLEntdeckenView: View {
     NavigationStack(path: $pfad) {
       HLStartView()
         .navigationTitle("Entdecken")
-        .searchable(text: $suchtext, prompt: "Künstler, Song oder Album")
+        .searchable(text: $suchtext, prompt: "Künstler, Song, Genre oder Stimmung")
         .onSubmit(of: .search) {
           let q = suchtext.trimmingCharacters(in: .whitespaces)
           if !q.isEmpty { pfad.append(HLZiel.suche(q)) }
@@ -471,10 +471,30 @@ struct HLSucheView: View {
   var body: some View {
     HLLaden(laden: { try await HLAPI.shared.suche(q) }) { d in
       List {
+        // Genre/Stimmung erkannt: diese Abschnitte zuerst, die Titelsuche danach
+        ForEach(d.abschnitte ?? [], id: \.self) { a in
+          Section {
+            ForEach(a.songs.prefix(10).indices, id: \.self) { HLSongZeile(songs: a.songs, i: $0) }
+          } header: {
+            HStack(alignment: .bottom) {
+              VStack(alignment: .leading, spacing: 1) {
+                Text(a.titel)
+                if let u = a.untertitel { Text(u).font(.caption).textCase(nil) }
+              }
+              Spacer()
+              Button { HLPlayer.shared.spielen(a.songs, ab: 0) } label: {
+                Label("Alle", systemImage: "play.fill").font(.caption.weight(.semibold))
+              }
+              .buttonStyle(.plain).foregroundStyle(Color.accentColor).textCase(nil)
+            }
+          }
+        }
         if !d.kuenstler.isEmpty { Section("Künstler") { HLKuenstlerBand(liste: d.kuenstler) } }
-        Section("Songs") {
-          if d.songs.isEmpty { Text("Nichts gefunden.").foregroundStyle(.secondary) }
-          ForEach(d.songs.indices, id: \.self) { HLSongZeile(songs: d.songs, i: $0) }
+        if !d.songs.isEmpty || d.abschnitte?.isEmpty != false {
+          Section("Songs") {
+            if d.songs.isEmpty { Text("Nichts gefunden.").foregroundStyle(.secondary) }
+            ForEach(d.songs.indices, id: \.self) { HLSongZeile(songs: d.songs, i: $0) }
+          }
         }
         if !d.alben.isEmpty { Section("Alben") { HLAlbumGitter(liste: d.alben) } }
       }
