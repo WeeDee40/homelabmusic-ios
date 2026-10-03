@@ -19,6 +19,7 @@ enum HLTab {
   static func erstellen(account: Account) -> UITab {
     HLAPI.shared.account = account
     HLPlayer.shared.aufraeumenBeimStart()
+    HLCover.einrichten()
     return UITab(
       title: "Entdecken",
       image: UIImage(systemName: "sparkles"),

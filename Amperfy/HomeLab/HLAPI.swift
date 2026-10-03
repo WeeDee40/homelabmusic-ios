@@ -175,6 +175,20 @@ final class HLAPI {
     return teile.url
   }
 
+  /// Adresse einer Subsonic-Anfrage an Navidrome mit den Zugangsdaten des Kontos (z. B. getCoverArt).
+  func subsonicURL(_ endpunkt: String, _ parameter: [String: String]) -> URL? {
+    guard let cred = credentials else { return nil }
+    let server = cred.activeBackendServerUrl.isEmpty ? cred.serverUrl : cred.activeBackendServerUrl
+    guard var teile = URLComponents(string: server.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/rest/" + endpunkt)
+    else { return nil }
+    let salz = (0 ..< 8).map { _ in String(format: "%02x", UInt8.random(in: 0 ... 255)) }.joined()
+    let hash = Insecure.MD5.hash(data: Data((cred.password + salz).utf8)).map { String(format: "%02x", $0) }.joined()
+    let basis = ["u": cred.username, "t": hash, "s": salz, "v": "1.16.1", "c": "homelabmusic"]
+    teile.queryItems = basis.merging(parameter) { $1 }.sorted { $0.key < $1.key }
+      .map { URLQueryItem(name: $0.key, value: $0.value) }
+    return teile.url
+  }
+
   private var schluessel: String {
     "homelabmusic.token.\(credentials?.username ?? "")@\(basisURL?.host ?? "")"
   }

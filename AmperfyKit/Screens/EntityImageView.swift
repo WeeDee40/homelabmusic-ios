@@ -36,6 +36,10 @@ open class EntityImageView: UIView {
 
   private var view: UIView!
 
+  /// HomeLabMusic: liefert ein Cover für Playlists vom Server (z. B. selbst hochgeladen); nil = Mosaik wie bisher.
+  @MainActor public static var playlistCover: ((String) async -> UIImage?)?   // Playlist-ID
+  private var coverAufgabe: Task<(), Never>?
+
   private var quadImages: [LibraryEntityImage] {
     [
       quadImage1,
@@ -89,11 +93,21 @@ open class EntityImageView: UIView {
     container: PlayableContainable,
     cornerRadius: CornerRadius = .small
   ) {
+    coverAufgabe?.cancel()
     display(
       theme: theme,
       collection: container.getArtworkCollection(theme: theme),
       cornerRadius: cornerRadius
     )
+    if let playlist = container as? Playlist, let quelle = Self.playlistCover {   // HomeLabMusic
+      let id = playlist.id
+      coverAufgabe = Task { [weak self] in
+        guard let bild = await quelle(id), !Task.isCancelled, let self else { return }
+        self.quadImages.forEach { $0.isHidden = true }
+        self.singleImage.isHidden = false
+        self.singleImage.display(image: bild)
+      }
+    }
   }
 
   public func configureStyling(
