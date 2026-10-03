@@ -504,7 +504,7 @@ struct HLSenderView: View {
   }
 }
 
-// MARK: - Mini-Player im Tab
+// MARK: - Leiste zum laufenden Song (Abspielen/Weiter macht der Amperfy-Mini-Player darunter)
 
 struct HLMiniPlayer: View {
   let oeffnen: (HLZiel) -> ()
@@ -532,10 +532,6 @@ struct HLMiniPlayer: View {
             if let id = s.deezerId { oeffnen(.sender(art: "song", id: "\(id)")) }
             else if let nd = s.navidromeId { oeffnen(.sender(art: "navidrome", id: nd)) }
           } label: { Image(systemName: "dot.radiowaves.left.and.right").frame(width: 36, height: 36) }
-          Button { player.umschalten() } label: {
-            Image(systemName: player.spielt ? "pause.fill" : "play.fill").font(.title3).frame(width: 36, height: 36)
-          }
-          Button { player.weiter() } label: { Image(systemName: "forward.fill").frame(width: 36, height: 36) }
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 12).padding(.vertical, 8)

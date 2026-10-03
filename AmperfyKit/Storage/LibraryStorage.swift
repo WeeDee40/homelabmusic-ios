@@ -613,7 +613,7 @@ public class LibraryStorage: PlayableFileCachable {
     return Song(managedObject: songMO)
   }
 
-  func createRadio(account: Account) -> Radio {
+  public func createRadio(account: Account) -> Radio { // HomeLabMusic: public für Vorschauen
     let radioMO = RadioMO(context: context)
     radioMO.account = account.managedObject
     return Radio(managedObject: radioMO)
@@ -625,7 +625,7 @@ public class LibraryStorage: PlayableFileCachable {
     return ScrobbleEntry(managedObject: scrobbleEntryMO)
   }
 
-  func deleteRadio(_ radio: Radio) {
+  public func deleteRadio(_ radio: Radio) { // HomeLabMusic: public für Vorschauen
     context.delete(radio.managedObject)
   }
 

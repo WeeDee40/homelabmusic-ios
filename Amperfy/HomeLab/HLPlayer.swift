@@ -2,9 +2,11 @@
 //  HLPlayer.swift
 //  HomeLabMusic
 //
-//  Eigener kleiner Player für den Entdecken-Tab: 30-Sekunden-Vorschauen (Deezer) und Songs aus
-//  der Bibliothek (über den Musikwunsch-Dienst von Navidrome). Pausiert den Amperfy-Player,
-//  solange er spielt, und hört auf, sobald Amperfy wieder spielt.
+//  Wiedergabe im Entdecken-Tab über den Amperfy-Player (Sperrbildschirm, CarPlay, eine Warteschlange):
+//  Songs aus der Bibliothek kommen als normale Bibliotheks-Songs in die Warteschlange, 30-Sekunden-
+//  Vorschauen als versteckte Radio-Einträge (eine Adresse, die abgespielt wird; Radio-Liste und
+//  Server-Abgleich ignorieren sie, weil sie als «gelöscht» markiert sind). Beim nächsten Start
+//  aus dem Entdecken-Tab und beim App-Start werden die alten Vorschau-Einträge weggeräumt.
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -13,42 +15,34 @@
 //
 
 import AmperfyKit
-import AVFoundation
 import Combine
-import MediaPlayer
 import UIKit
 
 @MainActor
 final class HLPlayer: ObservableObject {
   static let shared = HLPlayer()
+  static let kontext = "Entdecken"
+  private static let radioPraefix = "hl-vorschau-"
+  private static let merkKey = "homelabmusic.vorschauRadios"
 
-  @Published private(set) var liste: [HLSong] = []
-  @Published private(set) var index = -1
+  /// Song aus dem Entdecken-Tab, der gerade im Amperfy-Player läuft (nil bei anderer Musik).
+  @Published private(set) var aktuell: HLSong?
   @Published private(set) var spielt = false
   @Published private(set) var fortschritt = 0.0
   /// Status, der sich seit dem Laden geändert hat (z. B. nach «Wünschen»), je Song-Schlüssel.
   @Published private(set) var statusNeu: [String: String] = [:]
   @Published var hinweis: String?
 
-  private let player = AVPlayer()
-  private var zeitBeobachter: Any?
-  private var endeBeobachter: NSObjectProtocol?
-  private var wachhund: Timer?
+  private var zuordnung: [String: HLSong] = [:]       // Playable-ID -> Song
+  private var takt: Timer?
   private var hinweisAufgabe: Task<(), Never>?
 
-  var aktuell: HLSong? { liste.indices.contains(index) ? liste[index] : nil }
-
   private var amperfy: PlayerFacade { (UIApplication.shared.delegate as! AppDelegate).player }
+  private var bibliothek: LibraryStorage { AmperKit.shared.storage.main.library }
 
   private init() {
-    zeitBeobachter = player.addPeriodicTimeObserver(
-      forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
-      queue: .main
-    ) { [weak self] zeit in
-      MainActor.assumeIsolated {
-        guard let self, let dauer = self.player.currentItem?.duration.seconds, dauer.isFinite, dauer > 0 else { return }
-        self.fortschritt = zeit.seconds / dauer
-      }
+    takt = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+      MainActor.assumeIsolated { HLPlayer.shared.abgleichen() }
     }
   }
 
@@ -57,103 +51,75 @@ final class HLPlayer: ObservableObject {
   // MARK: Wiedergabe
 
   func spielen(_ songs: [HLSong], ab start: Int) {
-    liste = songs
-    index = start - 1
-    weiter()
-  }
-
-  func weiter() {
-    var i = index + 1
-    while liste.indices.contains(i) {
-      if let quelle = quelle(liste[i]) {
-        index = i
-        laden(quelle, song: liste[i])
-        return
+    guard let account = HLAPI.shared.account else { return }
+    let alteRadios = gemerkteRadios()
+    var playables = [AbstractPlayable]()
+    var neueZuordnung = [String: HLSong]()
+    var startIndex = 0
+    var neueRadios = [String]()
+    for (i, s) in songs.enumerated() {
+      if i == start { startIndex = playables.count }
+      if !s.istVorschau, let id = s.navidromeId, let song = bibliothek.getSong(for: account, id: id) {
+        playables.append(song)
+        neueZuordnung[song.id] = s
+      } else if s.istVorschau, let url = HLAPI.shared.url(s.vorschau) {
+        let radio = bibliothek.createRadio(account: account)
+        radio.id = Self.radioPraefix + UUID().uuidString
+        radio.title = "\(s.titel ?? "") · \(s.kuenstler ?? "")"
+        radio.url = url.absoluteString
+        radio.remoteStatus = .deleted                 // nicht in der Radio-Liste, vom Abgleich unberührt
+        playables.append(radio)
+        neueZuordnung[radio.id] = s
+        neueRadios.append(radio.id)
       }
-      i += 1
     }
-    stopp()
-    zeigeHinweis("Ende der Liste.")
-  }
-
-  func zurueck() {
-    if player.currentTime().seconds > 3 || index <= 0 {
-      player.seek(to: .zero)
+    guard !playables.isEmpty else {
+      zeigeHinweis("Nichts abspielbar.")
       return
     }
-    var i = index - 1
-    while i >= 0, quelle(liste[i]) == nil { i -= 1 }
-    if i >= 0 { index = i - 1; weiter() }
+    bibliothek.saveContext()
+    zuordnung = neueZuordnung
+    amperfy.play(context: PlayContext(name: Self.kontext, index: min(startIndex, playables.count - 1),
+                                      playables: playables))
+    radiosLoeschen(alteRadios)
+    merken(neueRadios)
+    abgleichen()
   }
 
-  func umschalten() {
-    if spielt {
-      player.pause()
-      spielt = false
-    } else if aktuell != nil {
-      amperfy.pause()
-      player.play()
-      spielt = true
+  func umschalten() { amperfy.togglePlayPause() }
+  func weiter() { amperfy.playNext() }
+
+  /// Beim App-Start: Vorschau-Einträge entfernen, wenn der Player nicht mehr aus «Entdecken» spielt.
+  func aufraeumenBeimStart() {
+    guard amperfy.contextName != Self.kontext else { return }
+    radiosLoeschen(gemerkteRadios())
+    merken([])
+  }
+
+  private func abgleichen() {
+    let laufend = amperfy.currentlyPlaying
+    let song = laufend.flatMap { zuordnung[$0.id] }
+    if aktuell?.schluessel != song?.schluessel || (aktuell == nil) != (song == nil) { aktuell = song }
+    if spielt != amperfy.isPlaying { spielt = amperfy.isPlaying }
+    let dauer = song?.istVorschau == true ? 30 : amperfy.duration
+    let neu = dauer > 0 ? min(amperfy.elapsedTime / dauer, 1) : 0
+    if abs(neu - fortschritt) > 0.005 { fortschritt = neu }
+  }
+
+  private func gemerkteRadios() -> [String] {
+    UserDefaults.standard.stringArray(forKey: Self.merkKey) ?? []
+  }
+
+  private func merken(_ ids: [String]) {
+    UserDefaults.standard.set(ids, forKey: Self.merkKey)
+  }
+
+  private func radiosLoeschen(_ ids: [String]) {
+    guard let account = HLAPI.shared.account, !ids.isEmpty else { return }
+    for id in ids where id.hasPrefix(Self.radioPraefix) {
+      if let radio = bibliothek.getRadio(for: account, id: id) { bibliothek.deleteRadio(radio) }
     }
-  }
-
-  func stopp() {
-    player.pause()
-    player.replaceCurrentItem(with: nil)
-    spielt = false
-    liste = []
-    index = -1
-    wachhund?.invalidate()
-  }
-
-  private func quelle(_ song: HLSong) -> URL? {
-    if !song.istVorschau, let id = song.navidromeId {
-      return HLAPI.shared.url("/entdecken/stream/\(id)")
-    }
-    return HLAPI.shared.url(song.vorschau)
-  }
-
-  private func laden(_ url: URL, song: HLSong) {
-    amperfy.pause()
-    fortschritt = 0
-    Task {
-      let kopf = await HLAPI.shared.kopf(fuer: url)
-      let asset = AVURLAsset(url: url, options: kopf.isEmpty ? nil : ["AVURLAssetHTTPHeaderFieldsKey": kopf])
-      let item = AVPlayerItem(asset: asset)
-      if let alt = endeBeobachter { NotificationCenter.default.removeObserver(alt) }
-      endeBeobachter = NotificationCenter.default.addObserver(
-        forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
-      ) { _ in
-        MainActor.assumeIsolated { HLPlayer.shared.weiter() }
-      }
-      player.replaceCurrentItem(with: item)
-      player.play()
-      spielt = true
-      jetztLaeuft(song)
-      wachen()
-    }
-  }
-
-  /// Startet jemand den Amperfy-Player, hört die Vorschau auf.
-  private func wachen() {
-    wachhund?.invalidate()
-    wachhund = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-      MainActor.assumeIsolated {
-        guard let self else { return }
-        if self.spielt, self.amperfy.isPlaying {
-          self.player.pause()
-          self.spielt = false
-        }
-      }
-    }
-  }
-
-  private func jetztLaeuft(_ song: HLSong) {
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = [
-      MPMediaItemPropertyTitle: song.titel ?? "",
-      MPMediaItemPropertyArtist: (song.istVorschau ? "Vorschau · " : "") + (song.kuenstler ?? ""),
-      MPMediaItemPropertyAlbumTitle: song.album ?? "",
-    ]
+    bibliothek.saveContext()
   }
 
   // MARK: Wünschen
