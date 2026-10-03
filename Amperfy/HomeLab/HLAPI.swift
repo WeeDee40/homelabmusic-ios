@@ -115,6 +115,16 @@ struct HLWunsch: Codable, Hashable, Sendable {
   var kuenstler: String
   var status: String
   var erstellt: Double
+  var songId: String?                                   // Navidrome-ID, sobald der Song da ist
+
+  var abspielbar: Bool { songId != nil && (status == "geliefert" || status == "gefunden") }
+
+  /// Als Bibliotheks-Song für den Player.
+  var alsSong: HLSong {
+    HLSong(typ: "bibliothek", status: "bibliothek", deezerId: nil, titel: titel, kuenstler: kuenstler,
+           kuenstlerId: nil, album: nil, albumId: nil, bild: songId.map { "/entdecken/cover/mf-\($0)" },
+           bildGross: nil, dauer: nil, vorschau: nil, navidromeId: songId, navidromeCover: nil)
+  }
 }
 
 struct HLWunschListe: Codable, Sendable {

@@ -318,14 +318,28 @@ struct HLStartView: View {
       }
       if !wuensche.isEmpty {
         Section("Deine letzten Wünsche") {
-          ForEach(wuensche.prefix(10), id: \.self) { w in
-            HStack {
+          let liste = Array(wuensche.prefix(10))
+          let abspielbar = liste.filter(\.abspielbar)
+          ForEach(liste, id: \.self) { w in
+            HStack(spacing: 12) {
+              if w.abspielbar { HLBild(pfad: w.alsSong.bild, groesse: 40) }
               VStack(alignment: .leading) {
                 Text(w.titel).font(.body.weight(.semibold)).lineLimit(1)
+                  .foregroundStyle(HLPlayer.shared.aktuell?.navidromeId == w.songId && w.songId != nil
+                    ? Color.accentColor : .primary)
                 Text(w.kuenstler).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
               }
               Spacer()
-              Text(Self.statusText[w.status] ?? w.status).font(.footnote).foregroundStyle(.secondary)
+              if w.abspielbar {
+                Image(systemName: "play.circle.fill").font(.title2).foregroundStyle(Color.accentColor)
+              } else {
+                Text(Self.statusText[w.status] ?? w.status).font(.footnote).foregroundStyle(.secondary)
+              }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {                              // gelieferte Wünsche ab hier der Reihe nach spielen
+              guard w.abspielbar, let i = abspielbar.firstIndex(of: w) else { return }
+              HLPlayer.shared.spielen(abspielbar.map(\.alsSong), ab: i)
             }
           }
         }
