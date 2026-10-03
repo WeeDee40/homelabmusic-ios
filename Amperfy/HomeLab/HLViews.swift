@@ -27,6 +27,7 @@ struct HLEntdeckenView: View {
   @ObservedObject private var player = HLPlayer.shared
   @State private var pfad = NavigationPath()
   @State private var suchtext = ""
+  @State private var shazamOffen = false
 
   var body: some View {
     NavigationStack(path: $pfad) {
@@ -36,6 +37,15 @@ struct HLEntdeckenView: View {
         .onSubmit(of: .search) {
           let q = suchtext.trimmingCharacters(in: .whitespaces)
           if !q.isEmpty { pfad.append(HLZiel.suche(q)) }
+        }
+        .toolbar {
+          ToolbarItem(placement: .topBarTrailing) {
+            Button { shazamOffen = true } label: { Image(systemName: "shazam.logo") }
+              .accessibilityLabel("Song erkennen")
+          }
+        }
+        .sheet(isPresented: $shazamOffen) {
+          HLShazamView { kuenstler in pfad.append(HLZiel.suche(kuenstler)) }
         }
         .navigationDestination(for: HLZiel.self) { ziel in
           switch ziel {

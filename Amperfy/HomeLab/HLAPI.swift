@@ -131,6 +131,11 @@ struct HLWunschAntwort: Codable, Sendable {
   var status: String
   var meldung: String?
   var anzahl: Int?
+  var titel: String?
+  var kuenstler: String?
+  var album: String?
+  var songId: String?                                   // bei «gefunden»: Navidrome-ID
+  var ueberschrift: String?
 }
 
 struct HLWunsch: Codable, Hashable, Sendable {
@@ -289,7 +294,7 @@ final class HLAPI {
     _ pfad: String,
     abfrage: [String: String] = [:],
     methode: String = "GET",
-    inhalt: [String: Int]? = nil,
+    inhalt: [String: any Encodable & Sendable]? = nil,
     erneut: Bool = true
   ) async throws -> T {
     guard let basis = basisURL else { throw HLAPIFehler.keinKonto }
@@ -302,7 +307,7 @@ final class HLAPI {
     req.setValue("Bearer \(try await gueltigesToken())", forHTTPHeaderField: "Authorization")
     if let inhalt {
       req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      req.httpBody = try JSONEncoder().encode(inhalt)
+      req.httpBody = try JSONSerialization.data(withJSONObject: inhalt)
     }
     let (daten, antwort) = try await session.data(for: req)
     let code = (antwort as? HTTPURLResponse)?.statusCode ?? 0
@@ -330,6 +335,11 @@ final class HLAPI {
 
   func wunsch(song deezerId: Int) async throws -> HLWunschAntwort {
     try await anfrage("entdecken/wunsch", methode: "POST", inhalt: ["deezer_id": deezerId])
+  }
+
+  /// Wunsch nach Titel und Künstler (Shazam), wie der Kurzbefehl: Bibliothek prüfen, sonst SoulSync.
+  func wunsch(titel: String, kuenstler: String) async throws -> HLWunschAntwort {
+    try await anfrage("wunsch", methode: "POST", inhalt: ["titel": titel, "kuenstler": kuenstler])
   }
 
   func wunsch(album albumId: Int) async throws -> HLWunschAntwort {
