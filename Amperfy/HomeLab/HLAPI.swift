@@ -324,6 +324,14 @@ final class HLAPI {
 
   func jetzt() async throws -> HLJetzt { try await anfrage("entdecken/jetzt") }
   func reihen() async throws -> HLReihen { try await anfrage("entdecken/reihen") }
+
+  private struct HLErkannt: Codable, Sendable { var song: HLSong }
+
+  /// Shazam-Treffer nachschlagen (Bibliothek oder Deezer-Vorschau), ohne Wunsch.
+  func erkennen(titel: String, kuenstler: String) async throws -> HLSong {
+    let r: HLErkannt = try await anfrage("entdecken/erkennen", abfrage: ["titel": titel, "kuenstler": kuenstler])
+    return r.song
+  }
   func suche(_ q: String) async throws -> HLSuche { try await anfrage("entdecken/suche", abfrage: ["q": q]) }
   func kuenstler(_ id: Int) async throws -> HLKuenstlerSeite { try await anfrage("entdecken/kuenstler/\(id)") }
   func album(_ id: Int) async throws -> HLAlbumSeite { try await anfrage("entdecken/album/\(id)") }

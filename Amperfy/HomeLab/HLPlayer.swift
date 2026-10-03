@@ -150,6 +150,23 @@ final class HLPlayer: ObservableObject {
     }
   }
 
+  /// Wunsch nach Titel/Künstler (Shazam-Treffer ohne Deezer-Eintrag).
+  func wuenschenOhneDeezer(_ song: HLSong) {
+    guard status(song) == "neu", let titel = song.titel, let kuenstler = song.kuenstler else { return }
+    statusNeu[song.schluessel] = "angefragt"
+    Task {
+      do {
+        let r = try await HLAPI.shared.wunsch(titel: titel, kuenstler: kuenstler)
+        if r.status == "gefunden" { statusNeu[song.schluessel] = "bibliothek" }
+        if r.status != "angefragt" && r.status != "gefunden" { statusNeu[song.schluessel] = nil }
+        zeigeHinweis(r.meldung ?? "")
+      } catch {
+        statusNeu[song.schluessel] = nil
+        zeigeHinweis(error.localizedDescription)
+      }
+    }
+  }
+
   func alsAngefragtMarkieren(_ songs: [HLSong]) {
     for s in songs where status(s) == "neu" { statusNeu[s.schluessel] = "angefragt" }
   }

@@ -45,7 +45,7 @@ struct HLEntdeckenView: View {
           }
         }
         .sheet(isPresented: $shazamOffen) {
-          HLShazamView { kuenstler in pfad.append(HLZiel.suche(kuenstler)) }
+          HLShazamView { ziel in pfad.append(ziel) }
         }
         .navigationDestination(for: HLZiel.self) { ziel in
           switch ziel {

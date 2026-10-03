@@ -2,8 +2,9 @@
 //  HLShazam.swift
 //  HomeLabMusic
 //
-//  Shazam im Entdecken-Tab: Song über das Mikrofon erkennen (ShazamKit) und wie der Kurzbefehl an den
-//  Musikwunsch-Dienst geben: schon in der Bibliothek -> direkt abspielbar, sonst auf die SoulSync-Wunschliste.
+//  Shazam im Entdecken-Tab: Song über das Mikrofon erkennen (ShazamKit), in der Bibliothek nachschlagen und
+//  als Karte zeigen. In der Bibliothek -> ganz abspielen. Nicht vorhanden -> 30-Sekunden-Vorschau von Deezer
+//  und erst auf Knopfdruck zur Bibliothek hinzufügen (SoulSync-Wunschliste).
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -21,8 +22,8 @@ final class HLShazam: ObservableObject {
   enum Zustand {
     case bereit
     case hoert
-    case wuenscht(titel: String, kuenstler: String, bild: URL?)
-    case fertig(titel: String, kuenstler: String, bild: URL?, antwort: HLWunschAntwort)
+    case sucht(titel: String, kuenstler: String, bild: URL?)
+    case erkannt(song: HLSong, shazamBild: URL?)
     case nichtErkannt
     case fehler(String)
   }
@@ -44,10 +45,10 @@ final class HLShazam: ObservableObject {
           zustand = .nichtErkannt
           return
         }
-        zustand = .wuenscht(titel: titel, kuenstler: kuenstler, bild: item.artworkURL)
+        zustand = .sucht(titel: titel, kuenstler: kuenstler, bild: item.artworkURL)
         do {
-          let antwort = try await HLAPI.shared.wunsch(titel: titel, kuenstler: kuenstler)
-          zustand = .fertig(titel: titel, kuenstler: kuenstler, bild: item.artworkURL, antwort: antwort)
+          let song = try await HLAPI.shared.erkennen(titel: titel, kuenstler: kuenstler)
+          zustand = .erkannt(song: song, shazamBild: item.artworkURL)
         } catch {
           zustand = .fehler(error.localizedDescription)
         }
@@ -83,25 +84,30 @@ final class HLShazam: ObservableObject {
 }
 
 struct HLShazamView: View {
-  /// Künstler in der Entdecken-Suche öffnen (Sheet schliesst sich vorher).
-  let suchen: (String) -> ()
+  /// Ziel im Entdecken-Tab öffnen (Sheet schliesst sich vorher).
+  let oeffnen: (HLZiel) -> ()
   @StateObject private var shazam = HLShazam()
+  @ObservedObject private var player = HLPlayer.shared
   @Environment(\.dismiss) private var schliessen
 
   var body: some View {
     NavigationStack {
-      VStack(spacing: 24) {
-        Spacer()
-        inhalt
-        Spacer()
+      ScrollView {
+        VStack(spacing: 22) { inhalt }
+          .padding(24)
+          .frame(maxWidth: .infinity, minHeight: 560)
       }
-      .padding(24)
-      .frame(maxWidth: .infinity)
       .navigationTitle("Song erkennen")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
           Button("Fertig") { shazam.abbrechen(); schliessen() }
+        }
+      }
+      .overlay(alignment: .bottom) {
+        if let text = player.hinweis, !text.isEmpty {
+          Text(text).font(.subheadline).padding(.horizontal, 16).padding(.vertical, 10)
+            .background(.thinMaterial, in: Capsule()).padding(.bottom, 24)
         }
       }
     }
@@ -118,27 +124,11 @@ struct HLShazamView: View {
         .symbolEffect(.pulse, options: .repeating)
       Text("Hört zu …").font(.title3.weight(.semibold))
       Text("Halte das iPhone in Richtung Musik.").foregroundStyle(.secondary)
-    case let .wuenscht(titel, kuenstler, bild):
-      songKopf(titel, kuenstler, bild)
-      ProgressView("Prüfe die Bibliothek …")
-    case let .fertig(titel, kuenstler, bild, antwort):
-      songKopf(titel, kuenstler, bild)
-      Text(antwort.ueberschrift ?? "").font(.headline)
-      if let m = antwort.meldung { Text(m).multilineTextAlignment(.center).foregroundStyle(.secondary) }
-      VStack(spacing: 10) {
-        if antwort.status == "gefunden", let id = antwort.songId {
-          knopf("Abspielen", "play.fill") {
-            HLPlayer.shared.spielen([HLSong(typ: "bibliothek", status: "bibliothek", deezerId: nil,
-                                            titel: antwort.titel ?? titel, kuenstler: antwort.kuenstler ?? kuenstler,
-                                            kuenstlerId: nil, album: antwort.album, albumId: nil,
-                                            bild: "/entdecken/cover/mf-\(id)", bildGross: nil, dauer: nil,
-                                            vorschau: nil, navidromeId: id, navidromeCover: nil)], ab: 0)
-            schliessen()
-          }
-        }
-        knopf("Künstler entdecken", "person.wave.2", haupt: false) { schliessen(); suchen(kuenstler) }
-        knopf("Nächsten Song erkennen", "shazam.logo", haupt: false) { shazam.starten() }
-      }
+    case let .sucht(titel, kuenstler, bild):
+      kopf(titel, kuenstler, bild.map(\.absoluteString))
+      ProgressView("Schaue in der Bibliothek nach …")
+    case let .erkannt(song, shazamBild):
+      erkannt(song, shazamBild)
     case .nichtErkannt:
       Image(systemName: "questionmark.circle").font(.system(size: 72)).foregroundStyle(.secondary)
       Text("Nichts erkannt").font(.title3.weight(.semibold))
@@ -150,19 +140,57 @@ struct HLShazamView: View {
     }
   }
 
-  private func songKopf(_ titel: String, _ kuenstler: String, _ bild: URL?) -> some View {
+  @ViewBuilder private func erkannt(_ song: HLSong, _ shazamBild: URL?) -> some View {
+    let status = player.status(song)
+    let spielt = player.aktuell?.schluessel == song.schluessel && player.spielt
+    kopf(song.titel ?? "", song.kuenstler ?? "", song.bildGross ?? song.bild ?? shazamBild?.absoluteString)
+    statusZeile(status)
     VStack(spacing: 10) {
-      AsyncImage(url: bild) { $0.resizable().scaledToFill() } placeholder: { Color.secondary.opacity(0.15) }
-        .frame(width: 180, height: 180).clipShape(RoundedRectangle(cornerRadius: 16))
+      if status == "bibliothek" {
+        knopf(spielt ? "Pause" : "Aus der Bibliothek abspielen", spielt ? "pause.fill" : "play.fill") {
+          if player.aktuell?.schluessel == song.schluessel { player.umschalten() } else { player.spielen([song], ab: 0) }
+        }
+      } else {
+        if song.vorschau != nil {
+          knopf(spielt ? "Pause" : "30 Sekunden reinhören", spielt ? "pause.fill" : "play.fill", haupt: status != "neu") {
+            if player.aktuell?.schluessel == song.schluessel { player.umschalten() } else { player.spielen([song], ab: 0) }
+          }
+        } else {
+          Text("Keine Vorschau verfügbar.").font(.footnote).foregroundStyle(.secondary)
+        }
+        if status == "neu" {
+          knopf("Zur Bibliothek hinzufügen", "plus") {
+            if song.deezerId != nil { player.wuenschen(song) } else { player.wuenschenOhneDeezer(song) }
+          }
+        }
+      }
+      if let k = song.kuenstlerId {
+        knopf("Künstler entdecken", "person.wave.2", haupt: false) { schliessen(); oeffnen(.kuenstler(k)) }
+      }
+      knopf("Nächsten Song erkennen", "shazam.logo", haupt: false) { shazam.starten() }
+    }
+  }
+
+  private func statusZeile(_ status: String) -> some View {
+    let (text, bild, farbe): (String, String, Color) = switch status {
+    case "bibliothek": ("In deiner Bibliothek", "checkmark.circle.fill", .green)
+    case "angefragt": ("Hinzugefügt, kommt in ein paar Minuten", "hourglass", .orange)
+    default: ("Nicht in deiner Bibliothek", "circle.dashed", .secondary)
+    }
+    return Label(text, systemImage: bild).font(.subheadline.weight(.semibold)).foregroundStyle(farbe)
+      .padding(.horizontal, 14).padding(.vertical, 8).background(farbe.opacity(0.12), in: Capsule())
+  }
+
+  private func kopf(_ titel: String, _ kuenstler: String, _ bild: String?) -> some View {
+    VStack(spacing: 10) {
+      HLBild(pfad: bild, groesse: 200)
       Text(titel).font(.title2.bold()).multilineTextAlignment(.center)
-      Text(kuenstler).foregroundStyle(.secondary)
+      Text(kuenstler).foregroundStyle(.secondary).multilineTextAlignment(.center)
     }
   }
 
   private func knopf(_ text: String, _ bild: String, haupt: Bool = true, _ aktion: @escaping () -> ()) -> some View {
-    Button(action: aktion) {
-      Label(text, systemImage: bild).frame(maxWidth: .infinity)
-    }
-    .buttonStyle(HLKapsel(haupt: haupt))
+    Button(action: aktion) { Label(text, systemImage: bild).frame(maxWidth: .infinity) }
+      .buttonStyle(HLKapsel(haupt: haupt))
   }
 }
