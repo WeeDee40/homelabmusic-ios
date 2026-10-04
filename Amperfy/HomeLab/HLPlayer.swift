@@ -66,23 +66,30 @@ final class HLPlayer: ObservableObject {
   // MARK: Wiedergabe
 
   func spielen(_ songs: [HLSong], ab start: Int, kontext: String = HLPlayer.kontext) {
-    let alteRadios = gemerkteRadios()
-    guard let (playables, startIndex) = vorbereiten(songs, ab: start, neu: true) else {
-      zeigeHinweis("Nichts abspielbar.")
-      return
+    Task {
+      let alteRadios = gemerkteRadios()
+      await HLVorschauDateien.laden(songs)
+      guard let (playables, startIndex) = vorbereiten(songs, ab: start, neu: true) else {
+        zeigeHinweis("Nichts abspielbar.")
+        return
+      }
+      amperfy.play(context: PlayContext(name: kontext, index: min(startIndex, playables.count - 1), playables: playables))
+      radiosLoeschen(alteRadios.filter { !gemerkteRadios().contains($0) })
+      abgleichen()
     }
-    amperfy.play(context: PlayContext(name: kontext, index: min(startIndex, playables.count - 1), playables: playables))
-    radiosLoeschen(alteRadios.filter { !gemerkteRadios().contains($0) })
-    abgleichen()
   }
 
   /// Songs hinten an die laufende Warteschlange hängen (Mix lädt nach).
   func anhaengen(_ songs: [HLSong]) {
-    guard let (playables, _) = vorbereiten(songs, ab: 0, neu: false) else { return }
-    amperfy.appendContextQueue(playables: playables)
+    Task {
+      await HLVorschauDateien.laden(songs)
+      guard let (playables, _) = vorbereiten(songs, ab: 0, neu: false) else { return }
+      amperfy.appendContextQueue(playables: playables)
+    }
   }
 
-  /// Playables für Amperfy: Bibliotheks-Songs direkt, Vorschauen als versteckte Radio-Einträge.
+  /// Playables für Amperfy: Bibliotheks-Songs direkt, Vorschauen als versteckte Radio-Einträge auf eine lokale
+  /// Datei (gestreamte Kurz-MP3s haben anfangs eine falsche Länge: Spulen und Weiterschalten gingen schief).
   private func vorbereiten(_ songs: [HLSong], ab start: Int, neu: Bool) -> ([AbstractPlayable], Int)? {
     guard let account = HLAPI.shared.account else { return nil }
     var playables = [AbstractPlayable](), startIndex = 0, radios = [String]()
@@ -92,7 +99,7 @@ final class HLPlayer: ObservableObject {
       if !s.istVorschau, let id = s.navidromeId, let song = bibliothek.getSong(for: account, id: id) {
         playables.append(song)
         neueZuordnung[song.id] = s
-      } else if s.istVorschau, let url = HLAPI.shared.url(s.vorschau) {
+      } else if s.istVorschau, let url = HLVorschauDateien.datei(s) ?? HLAPI.shared.url(s.vorschau) {
         let radio = bibliothek.createRadio(account: account)
         radio.id = Self.radioPraefix + UUID().uuidString
         radio.title = "\(s.titel ?? "") · \(s.kuenstler ?? "")"
@@ -163,6 +170,7 @@ final class HLPlayer: ObservableObject {
 
   /// Beim App-Start: Vorschau-Einträge entfernen, wenn der Player nicht mehr aus «Entdecken» spielt.
   func aufraeumenBeimStart() {
+    HLVorschauDateien.aufraeumen()
     guard amperfy.contextName != Self.kontext, !amperfy.contextName.hasPrefix(HLMix.praefix) else { return }
     radiosLoeschen(gemerkteRadios())
     merken([])
@@ -331,6 +339,53 @@ final class HLPlayer: ObservableObject {
     hinweisAufgabe = Task {
       try? await Task.sleep(for: .seconds(3))
       if !Task.isCancelled { hinweis = nil }
+    }
+  }
+}
+
+// MARK: - Vorschau-Dateien
+
+/// Deezer-Vorschauen als lokale MP3 (Caches/hl-vorschau/<deezer-id>.mp3), nach einem Tag gelöscht.
+@MainActor
+enum HLVorschauDateien {
+  private static var ordner: URL {
+    let o = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("hl-vorschau")
+    try? FileManager.default.createDirectory(at: o, withIntermediateDirectories: true)
+    return o
+  }
+
+  static func datei(_ s: HLSong) -> URL? {
+    guard let id = s.deezerId else { return nil }
+    let d = ordner.appendingPathComponent("\(id).mp3")
+    return FileManager.default.fileExists(atPath: d.path) ? d : nil
+  }
+
+  /// Fehlende Vorschauen parallel laden (höchstens 15 s; was fehlt, wird gestreamt).
+  static func laden(_ songs: [HLSong]) async {
+    let offen: [(Int, URL)] = songs.compactMap { s in
+      guard s.istVorschau, let id = s.deezerId, datei(s) == nil, let url = HLAPI.shared.url(s.vorschau) else { return nil }
+      return (id, url)
+    }
+    guard !offen.isEmpty else { return }
+    let ziel = ordner
+    await withTaskGroup(of: Void.self) { gruppe in
+      for (id, url) in offen {
+        gruppe.addTask {
+          var req = URLRequest(url: url)
+          req.timeoutInterval = 15
+          guard let (tmp, antwort) = try? await URLSession.shared.download(for: req),
+                (antwort as? HTTPURLResponse)?.statusCode == 200 else { return }
+          try? FileManager.default.moveItem(at: tmp, to: ziel.appendingPathComponent("\(id).mp3"))
+        }
+      }
+    }
+  }
+
+  static func aufraeumen() {
+    let grenze = Date().addingTimeInterval(-86400)
+    for d in (try? FileManager.default.contentsOfDirectory(at: ordner, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [] {
+      let datum = (try? d.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+      if datum < grenze { try? FileManager.default.removeItem(at: d) }
     }
   }
 }
