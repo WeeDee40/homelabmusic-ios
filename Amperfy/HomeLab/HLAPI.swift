@@ -261,6 +261,19 @@ final class HLAPI {
     return teile.url
   }
 
+  /// Senderbilder aus Navidrome (Radio-ID -> coverArt), leer wenn keine hochgeladen sind.
+  func senderBilder() async -> [String: String] {
+    guard let url = subsonicURL("getInternetRadioStations", ["f": "json"]),
+          let (daten, _) = try? await session.data(from: url),
+          let json = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
+          let antwort = json["subsonic-response"] as? [String: Any],
+          let liste = (antwort["internetRadioStations"] as? [String: Any])?["internetRadioStation"] as? [[String: Any]]
+    else { return [:] }
+    var out = [String: String]()
+    for r in liste { if let id = r["id"] as? String { out[id] = r["coverArt"] as? String ?? "" } }
+    return out
+  }
+
   private var schluessel: String {
     "homelabmusic.token.\(credentials?.username ?? "")@\(basisURL?.host ?? "")"
   }

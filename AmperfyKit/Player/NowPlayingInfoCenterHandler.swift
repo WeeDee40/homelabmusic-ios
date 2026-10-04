@@ -89,8 +89,8 @@ public class NowPlayingInfoCenterHandler {
       }
     }
 
-    let vorschau = LibraryEntityImage.vorschauInfo?(playable)            // HomeLabMusic
-    if vorschau != nil, let bild = LibraryEntityImage.vorschauBildSofort?(playable) { artworkImage = bild }
+    let vorschau = LibraryEntityImage.vorschauInfo?(playable)            // HomeLabMusic: Titel/Cover für Vorschau und Radio
+    if playable.isRadio, let bild = LibraryEntityImage.vorschauBildSofort?(playable) { artworkImage = bild }
     let concurrentSafeArtworkImage = artworkImage
     nowPlayingInfoCenter.nowPlayingInfo = [
       MPNowPlayingInfoPropertyMediaType: NSNumber(value: MPNowPlayingInfoMediaType.audio.rawValue),
@@ -103,7 +103,7 @@ public class NowPlayingInfoCenterHandler {
 
       MPMediaItemPropertyPlaybackDuration: backendAudioPlayer.duration,
       MPNowPlayingInfoPropertyElapsedPlaybackTime: backendAudioPlayer.elapsedTime,
-      MPNowPlayingInfoPropertyIsLiveStream: playable.isRadio && vorschau == nil,
+      MPNowPlayingInfoPropertyIsLiveStream: playable.isRadio,
 
       MPNowPlayingInfoPropertyDefaultPlaybackRate: NSNumber(value: 1.0),
       MPNowPlayingInfoPropertyPlaybackRate: NSNumber(

@@ -428,7 +428,7 @@ class PlayerUIHandler: NSObject {
     timeSlider.preferredBehavioralStyle = .pad
     timeSlider.sliderStyle = .thumbless
     if let currentlyPlaying = player.currentlyPlaying {
-      let supportTimeInteraction = !currentlyPlaying.isRadio || currentlyPlaying.isHLVorschau // HomeLabMusic
+      let supportTimeInteraction = !currentlyPlaying.isRadio
       timeSlider.isEnabled = supportTimeInteraction && (style != .miniPlayeriOS)
       timeSlider.minimumValue = 0.0
       timeSlider.maximumValue = Float(player.duration)

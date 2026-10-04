@@ -90,7 +90,7 @@ public class AudioPlayer: NSObject, BackendAudioPlayerNotifiable {
 
   private func shouldCurrentItemReplayedInsteadOfPrevious() -> Bool {
     if let currentlyPlaying = currentlyPlaying,
-       currentlyPlaying.isRadio, !currentlyPlaying.isHLVorschau { // HomeLabMusic
+       currentlyPlaying.isRadio {
       return false
     }
     if !backendAudioPlayer.canBeContinued {
@@ -244,7 +244,7 @@ public class AudioPlayer: NSObject, BackendAudioPlayerNotifiable {
 
   func pause() {
     if let currentlyPlaying = currentlyPlaying,
-       currentlyPlaying.isRadio, !currentlyPlaying.isHLVorschau { // HomeLabMusic
+       currentlyPlaying.isRadio {
       stopButRemainIndex()
     } else {
       backendAudioPlayer.pause()

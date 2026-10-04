@@ -68,7 +68,6 @@ final class HLPlayer: ObservableObject {
   func spielen(_ songs: [HLSong], ab start: Int, kontext: String = HLPlayer.kontext) {
     Task {
       let alteRadios = gemerkteRadios()
-      await HLVorschauDateien.laden(songs)
       guard let (playables, startIndex) = vorbereiten(songs, ab: start, neu: true) else {
         zeigeHinweis("Nichts abspielbar.")
         return
@@ -82,14 +81,13 @@ final class HLPlayer: ObservableObject {
   /// Songs hinten an die laufende Warteschlange hängen (Mix lädt nach).
   func anhaengen(_ songs: [HLSong]) {
     Task {
-      await HLVorschauDateien.laden(songs)
       guard let (playables, _) = vorbereiten(songs, ab: 0, neu: false) else { return }
       amperfy.appendContextQueue(playables: playables)
     }
   }
 
-  /// Playables für Amperfy: Bibliotheks-Songs direkt, Vorschauen als versteckte Radio-Einträge auf eine lokale
-  /// Datei (gestreamte Kurz-MP3s haben anfangs eine falsche Länge: Spulen und Weiterschalten gingen schief).
+  /// Playables für Amperfy: Bibliotheks-Songs direkt, Vorschauen als versteckte Radio-Einträge (30 s, ohne
+  /// Spulen; bewusst ohne Eingriff in Amperfys Wiedergabe-Kern).
   private func vorbereiten(_ songs: [HLSong], ab start: Int, neu: Bool) -> ([AbstractPlayable], Int)? {
     guard let account = HLAPI.shared.account else { return nil }
     var playables = [AbstractPlayable](), startIndex = 0, radios = [String]()
@@ -99,7 +97,7 @@ final class HLPlayer: ObservableObject {
       if !s.istVorschau, let id = s.navidromeId, let song = bibliothek.getSong(for: account, id: id) {
         playables.append(song)
         neueZuordnung[song.id] = s
-      } else if s.istVorschau, let url = HLVorschauDateien.datei(s) ?? HLAPI.shared.url(s.vorschau) {
+      } else if s.istVorschau, let url = HLAPI.shared.url(s.vorschau) {
         let radio = bibliothek.createRadio(account: account)
         radio.id = Self.radioPraefix + UUID().uuidString
         radio.title = "\(s.titel ?? "") · \(s.kuenstler ?? "")"
@@ -153,13 +151,42 @@ final class HLPlayer: ObservableObject {
       return (s.titel ?? "", "Vorschau · \(s.kuenstler ?? "")", s.album)
     }
     LibraryEntityImage.vorschauBild = { id in
-      guard let s = HLPlayer.shared.zuordnung[id], id.hasPrefix(radioPraefix), let url = HLAPI.shared.url(s.bildGross ?? s.bild) else { return nil }
-      return await HLBildSpeicher.shared.bild(url)
+      if id.hasPrefix(radioPraefix) {
+        guard let s = HLPlayer.shared.zuordnung[id], let url = HLAPI.shared.url(s.bildGross ?? s.bild) else { return nil }
+        return await HLBildSpeicher.shared.bild(url)
+      }
+      return await HLPlayer.shared.radioBild(id)
     }
     LibraryEntityImage.vorschauBildSofort = { p in
-      guard let s = HLPlayer.shared.vorschau(p), let url = HLAPI.shared.url(s.bildGross ?? s.bild) else { return nil }
-      return HLBildSpeicher.shared.zwischengespeichert(url)
+      if let s = HLPlayer.shared.vorschau(p) {
+        guard let url = HLAPI.shared.url(s.bildGross ?? s.bild) else { return nil }
+        return HLBildSpeicher.shared.zwischengespeichert(url)
+      }
+      return HLPlayer.shared.radioBildSofort(p.id)
     }
+  }
+
+  // MARK: Bilder für echte Radiosender
+
+  private var senderBilder: [String: String]?             // Radio-ID -> Navidrome-coverArt (falls hochgeladen)
+
+  /// Cover des Songs, der gerade im Radio läuft (Deezer); sonst das Senderbild aus Navidrome.
+  func radioBild(_ radioId: String) async -> UIImage? {
+    if let eintrag = radioVerlauf.first, amperfy.currentlyPlaying?.id == radioId {
+      for _ in 0 ..< 12 where radioTreffer[eintrag.schluessel] == nil { try? await Task.sleep(for: .milliseconds(500)) }
+      if let s = radioTreffer[eintrag.schluessel], let url = HLAPI.shared.url(s.bildGross ?? s.bild),
+         let bild = await HLBildSpeicher.shared.bild(url) { return bild }
+    }
+    if senderBilder == nil { senderBilder = await HLAPI.shared.senderBilder() }
+    guard let cover = senderBilder?[radioId], !cover.isEmpty,
+          let url = HLAPI.shared.subsonicURL("getCoverArt", ["id": cover, "size": "600"]) else { return nil }
+    return await HLBildSpeicher.shared.bild(url)
+  }
+
+  func radioBildSofort(_ radioId: String) -> UIImage? {
+    guard let eintrag = radioVerlauf.first, amperfy.currentlyPlaying?.id == radioId,
+          let s = radioTreffer[eintrag.schluessel], let url = HLAPI.shared.url(s.bildGross ?? s.bild) else { return nil }
+    return HLBildSpeicher.shared.zwischengespeichert(url)
   }
 
   var amperfyKontext: String { amperfy.contextName }
@@ -170,7 +197,7 @@ final class HLPlayer: ObservableObject {
 
   /// Beim App-Start: Vorschau-Einträge entfernen, wenn der Player nicht mehr aus «Entdecken» spielt.
   func aufraeumenBeimStart() {
-    HLVorschauDateien.aufraeumen()
+    HLVorschauDateien.aufraeumen()                   // Dateien aus Build 16/17 wegräumen
     guard amperfy.contextName != Self.kontext, !amperfy.contextName.hasPrefix(HLMix.praefix) else { return }
     radiosLoeschen(gemerkteRadios())
     merken([])
@@ -345,47 +372,14 @@ final class HLPlayer: ObservableObject {
 
 // MARK: - Vorschau-Dateien
 
-/// Deezer-Vorschauen als lokale MP3 (Caches/hl-vorschau/<deezer-id>.mp3), nach einem Tag gelöscht.
+/// Früher lokal gespeicherte Vorschauen (Build 16/17) wegräumen; heute werden sie gestreamt.
 @MainActor
 enum HLVorschauDateien {
   private static var ordner: URL {
-    let o = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("hl-vorschau")
-    try? FileManager.default.createDirectory(at: o, withIntermediateDirectories: true)
-    return o
-  }
-
-  static func datei(_ s: HLSong) -> URL? {
-    guard let id = s.deezerId else { return nil }
-    let d = ordner.appendingPathComponent("\(id).mp3")
-    return FileManager.default.fileExists(atPath: d.path) ? d : nil
-  }
-
-  /// Fehlende Vorschauen parallel laden (höchstens 15 s; was fehlt, wird gestreamt).
-  static func laden(_ songs: [HLSong]) async {
-    let offen: [(Int, URL)] = songs.compactMap { s in
-      guard s.istVorschau, let id = s.deezerId, datei(s) == nil, let url = HLAPI.shared.url(s.vorschau) else { return nil }
-      return (id, url)
-    }
-    guard !offen.isEmpty else { return }
-    let ziel = ordner
-    await withTaskGroup(of: Void.self) { gruppe in
-      for (id, url) in offen {
-        gruppe.addTask {
-          var req = URLRequest(url: url)
-          req.timeoutInterval = 15
-          guard let (tmp, antwort) = try? await URLSession.shared.download(for: req),
-                (antwort as? HTTPURLResponse)?.statusCode == 200 else { return }
-          try? FileManager.default.moveItem(at: tmp, to: ziel.appendingPathComponent("\(id).mp3"))
-        }
-      }
-    }
+    FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("hl-vorschau")
   }
 
   static func aufraeumen() {
-    let grenze = Date().addingTimeInterval(-86400)
-    for d in (try? FileManager.default.contentsOfDirectory(at: ordner, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [] {
-      let datum = (try? d.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
-      if datum < grenze { try? FileManager.default.removeItem(at: d) }
-    }
+    try? FileManager.default.removeItem(at: ordner)
   }
 }
