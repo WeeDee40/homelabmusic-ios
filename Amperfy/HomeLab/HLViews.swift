@@ -366,7 +366,50 @@ struct HLSongBand: View {
 
 // MARK: - Seiten
 
+/// Ein Song aus dem Radio: nachgeschlagen in Bibliothek bzw. bei Deezer, mit den passenden Knöpfen.
+struct HLRadioZeile: View {
+  let eintrag: HLRadioEintrag
+  var gross = false
+  @ObservedObject private var player = HLPlayer.shared
+  @Environment(\.hlOeffnen) private var oeffnen
+
+  var body: some View {
+    let song = player.radioTreffer[eintrag.schluessel]
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(spacing: 12) {
+        HLBild(pfad: song?.bild, groesse: gross ? 64 : 44)
+        VStack(alignment: .leading, spacing: 3) {
+          Text(song?.titel ?? eintrag.titel).font(.body.weight(.semibold)).lineLimit(1)
+          Text(song?.kuenstler ?? eintrag.kuenstler).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+          if let song { HLStatusZeile(status: player.status(song), klein: true) }
+        }
+        Spacer(minLength: 0)
+        if song == nil { ProgressView() }
+      }
+      if let song, gross {
+        HLTrefferKnoepfe(song: song, kompakt: true) { oeffnen($0) }
+      }
+    }
+    .contentShape(Rectangle())
+    .contextMenu {
+      if let song {
+        if let k = song.kuenstlerId { Button("Künstler ansehen", systemImage: "person") { oeffnen(.kuenstler(k)) } }
+        if song.vorschau != nil || song.navidromeId != nil {
+          Button("Abspielen", systemImage: "play") { player.spielen([song], ab: 0) }
+        }
+        if player.status(song) == "neu" {
+          Button("Zur Bibliothek hinzufügen", systemImage: "plus") {
+            if song.deezerId != nil { player.wuenschen(song) } else { player.wuenschenOhneDeezer(song) }
+          }
+        }
+      }
+    }
+    .onAppear { player.nachschlagen(eintrag) }
+  }
+}
+
 struct HLStartView: View {
+  @ObservedObject private var player = HLPlayer.shared
   @State private var jetzt: HLJetzt?
   @State private var wuensche: [HLWunsch] = []
   @State private var reihen: [HLReihe] = []
@@ -396,6 +439,13 @@ struct HLStartView: View {
             }
           }
           .listRowSeparator(.hidden)
+        }
+      }
+      if !player.radioVerlauf.isEmpty {
+        Section(player.radioLaeuft ? "Läuft im Radio · \(player.radioVerlauf[0].sender)" : "Zuletzt im Radio") {
+          ForEach(player.radioVerlauf, id: \.self) { e in
+            HLRadioZeile(eintrag: e, gross: e == player.radioVerlauf.first)
+          }
         }
       }
       ForEach(reihen, id: \.self) { r in

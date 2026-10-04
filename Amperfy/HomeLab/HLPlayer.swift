@@ -18,6 +18,14 @@ import AmperfyKit
 import Combine
 import UIKit
 
+/// Song, den ein Internetradio gerade meldet (Titelinfos des Senders).
+struct HLRadioEintrag: Hashable, Sendable {
+  var sender: String
+  var titel: String
+  var kuenstler: String
+  var schluessel: String { "\(kuenstler.lowercased())|\(titel.lowercased())" }
+}
+
 @MainActor
 final class HLPlayer: ObservableObject {
   static let shared = HLPlayer()
@@ -32,6 +40,11 @@ final class HLPlayer: ObservableObject {
   /// Status, der sich seit dem Laden geändert hat (z. B. nach «Wünschen»), je Song-Schlüssel.
   @Published private(set) var statusNeu: [String: String] = [:]
   @Published var hinweis: String?
+  /// Letzte Songs aus dem Radio (neuester zuerst) und ob gerade ein Radiosender läuft.
+  @Published private(set) var radioVerlauf: [HLRadioEintrag] = []
+  @Published private(set) var radioLaeuft = false
+  @Published private(set) var radioTreffer: [String: HLSong] = [:]
+  private var radioSuche = Set<String>()
 
   private var zuordnung: [String: HLSong] = [:]       // Playable-ID -> Song
   private var takt: Timer?
@@ -104,6 +117,42 @@ final class HLPlayer: ObservableObject {
     let dauer = song?.istVorschau == true ? 30 : amperfy.duration
     let neu = dauer > 0 ? min(amperfy.elapsedTime / dauer, 1) : 0
     if abs(neu - fortschritt) > 0.005 { fortschritt = neu }
+    radioAbgleichen(laufend)
+  }
+
+  /// Echter Radiosender (nicht unsere Vorschau-Einträge): gemeldeten Song in den Verlauf übernehmen.
+  private func radioAbgleichen(_ laufend: AbstractPlayable?) {
+    guard let laufend, laufend.isRadio, !laufend.id.hasPrefix(Self.radioPraefix),
+          let info = amperfy.currentRadioNowPlaying, !info.isEmpty else {
+      if radioLaeuft { radioLaeuft = false }
+      return
+    }
+    if !radioLaeuft { radioLaeuft = true }
+    var titel = info.title.trimmingCharacters(in: .whitespaces)
+    var kuenstler = info.artist.trimmingCharacters(in: .whitespaces)
+    // Viele Sender melden «Künstler - Titel», teils mit anderen Strichen (Energy Bern: «˗»)
+    if kuenstler.isEmpty, let r = titel.range(of: #"\s+[-–—˗‐‑−]\s+"#, options: .regularExpression) {
+      kuenstler = String(titel[..<r.lowerBound]); titel = String(titel[r.upperBound...])
+    }
+    guard !titel.isEmpty, !kuenstler.isEmpty else { return }
+    let e = HLRadioEintrag(sender: laufend.title, titel: titel, kuenstler: kuenstler)
+    guard radioVerlauf.first?.schluessel != e.schluessel else { return }
+    radioVerlauf.removeAll { $0.schluessel == e.schluessel }
+    radioVerlauf.insert(e, at: 0)
+    if radioVerlauf.count > 5 { radioVerlauf.removeLast() }
+    nachschlagen(e)
+  }
+
+  /// Radio-Song in Bibliothek bzw. bei Deezer nachschlagen (einmal je Song).
+  func nachschlagen(_ e: HLRadioEintrag) {
+    guard radioTreffer[e.schluessel] == nil, !radioSuche.contains(e.schluessel) else { return }
+    radioSuche.insert(e.schluessel)
+    Task {
+      if let song = try? await HLAPI.shared.erkennen(titel: e.titel, kuenstler: e.kuenstler) {
+        radioTreffer[e.schluessel] = song
+      }
+      radioSuche.remove(e.schluessel)
+    }
   }
 
   private func gemerkteRadios() -> [String] {

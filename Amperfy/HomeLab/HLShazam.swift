@@ -141,44 +141,12 @@ struct HLShazamView: View {
   }
 
   @ViewBuilder private func erkannt(_ song: HLSong, _ shazamBild: URL?) -> some View {
-    let status = player.status(song)
-    let spielt = player.aktuell?.schluessel == song.schluessel && player.spielt
     kopf(song.titel ?? "", song.kuenstler ?? "", song.bildGross ?? song.bild ?? shazamBild?.absoluteString)
-    statusZeile(status)
+    HLStatusZeile(status: player.status(song))
     VStack(spacing: 10) {
-      if status == "bibliothek" {
-        knopf(spielt ? "Pause" : "Aus der Bibliothek abspielen", spielt ? "pause.fill" : "play.fill") {
-          if player.aktuell?.schluessel == song.schluessel { player.umschalten() } else { player.spielen([song], ab: 0) }
-        }
-      } else {
-        if song.vorschau != nil {
-          knopf(spielt ? "Pause" : "30 Sekunden reinhören", spielt ? "pause.fill" : "play.fill", haupt: status != "neu") {
-            if player.aktuell?.schluessel == song.schluessel { player.umschalten() } else { player.spielen([song], ab: 0) }
-          }
-        } else {
-          Text("Keine Vorschau verfügbar.").font(.footnote).foregroundStyle(.secondary)
-        }
-        if status == "neu" {
-          knopf("Zur Bibliothek hinzufügen", "plus") {
-            if song.deezerId != nil { player.wuenschen(song) } else { player.wuenschenOhneDeezer(song) }
-          }
-        }
-      }
-      if let k = song.kuenstlerId {
-        knopf("Künstler entdecken", "person.wave.2", haupt: false) { schliessen(); oeffnen(.kuenstler(k)) }
-      }
+      HLTrefferKnoepfe(song: song) { ziel in schliessen(); oeffnen(ziel) }
       knopf("Nächsten Song erkennen", "shazam.logo", haupt: false) { shazam.starten() }
     }
-  }
-
-  private func statusZeile(_ status: String) -> some View {
-    let (text, bild, farbe): (String, String, Color) = switch status {
-    case "bibliothek": ("In deiner Bibliothek", "checkmark.circle.fill", .green)
-    case "angefragt": ("Hinzugefügt, kommt in ein paar Minuten", "hourglass", .orange)
-    default: ("Nicht in deiner Bibliothek", "circle.dashed", .secondary)
-    }
-    return Label(text, systemImage: bild).font(.subheadline.weight(.semibold)).foregroundStyle(farbe)
-      .padding(.horizontal, 14).padding(.vertical, 8).background(farbe.opacity(0.12), in: Capsule())
   }
 
   private func kopf(_ titel: String, _ kuenstler: String, _ bild: String?) -> some View {
@@ -192,5 +160,68 @@ struct HLShazamView: View {
   private func knopf(_ text: String, _ bild: String, haupt: Bool = true, _ aktion: @escaping () -> ()) -> some View {
     Button(action: aktion) { Label(text, systemImage: bild).frame(maxWidth: .infinity) }
       .buttonStyle(HLKapsel(haupt: haupt))
+  }
+}
+
+// MARK: - Gemeinsame Bausteine für erkannte Songs (Shazam, Radio)
+
+struct HLStatusZeile: View {
+  let status: String
+  var klein = false
+
+  var body: some View {
+    let (text, bild, farbe): (String, String, Color) = switch status {
+    case "bibliothek": ("In deiner Bibliothek", "checkmark.circle.fill", .green)
+    case "angefragt": ("Hinzugefügt, kommt in ein paar Minuten", "hourglass", .orange)
+    default: ("Nicht in deiner Bibliothek", "circle.dashed", .secondary)
+    }
+    Label(text, systemImage: bild).font((klein ? Font.caption : .subheadline).weight(.semibold)).foregroundStyle(farbe)
+      .padding(.horizontal, klein ? 10 : 14).padding(.vertical, klein ? 5 : 8).background(farbe.opacity(0.12), in: Capsule())
+  }
+}
+
+/// Knöpfe je nach Status: Bibliothek -> ganz abspielen; sonst 30-s-Vorschau und «hinzufügen»; dazu der Künstler.
+struct HLTrefferKnoepfe: View {
+  let song: HLSong
+  var kompakt = false
+  let oeffnen: (HLZiel) -> ()
+  @ObservedObject private var player = HLPlayer.shared
+
+  var body: some View {
+    let status = player.status(song)
+    let spielt = player.aktuell?.schluessel == song.schluessel && player.spielt
+    let layout = kompakt ? AnyLayout(HStackLayout(spacing: 8)) : AnyLayout(VStackLayout(spacing: 10))
+    layout {
+      if status == "bibliothek" {
+        knopf(spielt ? "Pause" : (kompakt ? "Abspielen" : "Aus der Bibliothek abspielen"),
+              spielt ? "pause.fill" : "play.fill") { abspielen() }
+      } else {
+        if song.vorschau != nil {
+          knopf(spielt ? "Pause" : (kompakt ? "30 s" : "30 Sekunden reinhören"), spielt ? "pause.fill" : "play.fill",
+                haupt: status != "neu") { abspielen() }
+        } else if !kompakt {
+          Text("Keine Vorschau verfügbar.").font(.footnote).foregroundStyle(.secondary)
+        }
+        if status == "neu" {
+          knopf(kompakt ? "Hinzufügen" : "Zur Bibliothek hinzufügen", "plus") {
+            if song.deezerId != nil { player.wuenschen(song) } else { player.wuenschenOhneDeezer(song) }
+          }
+        }
+      }
+      if let k = song.kuenstlerId {
+        knopf(kompakt ? "Künstler" : "Künstler entdecken", "person.wave.2", haupt: false) { oeffnen(.kuenstler(k)) }
+      }
+    }
+  }
+
+  private func abspielen() {
+    if player.aktuell?.schluessel == song.schluessel { player.umschalten() } else { player.spielen([song], ab: 0) }
+  }
+
+  private func knopf(_ text: String, _ bild: String, haupt: Bool = true, _ aktion: @escaping () -> ()) -> some View {
+    Button(action: aktion) {
+      Label(text, systemImage: bild).frame(maxWidth: kompakt ? nil : .infinity)
+    }
+    .buttonStyle(HLKapsel(haupt: haupt))
   }
 }
