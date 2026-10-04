@@ -200,6 +200,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         )
       }
     }
+    await HLBenachrichtigung.pruefen() // HomeLabMusic: gelieferte Wünsche melden
     bgTask.setTaskCompleted(success: success)
     userStatistics.backgroundFetchPerformed(result: UIBackgroundFetchResult.newData)
     scheduleAppRefresh()

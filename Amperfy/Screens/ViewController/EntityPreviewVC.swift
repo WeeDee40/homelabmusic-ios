@@ -111,6 +111,7 @@ class EntityPreviewActionBuilder {
     if !playActions.isEmpty {
       menuActions.append(UIMenu(options: .displayInline, children: playActions))
     }
+    menuActions.append(contentsOf: HLMenue.aktionen(fuer: entityContainer, auf: rootView)) // HomeLabMusic
     if isMusicQueue {
       menuActions.append(createMusicQueueAction())
     }

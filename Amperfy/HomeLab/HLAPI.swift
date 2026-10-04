@@ -48,6 +48,7 @@ struct HLKuenstler: Codable, Hashable, Sendable {
   var fans: Int?
   var inBibliothek: Int?
   var albenAnzahl: Int?
+  var folgt: Bool?                                      // auf der SoulSync-Watchlist der Person
 }
 
 struct HLAlbum: Codable, Hashable, Sendable {
@@ -138,7 +139,16 @@ struct HLWunschAntwort: Codable, Sendable {
   var ueberschrift: String?
 }
 
+struct HLFortschritt: Codable, Hashable, Sendable {
+  var phase: String                                     // wartet, laedt, import, fehler
+  var text: String
+  var prozent: Double?
+  var andere: Bool
+}
+
 struct HLWunsch: Codable, Hashable, Sendable {
+  var id: Int?
+  var fortschritt: HLFortschritt?
   var titel: String
   var kuenstler: String
   var status: String
@@ -153,6 +163,28 @@ struct HLWunsch: Codable, Hashable, Sendable {
            kuenstlerId: nil, album: nil, albumId: nil, bild: songId.map { "/entdecken/cover/mf-\($0)" },
            bildGross: nil, dauer: nil, vorschau: nil, navidromeId: songId, navidromeCover: nil)
   }
+}
+
+struct HLAntwort: Codable, Sendable {
+  var status: String?
+  var meldung: String?
+  var kuenstlerGesperrt: Bool?
+  var folgt: Bool?
+}
+
+struct HLAbgelehnt: Codable, Hashable, Sendable {
+  var art: String                                       // "song" oder "kuenstler"
+  var schluessel: String
+  var anzeige: String
+}
+
+struct HLAbgelehntListe: Codable, Sendable {
+  var eintraege: [HLAbgelehnt]
+}
+
+struct HLAehnlich: Codable, Sendable {
+  var seed: HLSong
+  var songs: [HLSong]
 }
 
 struct HLWunschListe: Codable, Sendable {
@@ -290,6 +322,12 @@ final class HLAPI {
     (try? decoder.decode(HLFehler.self, from: daten))?.meldung
   }
 
+  /// Konto nachträglich setzen (z. B. Hintergrundaufgabe ohne geöffnete Oberfläche).
+  func kontoSicherstellen() {
+    guard account == nil, let info = AmperKit.shared.storage.settings.accounts.active else { return }
+    account = AmperKit.shared.storage.main.library.getAccount(info: info)
+  }
+
   private func anfrage<T: Decodable>(
     _ pfad: String,
     abfrage: [String: String] = [:],
@@ -335,7 +373,7 @@ final class HLAPI {
   func suche(_ q: String) async throws -> HLSuche { try await anfrage("entdecken/suche", abfrage: ["q": q]) }
   func kuenstler(_ id: Int) async throws -> HLKuenstlerSeite { try await anfrage("entdecken/kuenstler/\(id)") }
   func album(_ id: Int) async throws -> HLAlbumSeite { try await anfrage("entdecken/album/\(id)") }
-  func wuensche() async throws -> HLWunschListe { try await anfrage("wuensche") }
+  func wuensche() async throws -> HLWunschListe { try await anfrage("entdecken/wuensche") }
 
   func sender(art: String, id: String) async throws -> HLSender {
     try await anfrage("entdecken/sender", abfrage: [art: id, "anzahl": "30"])
@@ -348,6 +386,31 @@ final class HLAPI {
   /// Wunsch nach Titel und Künstler (Shazam), wie der Kurzbefehl: Bibliothek prüfen, sonst SoulSync.
   func wunsch(titel: String, kuenstler: String) async throws -> HLWunschAntwort {
     try await anfrage("wunsch", methode: "POST", inhalt: ["titel": titel, "kuenstler": kuenstler])
+  }
+
+  func ablehnen(titel: String, kuenstler: String, navidromeId: String?, rueckgaengig: Bool = false) async throws -> HLAntwort {
+    var inhalt: [String: any Encodable & Sendable] = ["titel": titel, "kuenstler": kuenstler]
+    if let navidromeId { inhalt["navidrome_id"] = navidromeId }
+    if rueckgaengig { inhalt["rueckgaengig"] = true }
+    return try await anfrage("entdecken/ablehnen", methode: "POST", inhalt: inhalt)
+  }
+
+  func abgelehnt() async throws -> HLAbgelehntListe { try await anfrage("entdecken/abgelehnt") }
+
+  func aufheben(_ e: HLAbgelehnt) async throws -> HLAntwort {
+    try await anfrage("entdecken/abgelehnt", methode: "POST", inhalt: ["art": e.art, "schluessel": e.schluessel])
+  }
+
+  func folgen(kuenstlerId: Int, name: String, folgen: Bool) async throws -> HLAntwort {
+    try await anfrage("entdecken/folgen", methode: "POST", inhalt: ["kuenstler_id": kuenstlerId, "name": name, "folgen": folgen])
+  }
+
+  func andereVersion(wunschId: Int) async throws -> HLAntwort {
+    try await anfrage("entdecken/wunsch/andere", methode: "POST", inhalt: ["id": wunschId])
+  }
+
+  func aehnlich(navidromeId: String) async throws -> HLAehnlich {
+    try await anfrage("entdecken/aehnlich", abfrage: ["navidrome": navidromeId])
   }
 
   func wunsch(album albumId: Int) async throws -> HLWunschAntwort {

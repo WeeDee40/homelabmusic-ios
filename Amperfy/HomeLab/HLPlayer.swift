@@ -40,6 +40,8 @@ final class HLPlayer: ObservableObject {
   /// Status, der sich seit dem Laden geändert hat (z. B. nach «Wünschen»), je Song-Schlüssel.
   @Published private(set) var statusNeu: [String: String] = [:]
   @Published var hinweis: String?
+  /// Mit «Nicht mein Ding» abgelehnte Songs (ausgeblendet bis zum Neuladen).
+  @Published private(set) var ausgeblendet = Set<String>()
   /// Letzte Songs aus dem Radio (neuester zuerst) und ob gerade ein Radiosender läuft.
   @Published private(set) var radioVerlauf: [HLRadioEintrag] = []
   @Published private(set) var radioLaeuft = false
@@ -211,6 +213,22 @@ final class HLPlayer: ObservableObject {
         zeigeHinweis(r.meldung ?? "")
       } catch {
         statusNeu[song.schluessel] = nil
+        zeigeHinweis(error.localizedDescription)
+      }
+    }
+  }
+
+  /// «Nicht mein Ding»: kommt nicht mehr in Vorschlägen und Mixen; läuft er gerade, geht es weiter.
+  func ablehnen(_ song: HLSong) {
+    guard let titel = song.titel, let kuenstler = song.kuenstler else { return }
+    ausgeblendet.insert(song.schluessel)
+    if aktuell?.schluessel == song.schluessel { weiter() }
+    Task {
+      do {
+        let r = try await HLAPI.shared.ablehnen(titel: titel, kuenstler: kuenstler, navidromeId: song.navidromeId)
+        zeigeHinweis(r.meldung ?? "Abgelehnt.")
+      } catch {
+        ausgeblendet.remove(song.schluessel)
         zeigeHinweis(error.localizedDescription)
       }
     }

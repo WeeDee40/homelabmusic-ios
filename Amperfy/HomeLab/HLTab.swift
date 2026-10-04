@@ -20,6 +20,7 @@ enum HLTab {
     HLAPI.shared.account = account
     HLPlayer.shared.aufraeumenBeimStart()
     HLCover.einrichten()
+    HLBenachrichtigung.starten()
     return UITab(
       title: "Entdecken",
       image: UIImage(systemName: "sparkles"),

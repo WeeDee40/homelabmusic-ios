@@ -21,6 +21,7 @@ enum HLZiel: Hashable {
   case kuenstler(Int)
   case album(Int)
   case sender(art: String, id: String)
+  case aehnlich(String)
 }
 
 struct HLEntdeckenView: View {
@@ -28,6 +29,7 @@ struct HLEntdeckenView: View {
   @State private var pfad = NavigationPath()
   @State private var suchtext = ""
   @State private var shazamOffen = false
+  @State private var abgelehntOffen = false
 
   var body: some View {
     NavigationStack(path: $pfad) {
@@ -43,7 +45,13 @@ struct HLEntdeckenView: View {
             Button { shazamOffen = true } label: { Image(systemName: "shazam.logo") }
               .accessibilityLabel("Song erkennen")
           }
+          ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+              Button("Nicht mein Ding …", systemImage: "hand.thumbsdown") { abgelehntOffen = true }
+            } label: { Image(systemName: "ellipsis") }
+          }
         }
+        .sheet(isPresented: $abgelehntOffen) { HLAbgelehntView() }
         .sheet(isPresented: $shazamOffen) {
           HLShazamView { ziel in pfad.append(ziel) }
         }
@@ -53,6 +61,7 @@ struct HLEntdeckenView: View {
           case let .kuenstler(id): HLKuenstlerView(id: id)
           case let .album(id): HLAlbumView(id: id)
           case let .sender(art, id): HLSenderView(art: art, id: id)
+          case let .aehnlich(id): HLAehnlichInhalt(navidromeId: id)
           }
         }
     }
@@ -181,6 +190,10 @@ struct HLSongZeile: View {
 
   var body: some View {
     let s = songs[i]
+    if !player.ausgeblendet.contains(s.schluessel) { zeile(s) }
+  }
+
+  @ViewBuilder private func zeile(_ s: HLSong) -> some View {
     let spielt = player.aktuell?.schluessel == s.schluessel
     HStack(spacing: 12) {
       HLBild(pfad: s.bild)
@@ -198,7 +211,14 @@ struct HLSongZeile: View {
       HLStatusKnopf(song: s)
     }
     .opacity(s.istVorschau && s.vorschau == nil ? 0.45 : 1)
+    .swipeActions(edge: .trailing) {
+      Button { player.ablehnen(s) } label: { Label("Nicht mein Ding", systemImage: "hand.thumbsdown") }.tint(.red)
+    }
     .contextMenu {
+      if let nd = s.navidromeId {
+        Button("Klingt ähnlich", systemImage: "waveform.path.ecg") { oeffnen(.aehnlich(nd)) }
+      }
+      Button("Nicht mein Ding", systemImage: "hand.thumbsdown", role: .destructive) { player.ablehnen(s) }
       if let id = s.deezerId {
         Button("Sender ab diesem Song", systemImage: "dot.radiowaves.left.and.right") { oeffnen(.sender(art: "song", id: "\(id)")) }
       } else if let nd = s.navidromeId {
@@ -338,7 +358,7 @@ struct HLSongBand: View {
   var body: some View {
     ScrollView(.horizontal, showsIndicators: false) {
       HStack(alignment: .top, spacing: 14) {
-        ForEach(songs.indices, id: \.self) { i in
+        ForEach(songs.indices.filter { !player.ausgeblendet.contains(songs[$0].schluessel) }, id: \.self) { i in
           let s = songs[i]
           VStack(alignment: .leading, spacing: 3) {
             ZStack(alignment: .bottomTrailing) {
@@ -357,10 +377,42 @@ struct HLSongBand: View {
           .frame(width: 130)
           .contentShape(Rectangle())
           .onTapGesture { player.spielen(songs, ab: i) }
+          .contextMenu {
+            Button("Nicht mein Ding", systemImage: "hand.thumbsdown", role: .destructive) { player.ablehnen(s) }
+          }
         }
       }
       .padding(.vertical, 4)
     }
+  }
+}
+
+/// Download-Stand eines offenen Wunsches, bei Problemen mit «Andere Version».
+struct HLFortschrittAnzeige: View {
+  let wunsch: HLWunsch
+  let fortschritt: HLFortschritt
+  let neuLaden: () -> ()
+  @State private var laeuft = false
+
+  var body: some View {
+    VStack(alignment: .trailing, spacing: 4) {
+      Text(fortschritt.text).font(.caption)
+        .foregroundStyle(fortschritt.phase == "fehler" ? Color.orange : .secondary)
+        .multilineTextAlignment(.trailing)
+      if let p = fortschritt.prozent { ProgressView(value: p).frame(width: 90) }
+      if fortschritt.andere, let id = wunsch.id {
+        Button(laeuft ? "Sucht …" : "Andere Version") {
+          laeuft = true
+          Task {
+            if let r = try? await HLAPI.shared.andereVersion(wunschId: id) { HLPlayer.shared.zeigeHinweis(r.meldung ?? "") }
+            laeuft = false
+            neuLaden()
+          }
+        }
+        .font(.caption.weight(.semibold)).buttonStyle(.borderless).disabled(laeuft)
+      }
+    }
+    .frame(maxWidth: 170, alignment: .trailing)
   }
 }
 
@@ -480,6 +532,8 @@ struct HLStartView: View {
               Spacer()
               if w.abspielbar {
                 Image(systemName: "play.circle.fill").font(.title2).foregroundStyle(Color.accentColor)
+              } else if let f = w.fortschritt {
+                HLFortschrittAnzeige(wunsch: w, fortschritt: f) { Task { await laden() } }
               } else {
                 Text(Self.statusText[w.status] ?? w.status).font(.footnote).foregroundStyle(.secondary)
               }
@@ -566,6 +620,8 @@ struct HLSucheView: View {
 
 struct HLKuenstlerView: View {
   let id: Int
+  @State private var folgt: Bool?
+  @State private var folgtLaeuft = false
   @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
@@ -582,13 +638,11 @@ struct HLKuenstlerView: View {
                 .font(.subheadline).foregroundStyle(.secondary)
             }
           }
-          HStack {
-            Button { HLPlayer.shared.spielen(d.top, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
-              .buttonStyle(HLKapsel(haupt: true))
-            Button { oeffnen(.sender(art: "kuenstler", id: "\(id)")) } label: {
-              Label("Sender", systemImage: "dot.radiowaves.left.and.right")
-            }
-            .buttonStyle(HLKapsel())
+          let istGefolgt = folgt ?? d.kuenstler.folgt ?? false
+          ViewThatFits(in: .horizontal) {                 // zu schmal: Sender und Folgen nur als Symbol
+            knoepfe(d, istGefolgt, senderKurz: false, folgenKurz: false)
+            knoepfe(d, istGefolgt, senderKurz: true, folgenKurz: false)
+            knoepfe(d, istGefolgt, senderKurz: true, folgenKurz: true)
           }
           .listRowSeparator(.hidden)
         }
@@ -601,6 +655,35 @@ struct HLKuenstlerView: View {
       .navigationTitle(d.kuenstler.name)
     }
     .navigationBarTitleDisplayMode(.inline)
+  }
+
+  @ViewBuilder private func knoepfe(_ d: HLKuenstlerSeite, _ istGefolgt: Bool, senderKurz: Bool, folgenKurz: Bool) -> some View {
+    HStack {
+      Button { HLPlayer.shared.spielen(d.top, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
+        .buttonStyle(HLKapsel(haupt: true))
+      Button { oeffnen(.sender(art: "kuenstler", id: "\(id)")) } label: {
+        if senderKurz { Image(systemName: "dot.radiowaves.left.and.right") } else {
+          Label("Sender", systemImage: "dot.radiowaves.left.and.right")
+        }
+      }
+      .buttonStyle(HLKapsel())
+      Button {
+        folgtLaeuft = true
+        Task {
+          if let r = try? await HLAPI.shared.folgen(kuenstlerId: id, name: d.kuenstler.name, folgen: !istGefolgt) {
+            folgt = r.folgt ?? !istGefolgt
+            HLPlayer.shared.zeigeHinweis(r.meldung ?? "")
+          }
+          folgtLaeuft = false
+        }
+      } label: {
+        if folgenKurz { Image(systemName: istGefolgt ? "checkmark" : "person.badge.plus") } else {
+          Label(istGefolgt ? "Gefolgt" : "Folgen", systemImage: istGefolgt ? "checkmark" : "plus")
+        }
+      }
+      .buttonStyle(HLKapsel(haupt: false))
+      .disabled(folgtLaeuft)
+    }
   }
 
   static func bibliothekText(_ n: Int) -> String {

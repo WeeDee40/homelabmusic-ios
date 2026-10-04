@@ -188,10 +188,20 @@ struct HLTrefferKnoepfe: View {
   @ObservedObject private var player = HLPlayer.shared
 
   var body: some View {
+    if kompakt {
+      ViewThatFits(in: .horizontal) {                     // zu schmal: Künstler nur als Symbol
+        HStack(spacing: 8) { inhalt(kurz: false) }
+        HStack(spacing: 8) { inhalt(kurz: true) }
+      }
+    } else {
+      VStack(spacing: 10) { inhalt(kurz: false) }
+    }
+  }
+
+  @ViewBuilder private func inhalt(kurz: Bool) -> some View {
     let status = player.status(song)
     let spielt = player.aktuell?.schluessel == song.schluessel && player.spielt
-    let layout = kompakt ? AnyLayout(HStackLayout(spacing: 8)) : AnyLayout(VStackLayout(spacing: 10))
-    layout {
+    Group {
       if status == "bibliothek" {
         knopf(spielt ? "Pause" : (kompakt ? "Abspielen" : "Aus der Bibliothek abspielen"),
               spielt ? "pause.fill" : "play.fill") { abspielen() }
@@ -209,7 +219,11 @@ struct HLTrefferKnoepfe: View {
         }
       }
       if let k = song.kuenstlerId {
-        knopf(kompakt ? "Künstler" : "Künstler entdecken", "person.wave.2", haupt: false) { oeffnen(.kuenstler(k)) }
+        if kurz {
+          Button { oeffnen(.kuenstler(k)) } label: { Image(systemName: "person.wave.2") }.buttonStyle(HLKapsel())
+        } else {
+          knopf(kompakt ? "Künstler" : "Künstler entdecken", "person.wave.2", haupt: false) { oeffnen(.kuenstler(k)) }
+        }
       }
     }
   }
