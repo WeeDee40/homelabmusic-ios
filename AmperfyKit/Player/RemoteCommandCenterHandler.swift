@@ -199,7 +199,8 @@ public class RemoteCommandCenterHandler {
 
   func changeRemoteCommandCenterControlsBasedOnCurrentPlayableType() {
     guard let currentItem = musicPlayer.currentlyPlaying else { return }
-    switch currentItem.derivedType {
+    // HomeLabMusic: Vorschau (technisch Radio) wie einen Song steuern: Pause, Spulen, Vor/Zurück
+    switch currentItem.isHLVorschau ? .song : currentItem.derivedType {
     case .song:
       remoteCommandCenter.playCommand.isEnabled = true
       remoteCommandCenter.pauseCommand.isEnabled = true

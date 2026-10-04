@@ -28,6 +28,7 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/Screens/Player/PlayerUIHandler.swift` | Vorschau-Titel/Untertitel; Zeitleiste auch bei Vorschau | «Vorschau · Künstler», Fortschritt statt «LIVE» |
 | `AmperfyKit/Screens/LibraryEntityImage.swift` | `vorschauInfo` / `vorschauBild` / `vorschauBildSofort` | Cover der Vorschau statt Radio-Symbol |
 | `AmperfyKit/Player/NowPlayingInfoCenterHandler.swift` | Vorschau-Titel, Cover, nicht «Live» | Sperrbildschirm |
+| `AmperfyKit/Player/RemoteCommandCenterHandler.swift` | Vorschau wie `.song` behandeln | Spulen, Pause, Vor/Zurück auf Sperrbildschirm, Kontrollzentrum, Kopfhörer |
 | `Amperfy/Screens/Player/PopupPlayer+Visuals.swift`, `PopupPlayerVC.swift` | Herz-Knopf wird bei Vorschauen zu «+» (Hinzufügen) | im Player direkt zur Bibliothek hinzufügen |
 
 ## Projekt und Ressourcen
