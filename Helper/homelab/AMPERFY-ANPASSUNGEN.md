@@ -3,7 +3,7 @@
 HomeLabMusic ist eine Kopie von [Amperfy](https://github.com/BLeeEZ/amperfy) (GPL-3), Basis **v2.1.1**.
 Fast alles Eigene liegt in **eigenen Dateien**, die Amperfy nie anfasst:
 
-- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild
+- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, lernender Mix, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild
 - `Helper/homelab/` – Hilfsskripte (Dateien ins Projekt eintragen, Symbol zeichnen, TestFlight-Upload)
 
 Im Amperfy-Code selbst gibt es nur die folgenden Eingriffe. Beim Übernehmen einer neuen Amperfy-Version
@@ -16,7 +16,8 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 |---|---|---|
 | `Amperfy/Screens/ViewController/TabBarVC.swift` | `fixTabs.append(HLTab.erstellen(account:))` | Tab «Entdecken» |
 | `Amperfy/SceneDelegate.swift` | `HLSplash.zeigen(in: window)` | Startbild kurz stehen lassen |
-| `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `menuActions.append(contentsOf: HLMenue.aktionen(…))` nach den Abspiel-Befehlen | «Klingt ähnlich» und «Nicht mein Ding» in jedem Song-Menü |
+| `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `menuActions.append(contentsOf: HLMenue.aktionen(…))` nach den Abspiel-Befehlen | «Mix ab diesem Song» (Untermenü Nur Bibliothek / Etwas / Viel Neues) und «Nicht mein Ding» in jedem Song-Menü |
+| `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `if isInstantMix, !HLMenue.ersetztInstantMix` | Amperfys «Instant Mix» ausgeblendet; unser Mix nutzt ihn intern als Ersatz, wenn der Musikwunsch-Dienst nicht antwortet |
 | `Amperfy/AppDelegateNotificationExtensions.swift` | `if HLBenachrichtigung.behandeln(userInfo) { return }` | Antippen von «Dein Wunsch ist da» spielt den Song |
 | `Amperfy/AppDelegate.swift` (`performBackgroundFetchTask`) | `await HLBenachrichtigung.pruefen()` | gelieferte Wünsche auch im Hintergrund melden |
 | `Amperfy/Screens/ViewController/LoginVC.swift` | Titel «HomeLabMusic», Server-Adresse vorausgefüllt | Anmeldung für die Familie |
@@ -39,5 +40,5 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 
 1. Bauen (`xcodebuild … build`), Konflikte in der Projektdatei lösen.
 2. Im Simulator: Tab «Entdecken» da, Startbild, Anmeldeseite, Song-Menü mit «HomeLabMusic»-Abschnitt,
-   Playlist-Cover, Vorschau im Player (Sender starten), Shazam-Knopf.
+   Playlist-Cover, «Mix ab diesem Song» (lädt nach 10 Songs nach), Shazam-Knopf.
 3. `Helper/homelab/testflight.sh` für den Upload.

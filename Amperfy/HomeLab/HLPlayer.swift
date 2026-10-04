@@ -65,13 +65,28 @@ final class HLPlayer: ObservableObject {
 
   // MARK: Wiedergabe
 
-  func spielen(_ songs: [HLSong], ab start: Int) {
-    guard let account = HLAPI.shared.account else { return }
+  func spielen(_ songs: [HLSong], ab start: Int, kontext: String = HLPlayer.kontext) {
     let alteRadios = gemerkteRadios()
-    var playables = [AbstractPlayable]()
-    var neueZuordnung = [String: HLSong]()
-    var startIndex = 0
-    var neueRadios = [String]()
+    guard let (playables, startIndex) = vorbereiten(songs, ab: start, neu: true) else {
+      zeigeHinweis("Nichts abspielbar.")
+      return
+    }
+    amperfy.play(context: PlayContext(name: kontext, index: min(startIndex, playables.count - 1), playables: playables))
+    radiosLoeschen(alteRadios.filter { !gemerkteRadios().contains($0) })
+    abgleichen()
+  }
+
+  /// Songs hinten an die laufende Warteschlange hängen (Mix lädt nach).
+  func anhaengen(_ songs: [HLSong]) {
+    guard let (playables, _) = vorbereiten(songs, ab: 0, neu: false) else { return }
+    amperfy.appendContextQueue(playables: playables)
+  }
+
+  /// Playables für Amperfy: Bibliotheks-Songs direkt, Vorschauen als versteckte Radio-Einträge.
+  private func vorbereiten(_ songs: [HLSong], ab start: Int, neu: Bool) -> ([AbstractPlayable], Int)? {
+    guard let account = HLAPI.shared.account else { return nil }
+    var playables = [AbstractPlayable](), startIndex = 0, radios = [String]()
+    var neueZuordnung = neu ? [String: HLSong]() : zuordnung
     for (i, s) in songs.enumerated() {
       if i == start { startIndex = playables.count }
       if !s.istVorschau, let id = s.navidromeId, let song = bibliothek.getSong(for: account, id: id) {
@@ -85,34 +100,65 @@ final class HLPlayer: ObservableObject {
         radio.remoteStatus = .deleted                 // nicht in der Radio-Liste, vom Abgleich unberührt
         playables.append(radio)
         neueZuordnung[radio.id] = s
-        neueRadios.append(radio.id)
+        radios.append(radio.id)
       }
     }
-    guard !playables.isEmpty else {
-      zeigeHinweis("Nichts abspielbar.")
-      return
-    }
+    guard !playables.isEmpty else { return nil }
     bibliothek.saveContext()
     zuordnung = neueZuordnung
-    amperfy.play(context: PlayContext(name: Self.kontext, index: min(startIndex, playables.count - 1),
-                                      playables: playables))
-    radiosLoeschen(alteRadios)
-    merken(neueRadios)
-    abgleichen()
+    merken((neu ? [] : gemerkteRadios()) + radios)
+    return (playables, startIndex)
   }
+
+  /// Amperfy-Songs direkt abspielen (Ersatz-Mix über Navidromes Instant Mix).
+  func spielenAmperfy(_ playables: [AbstractPlayable], kontext: String) {
+    zuordnung = [:]
+    amperfy.play(context: PlayContext(name: kontext, index: 0, playables: playables))
+  }
+
+  var amperfyKontext: String { amperfy.contextName }
+  var naechsteAnzahl: Int { amperfy.nextQueueCount }
 
   func umschalten() { amperfy.togglePlayPause() }
   func weiter() { amperfy.playNext() }
 
   /// Beim App-Start: Vorschau-Einträge entfernen, wenn der Player nicht mehr aus «Entdecken» spielt.
   func aufraeumenBeimStart() {
-    guard amperfy.contextName != Self.kontext else { return }
+    guard amperfy.contextName != Self.kontext, !amperfy.contextName.hasPrefix(HLMix.praefix) else { return }
     radiosLoeschen(gemerkteRadios())
     merken([])
   }
 
+  private var letzteId: String?
+  private var letzteZeit = 0.0
+  private var letzteDauer = 0.0
+
+  /// Songwechsel auswerten: ganz gehört, früh übersprungen oder mit Stern -> Signal an den Mix.
+  private func wechselAuswerten(neueId: String?) {
+    defer { letzteId = neueId; letzteZeit = 0; letzteDauer = 0 }
+    guard let alt = letzteId, alt != neueId, let song = zuordnung[alt] else { return }
+    if song.istVorschau {
+      if letzteZeit < 8 { HLMix.shared.signal(song, art: "skip") }
+      return
+    }
+    let favorit = HLAPI.shared.account.flatMap { bibliothek.getSong(for: $0, id: alt) }?.isFavorite ?? false
+    if favorit {
+      HLMix.shared.signal(song, art: "stark")
+    } else if letzteDauer > 0, letzteZeit >= letzteDauer * 0.8 {
+      HLMix.shared.signal(song, art: "gehoert")
+    } else if letzteZeit < 30 {
+      HLMix.shared.signal(song, art: "skip")
+    }
+  }
+
   private func abgleichen() {
     let laufend = amperfy.currentlyPlaying
+    if laufend?.id != letzteId { wechselAuswerten(neueId: laufend?.id) }
+    if laufend != nil {
+      letzteZeit = max(letzteZeit, amperfy.elapsedTime)
+      if amperfy.duration > 0 { letzteDauer = amperfy.duration }
+    }
+    HLMix.shared.pruefen()
     let song = laufend.flatMap { zuordnung[$0.id] }
     if aktuell?.schluessel != song?.schluessel || (aktuell == nil) != (song == nil) { aktuell = song }
     if spielt != amperfy.isPlaying { spielt = amperfy.isPlaying }
@@ -181,6 +227,7 @@ final class HLPlayer: ObservableObject {
       return
     }
     statusNeu[song.schluessel] = "angefragt"
+    HLMix.shared.signal(song, art: "stark")
     Task {
       do {
         let r = try await HLAPI.shared.wunsch(song: id)
@@ -222,6 +269,7 @@ final class HLPlayer: ObservableObject {
   func ablehnen(_ song: HLSong) {
     guard let titel = song.titel, let kuenstler = song.kuenstler else { return }
     ausgeblendet.insert(song.schluessel)
+    HLMix.shared.signal(song, art: "weg")
     if aktuell?.schluessel == song.schluessel { weiter() }
     Task {
       do {

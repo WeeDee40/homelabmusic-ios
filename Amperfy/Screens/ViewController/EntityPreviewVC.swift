@@ -105,7 +105,7 @@ class EntityPreviewActionBuilder {
     if isShuffle {
       playActions.append(createPlayShuffledAction())
     }
-    if isInstantMix {
+    if isInstantMix, !HLMenue.ersetztInstantMix { // HomeLabMusic: «Mix ab diesem Song» statt Instant Mix
       playActions.append(createInstantMixAction())
     }
     if !playActions.isEmpty {

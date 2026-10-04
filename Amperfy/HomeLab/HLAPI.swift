@@ -182,9 +182,11 @@ struct HLAbgelehntListe: Codable, Sendable {
   var eintraege: [HLAbgelehnt]
 }
 
-struct HLAehnlich: Codable, Sendable {
-  var seed: HLSong
+struct HLMixAntwort: Codable, Sendable {
+  var name: String
+  var start: HLSong?
   var songs: [HLSong]
+  var klang: Bool?
 }
 
 struct HLWunschListe: Codable, Sendable {
@@ -409,9 +411,11 @@ final class HLAPI {
     try await anfrage("entdecken/wunsch/andere", methode: "POST", inhalt: ["id": wunschId])
   }
 
-  func aehnlich(navidromeId: String) async throws -> HLAehnlich {
-    try await anfrage("entdecken/aehnlich", abfrage: ["navidrome": navidromeId])
+  func mix(seed: [String: String], neu: Double, gespielt: [String], signale: [[String: String]]) async throws -> HLMixAntwort {
+    try await anfrage("entdecken/mix", methode: "POST",
+                      inhalt: ["seed": seed, "neu": neu, "anzahl": 15, "gespielt": gespielt, "signale": signale])
   }
+
 
   func wunsch(album albumId: Int) async throws -> HLWunschAntwort {
     try await anfrage("entdecken/wunsch", methode: "POST", inhalt: ["album_id": albumId])

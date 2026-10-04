@@ -2,7 +2,7 @@
 //  HLViews.swift
 //  HomeLabMusic
 //
-//  Tab «Entdecken»: Läuft gerade, Suche, Künstler, Alben, Sender, Wünschen.
+//  Tab «Entdecken»: Läuft gerade, Suche, Künstler, Alben, Mix, Wünschen.
 //  Vorbild ist die Web-Seite /app des Musikwunsch-Dienstes.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,6 @@ enum HLZiel: Hashable {
   case kuenstler(Int)
   case album(Int)
   case sender(art: String, id: String)
-  case aehnlich(String)
 }
 
 struct HLEntdeckenView: View {
@@ -60,8 +59,7 @@ struct HLEntdeckenView: View {
           case let .suche(q): HLSucheView(q: q)
           case let .kuenstler(id): HLKuenstlerView(id: id)
           case let .album(id): HLAlbumView(id: id)
-          case let .sender(art, id): HLSenderView(art: art, id: id)
-          case let .aehnlich(id): HLAehnlichInhalt(navidromeId: id)
+          case let .sender(art, id): HLMixView(art: art, id: id)
           }
         }
     }
@@ -216,14 +214,11 @@ struct HLSongZeile: View {
     }
     .contextMenu {
       if let nd = s.navidromeId {
-        Button("Klingt ähnlich", systemImage: "waveform.path.ecg") { oeffnen(.aehnlich(nd)) }
+        Button("Mix ab diesem Song", systemImage: "dot.radiowaves.left.and.right") { oeffnen(.sender(art: "navidrome", id: nd)) }
+      } else if let id = s.deezerId {
+        Button("Mix ab diesem Song", systemImage: "dot.radiowaves.left.and.right") { oeffnen(.sender(art: "song", id: "\(id)")) }
       }
       Button("Nicht mein Ding", systemImage: "hand.thumbsdown", role: .destructive) { player.ablehnen(s) }
-      if let id = s.deezerId {
-        Button("Sender ab diesem Song", systemImage: "dot.radiowaves.left.and.right") { oeffnen(.sender(art: "song", id: "\(id)")) }
-      } else if let nd = s.navidromeId {
-        Button("Sender ab diesem Song", systemImage: "dot.radiowaves.left.and.right") { oeffnen(.sender(art: "navidrome", id: nd)) }
-      }
       if let k = s.kuenstlerId {
         Button("Künstler ansehen", systemImage: "person") { oeffnen(.kuenstler(k)) }
       }
@@ -484,7 +479,7 @@ struct HLStartView: View {
           HStack {
             Button {
               if let id = j.song.navidromeId { oeffnen(.sender(art: "navidrome", id: id)) }
-            } label: { Label("Sender starten", systemImage: "dot.radiowaves.left.and.right") }
+            } label: { Label("Mix starten", systemImage: "dot.radiowaves.left.and.right") }
               .buttonStyle(HLKapsel(haupt: true))
             if let k = j.song.kuenstlerId {
               Button("Künstler entdecken") { oeffnen(.kuenstler(k)) }.buttonStyle(HLKapsel())
@@ -639,7 +634,7 @@ struct HLKuenstlerView: View {
             }
           }
           let istGefolgt = folgt ?? d.kuenstler.folgt ?? false
-          ViewThatFits(in: .horizontal) {                 // zu schmal: Sender und Folgen nur als Symbol
+          ViewThatFits(in: .horizontal) {                 // zu schmal: Mix und Folgen nur als Symbol
             knoepfe(d, istGefolgt, senderKurz: false, folgenKurz: false)
             knoepfe(d, istGefolgt, senderKurz: true, folgenKurz: false)
             knoepfe(d, istGefolgt, senderKurz: true, folgenKurz: true)
@@ -663,7 +658,7 @@ struct HLKuenstlerView: View {
         .buttonStyle(HLKapsel(haupt: true))
       Button { oeffnen(.sender(art: "kuenstler", id: "\(id)")) } label: {
         if senderKurz { Image(systemName: "dot.radiowaves.left.and.right") } else {
-          Label("Sender", systemImage: "dot.radiowaves.left.and.right")
+          Label("Mix", systemImage: "dot.radiowaves.left.and.right")
         }
       }
       .buttonStyle(HLKapsel())
@@ -747,37 +742,6 @@ struct HLAlbumView: View {
       }
       .navigationTitle(a.titel ?? "Album")
     }
-    .navigationBarTitleDisplayMode(.inline)
-  }
-}
-
-struct HLSenderView: View {
-  let art: String
-  let id: String
-  @State private var runde = 0
-
-  var body: some View {
-    HLLaden(laden: { try await HLAPI.shared.sender(art: art, id: id) }) { d in
-      List {
-        Section {
-          Text("Neue Songs als 30-Sekunden-Vorschau, gemischt mit passenden Songs aus deiner Bibliothek.")
-            .font(.subheadline).foregroundStyle(.secondary)
-          HStack {
-            Button { HLPlayer.shared.spielen(d.songs, ab: 0) } label: { Label("Abspielen", systemImage: "play.fill") }
-              .buttonStyle(HLKapsel(haupt: true))
-            Button { runde += 1 } label: { Label("Neu mischen", systemImage: "arrow.clockwise") }
-              .buttonStyle(HLKapsel())
-          }
-          .listRowSeparator(.hidden)
-        }
-        Section("Songs") {
-          ForEach(d.songs.indices, id: \.self) { HLSongZeile(songs: d.songs, i: $0) }
-        }
-      }
-      .navigationTitle(d.sender.name)
-      .onAppear { if HLPlayer.shared.aktuell == nil { HLPlayer.shared.spielen(d.songs, ab: 0) } }
-    }
-    .id(runde)
     .navigationBarTitleDisplayMode(.inline)
   }
 }
