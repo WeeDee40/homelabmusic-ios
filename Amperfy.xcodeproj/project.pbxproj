@@ -542,6 +542,7 @@
 		F37E643B306E2E2589AC762D /* HLViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93CB59B481BE869B059A5B77 /* HLViews.swift */; };
 		E60ADE5913AF426F9B117931 /* HLCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BB814655D28C78363ADB3F /* HLCover.swift */; };
 		E1AC7783FDAE4615C7C07B37 /* HLShazam.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4024F11B023AD7FB381D7211 /* HLShazam.swift */; };
+		9159A8EE56B854BD0502E8D6 /* HLSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 058FEEB4DB424CF5D1491D87 /* HLSplash.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1170,6 +1171,7 @@
 		93CB59B481BE869B059A5B77 /* HLViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLViews.swift; sourceTree = "<group>"; };
 		B1BB814655D28C78363ADB3F /* HLCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLCover.swift; sourceTree = "<group>"; };
 		4024F11B023AD7FB381D7211 /* HLShazam.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLShazam.swift; sourceTree = "<group>"; };
+		058FEEB4DB424CF5D1491D87 /* HLSplash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSplash.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2189,6 +2191,7 @@
 		08DDD6DE514A52B923C9F555 /* HomeLab */ = {
 			isa = PBXGroup;
 			children = (
+				058FEEB4DB424CF5D1491D87 /* HLSplash.swift */,
 				4024F11B023AD7FB381D7211 /* HLShazam.swift */,
 				B1BB814655D28C78363ADB3F /* HLCover.swift */,
 				93CB59B481BE869B059A5B77 /* HLViews.swift */,
@@ -2473,6 +2476,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9159A8EE56B854BD0502E8D6 /* HLSplash.swift in Sources */,
 				E1AC7783FDAE4615C7C07B37 /* HLShazam.swift in Sources */,
 				E60ADE5913AF426F9B117931 /* HLCover.swift in Sources */,
 				F37E643B306E2E2589AC762D /* HLViews.swift in Sources */,

@@ -122,6 +122,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     replaceMainRootViewController(vc: initialViewController!)
 
     window?.makeKeyAndVisible()
+    HLSplash.zeigen(in: window) // HomeLabMusic
 
     appDelegate.setAppAppearanceMode(style: appDelegate.storage.settings.user.appearanceMode)
     AmperfyAppShortcuts.updateAppShortcutParameters()
