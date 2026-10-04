@@ -53,6 +53,12 @@ extension LibraryEntityImage {
 public class LibraryEntityImage: RoundedImage {
   static private let cache: NSCache<NSString, UIImage> = NSCache()
 
+  // HomeLabMusic: Vorschauen (Deezer, als Radio im Player) mit echtem Titel, Untertitel und Cover
+  @MainActor public static var vorschauInfo: ((AbstractPlayable) -> (titel: String, untertitel: String, album: String?)?)?
+  @MainActor public static var vorschauBild: ((String) async -> UIImage?)?   // Playable-ID
+  @MainActor public static var vorschauBildSofort: ((AbstractPlayable) -> UIImage?)?
+  private var vorschauAufgabe: Task<(), Never>?
+
   private let appDelegate: AmperKit
 
   private var entity: AbstractLibraryEntity?
@@ -111,6 +117,15 @@ public class LibraryEntityImage: RoundedImage {
     self.entity = entity
     backupArtworkType = entity.getDefaultArtworkType()
     refresh()
+    vorschauAufgabe?.cancel()                                        // HomeLabMusic
+    if let playable = entity as? AbstractPlayable, playable.isRadio, let quelle = Self.vorschauBild {
+      if let sofort = Self.vorschauBildSofort?(playable) { self.image = sofort }
+      let id = playable.id
+      vorschauAufgabe = Task { [weak self] in
+        guard let bild = await quelle(id), !Task.isCancelled, let self, self.entity == entity else { return }
+        self.image = bild
+      }
+    }
   }
 
   public func displayAndUpdate(entity: AbstractLibraryEntity) {

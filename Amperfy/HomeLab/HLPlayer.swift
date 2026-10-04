@@ -48,7 +48,7 @@ final class HLPlayer: ObservableObject {
   @Published private(set) var radioTreffer: [String: HLSong] = [:]
   private var radioSuche = Set<String>()
 
-  private var zuordnung: [String: HLSong] = [:]       // Playable-ID -> Song
+  private(set) var zuordnung: [String: HLSong] = [:]       // Playable-ID -> Song
   private var takt: Timer?
   private var hinweisAufgabe: Task<(), Never>?
 
@@ -114,6 +114,45 @@ final class HLPlayer: ObservableObject {
   func spielenAmperfy(_ playables: [AbstractPlayable], kontext: String) {
     zuordnung = [:]
     amperfy.play(context: PlayContext(name: kontext, index: 0, playables: playables))
+  }
+
+  // MARK: Vorschauen im Amperfy-Player (Titel, Cover, Hinzufügen-Knopf)
+
+  /// Unser Song hinter einem Vorschau-Radio-Eintrag (sonst nil).
+  func vorschau(_ p: AbstractPlayable?) -> HLSong? {
+    guard let p, p.isRadio, p.id.hasPrefix(Self.radioPraefix) else { return nil }
+    return zuordnung[p.id]
+  }
+
+  func vorschauKnopf(_ p: AbstractPlayable?) -> (bild: String, farbe: UIColor)? {
+    guard let s = vorschau(p) else { return nil }
+    switch status(s) {
+    case "bibliothek": return ("checkmark.circle.fill", .systemGreen)
+    case "angefragt": return ("hourglass.circle.fill", .systemOrange)
+    default: return ("plus.circle.fill", .tintColor)
+    }
+  }
+
+  /// Herz-Knopf bei einer Vorschau: zur Bibliothek hinzufügen. true, wenn es eine Vorschau war.
+  func vorschauWuenschen(_ p: AbstractPlayable?) -> Bool {
+    guard let s = vorschau(p) else { return false }
+    wuenschen(s)
+    return true
+  }
+
+  static func hakenEinrichten() {
+    LibraryEntityImage.vorschauInfo = { p in
+      guard let s = HLPlayer.shared.vorschau(p) else { return nil }
+      return (s.titel ?? "", "Vorschau · \(s.kuenstler ?? "")", s.album)
+    }
+    LibraryEntityImage.vorschauBild = { id in
+      guard let s = HLPlayer.shared.zuordnung[id], id.hasPrefix(radioPraefix), let url = HLAPI.shared.url(s.bildGross ?? s.bild) else { return nil }
+      return await HLBildSpeicher.shared.bild(url)
+    }
+    LibraryEntityImage.vorschauBildSofort = { p in
+      guard let s = HLPlayer.shared.vorschau(p), let url = HLAPI.shared.url(s.bildGross ?? s.bild) else { return nil }
+      return HLBildSpeicher.shared.zwischengespeichert(url)
+    }
   }
 
   var amperfyKontext: String { amperfy.contextName }

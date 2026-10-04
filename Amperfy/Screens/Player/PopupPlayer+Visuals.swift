@@ -77,7 +77,11 @@ extension PopupPlayerVC {
     var config = UIButton.Configuration.playerRound()
     switch player.playerMode {
     case .music:
-      if let playableInfo = player.currentlyPlaying,
+      if let knopf = HLPlayer.shared.vorschauKnopf(player.currentlyPlaying) { // HomeLabMusic: Hinzufügen
+        config.image = UIImage(systemName: knopf.bild)
+        config.baseForegroundColor = knopf.farbe
+        button.isEnabled = true
+      } else if let playableInfo = player.currentlyPlaying,
          playableInfo.isSong {
         config.image = playableInfo.isFavorite ? .heartFill : .heartEmpty
         config.baseForegroundColor = appDelegate.storage.settings.user

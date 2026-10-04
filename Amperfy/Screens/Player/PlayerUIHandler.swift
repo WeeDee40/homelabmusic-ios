@@ -296,7 +296,13 @@ class PlayerUIHandler: NSObject {
   ) {
     refreshArtwork(artworkImage: artworkImage)
     if let playableInfo = player.currentlyPlaying {
-      if playableInfo.isRadio {
+      if let v = LibraryEntityImage.vorschauInfo?(playableInfo) { // HomeLabMusic: Vorschau statt Radio
+        titleLabel.text = v.titel
+        artistLabel.text = v.untertitel
+        albumLabel?.text = v.album ?? ""
+        albumButton?.isEnabled = false
+        albumContainerView?.isHidden = v.album == nil
+      } else if playableInfo.isRadio {
         // For radios, show stream metadata if available, otherwise show station name
         if let radioInfo = player.currentRadioNowPlaying, !radioInfo.isEmpty {
           titleLabel.text = radioInfo.title
@@ -422,7 +428,7 @@ class PlayerUIHandler: NSObject {
     timeSlider.preferredBehavioralStyle = .pad
     timeSlider.sliderStyle = .thumbless
     if let currentlyPlaying = player.currentlyPlaying {
-      let supportTimeInteraction = !currentlyPlaying.isRadio
+      let supportTimeInteraction = !currentlyPlaying.isRadio || currentlyPlaying.isHLVorschau // HomeLabMusic
       timeSlider.isEnabled = supportTimeInteraction && (style != .miniPlayeriOS)
       timeSlider.minimumValue = 0.0
       timeSlider.maximumValue = Float(player.duration)

@@ -21,6 +21,7 @@ enum HLTab {
     HLPlayer.shared.aufraeumenBeimStart()
     HLCover.einrichten()
     HLBenachrichtigung.starten()
+    HLPlayer.hakenEinrichten()
     return UITab(
       title: "Entdecken",
       image: UIImage(systemName: "sparkles"),

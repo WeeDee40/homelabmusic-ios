@@ -232,6 +232,7 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
     switch player.playerMode {
     case .music:
       guard let playableInfo = player.currentlyPlaying else { return }
+      if HLPlayer.shared.vorschauWuenschen(playableInfo) { refresh(); return } // HomeLabMusic
       if playableInfo.isSong, let account = playableInfo.account {
         Task { @MainActor in
           do {

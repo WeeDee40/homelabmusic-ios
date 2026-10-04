@@ -117,6 +117,8 @@ final class HLBildSpeicher {
   static let shared = HLBildSpeicher()
   private let cache = NSCache<NSURL, UIImage>()
 
+  func zwischengespeichert(_ url: URL) -> UIImage? { cache.object(forKey: url as NSURL) }
+
   func bild(_ url: URL) async -> UIImage? {
     if let b = cache.object(forKey: url as NSURL) { return b }
     var req = URLRequest(url: url)

@@ -278,7 +278,7 @@ extension PlayerFacade {
 
   public var isSkipAvailable: Bool {
     if let currentlyPlaying = currentlyPlaying,
-       currentlyPlaying.isRadio {
+       currentlyPlaying.isRadio, !currentlyPlaying.isHLVorschau { // HomeLabMusic
       return false
     } else {
       return true
@@ -287,7 +287,7 @@ extension PlayerFacade {
 
   public var isStopInsteadOfPause: Bool {
     if let currentlyPlaying = currentlyPlaying,
-       currentlyPlaying.isRadio {
+       currentlyPlaying.isRadio, !currentlyPlaying.isHLVorschau { // HomeLabMusic
       return true
     } else {
       return false

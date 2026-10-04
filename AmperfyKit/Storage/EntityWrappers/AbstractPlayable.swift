@@ -339,6 +339,9 @@ public class AbstractPlayable: AbstractLibraryEntity, Downloadable {
     return PodcastEpisode(managedObject: playablePodcastEpisode)
   }
 
+  /// HomeLabMusic: 30-Sekunden-Vorschau (technisch ein Radio-Eintrag, verhält sich aber wie ein Song)
+  public var isHLVorschau: Bool { isRadio && id.hasPrefix("hl-vorschau-") }
+
   public var isRadio: Bool {
     playableManagedObject is RadioMO
   }

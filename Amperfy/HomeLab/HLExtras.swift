@@ -118,11 +118,39 @@ enum HLBenachrichtigung {
 
 @MainActor
 enum HLMenue {
+  /// Menü für eine laufende Vorschau (im Amperfy-Player als Radio).
+  private static func vorschauAktionen(_ s: HLSong) -> [UIMenuElement] {
+    var aktionen = [UIMenuElement]()
+    switch HLPlayer.shared.status(s) {
+    case "neu":
+      aktionen.append(UIAction(title: "Zur Bibliothek hinzufügen", image: UIImage(systemName: "plus.circle")) { _ in
+        HLPlayer.shared.wuenschen(s)
+      })
+    case "angefragt":
+      aktionen.append(UIAction(title: "Hinzugefügt, kommt bald", image: UIImage(systemName: "hourglass"),
+                               attributes: .disabled) { _ in })
+    default:
+      break
+    }
+    if let id = s.deezerId {
+      aktionen.append(UIMenu(title: "Mix ab diesem Song", image: UIImage(systemName: "dot.radiowaves.left.and.right"),
+                             children: HLMix.Stufe.allCases.map { stufe in
+        UIAction(title: stufe.menuTitel, state: stufe == HLMix.shared.stufe ? .on : .off) { _ in
+          HLMix.shared.starten(art: "song", id: "\(id)", stufe: stufe)
+        }
+      }))
+    }
+    aktionen.append(UIAction(title: "Nicht mein Ding", image: UIImage(systemName: "hand.thumbsdown"),
+                             attributes: .destructive) { _ in HLPlayer.shared.ablehnen(s) })
+    return [UIMenu(title: "Vorschau · \(s.kuenstler ?? "")", options: .displayInline, children: aktionen)]
+  }
+
   /// Unser «Mix ab diesem Song» ersetzt Amperfys «Instant Mix» (der bleibt als Ersatz bei Ausfall).
   static var ersetztInstantMix: Bool { HLAPI.shared.account != nil }
 
   /// Zusätzliche Menüeinträge für einen Bibliotheks-Song (eingebunden in EntityPreviewActionBuilder).
   static func aktionen(fuer container: PlayableContainable, auf ansicht: UIViewController) -> [UIMenuElement] {
+    if let vorschau = HLPlayer.shared.vorschau(container as? AbstractPlayable) { return vorschauAktionen(vorschau) }
     guard let song = (container as? AbstractPlayable)?.asSong, HLAPI.shared.account != nil else { return [] }
     let id = song.id, titel = song.title, kuenstler = song.creatorName
     let mix = UIMenu(title: "Mix ab diesem Song", image: UIImage(systemName: "dot.radiowaves.left.and.right"),

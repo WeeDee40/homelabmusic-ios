@@ -23,6 +23,12 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/Screens/ViewController/LoginVC.swift` | Titel «HomeLabMusic», Server-Adresse vorausgefüllt | Anmeldung für die Familie |
 | `AmperfyKit/Screens/EntityImageView.swift` | `playlistCover`-Haken (Playlist-ID → Bild) | eigene Playlist-Cover von Navidrome statt Mosaik |
 | `AmperfyKit/Storage/LibraryStorage.swift` | `createRadio` / `deleteRadio` auf `public` | Vorschauen als versteckte Radio-Einträge im Player |
+| `AmperfyKit/Storage/EntityWrappers/AbstractPlayable.swift` | `isHLVorschau` (Radio mit ID `hl-vorschau-…`) | Vorschau von echtem Radio unterscheiden |
+| `AmperfyKit/Player/AudioPlayer.swift`, `PlayerFacade.swift` (4 Stellen) | `isRadio, !isHLVorschau` | Vorschau wie ein Song: Pause statt Stopp, Überspringen, Zurück |
+| `Amperfy/Screens/Player/PlayerUIHandler.swift` | Vorschau-Titel/Untertitel; Zeitleiste auch bei Vorschau | «Vorschau · Künstler», Fortschritt statt «LIVE» |
+| `AmperfyKit/Screens/LibraryEntityImage.swift` | `vorschauInfo` / `vorschauBild` / `vorschauBildSofort` | Cover der Vorschau statt Radio-Symbol |
+| `AmperfyKit/Player/NowPlayingInfoCenterHandler.swift` | Vorschau-Titel, Cover, nicht «Live» | Sperrbildschirm |
+| `Amperfy/Screens/Player/PopupPlayer+Visuals.swift`, `PopupPlayerVC.swift` | Herz-Knopf wird bei Vorschauen zu «+» (Hinzufügen) | im Player direkt zur Bibliothek hinzufügen |
 
 ## Projekt und Ressourcen
 
