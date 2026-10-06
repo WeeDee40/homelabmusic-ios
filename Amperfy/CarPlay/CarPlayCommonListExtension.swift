@@ -332,6 +332,7 @@ extension CarPlaySceneDelegate {
           accessoryImage: nil,
           accessoryType: .disclosureIndicator
         )
+        HLCarPlay.nachladen(playlist, traits: traits) { item.setImage($0) }   // HomeLabMusic
         item.handler = { [weak self] item, completion in
           guard let self = self else { completion(); return }
           let playlistDetailTemplate = CPListTemplate(title: playlist.name, sections: [
@@ -514,6 +515,7 @@ extension CarPlaySceneDelegate {
           playContext: PlayContext(name: "Radios", index: itemCount - 1, playables: Array(radios)),
           isTrackDisplayed: false
         )
+        HLCarPlay.nachladen(radio, traits: traits) { listItem.setImage($0) }   // HomeLabMusic
         items.append(listItem)
         itemCount += 1
         if itemCount > CPListTemplate.maximumItemCount { break }

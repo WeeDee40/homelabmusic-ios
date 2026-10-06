@@ -219,6 +219,7 @@ extension CarPlaySceneDelegate {
         title: item.playableContainable.name,
         subtitle: item.playableContainable.subtitle
       )
+      HLCarPlay.nachladen(item.playableContainable, traits: traits) { element.image = $0 }   // HomeLabMusic
       if let artwork, let entity {
         if homeArtworkUpdate[artwork.uniqueID] == nil {
           homeArtworkUpdate[artwork.uniqueID] = EntityImageRowContainer(

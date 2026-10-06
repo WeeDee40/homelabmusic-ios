@@ -30,7 +30,7 @@ struct HLRadioEintrag: Hashable, Sendable {
 final class HLPlayer: ObservableObject {
   static let shared = HLPlayer()
   static let kontext = "Entdecken"
-  private static let radioPraefix = "hl-vorschau-"
+  static let radioPraefix = "hl-vorschau-"
   private static let merkKey = "homelabmusic.vorschauRadios"
 
   /// Song aus dem Entdecken-Tab, der gerade im Amperfy-Player läuft (nil bei anderer Musik).
@@ -177,6 +177,11 @@ final class HLPlayer: ObservableObject {
       if let s = radioTreffer[eintrag.schluessel], let url = HLAPI.shared.url(s.bildGross ?? s.bild),
          let bild = await HLBildSpeicher.shared.bild(url) { return bild }
     }
+    return await senderBild(radioId)
+  }
+
+  /// Senderbild aus Navidrome (Radio → Sender → Bild), falls hochgeladen.
+  func senderBild(_ radioId: String) async -> UIImage? {
     if senderBilder == nil { senderBilder = await HLAPI.shared.senderBilder() }
     guard let cover = senderBilder?[radioId], !cover.isEmpty,
           let url = HLAPI.shared.subsonicURL("getCoverArt", ["id": cover, "size": "600"]) else { return nil }

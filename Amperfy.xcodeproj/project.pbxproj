@@ -545,6 +545,7 @@
 		9159A8EE56B854BD0502E8D6 /* HLSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 058FEEB4DB424CF5D1491D87 /* HLSplash.swift */; };
 		A7CDD3B500D1D1AA721D0E9A /* HLExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7CCF5033D14D2E7E9E93FB8 /* HLExtras.swift */; };
 		FDD697D4F058CAC828EBD0B2 /* HLMix.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BF2FF4EE56CF27F6434544 /* HLMix.swift */; };
+		94AB70A0EB60C06A7E95A1E6 /* HLCarPlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 395092190915AA09E186CBF8 /* HLCarPlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1176,6 +1177,7 @@
 		058FEEB4DB424CF5D1491D87 /* HLSplash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSplash.swift; sourceTree = "<group>"; };
 		C7CCF5033D14D2E7E9E93FB8 /* HLExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLExtras.swift; sourceTree = "<group>"; };
 		17BF2FF4EE56CF27F6434544 /* HLMix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLMix.swift; sourceTree = "<group>"; };
+		395092190915AA09E186CBF8 /* HLCarPlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLCarPlay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2195,6 +2197,7 @@
 		08DDD6DE514A52B923C9F555 /* HomeLab */ = {
 			isa = PBXGroup;
 			children = (
+				395092190915AA09E186CBF8 /* HLCarPlay.swift */,
 				17BF2FF4EE56CF27F6434544 /* HLMix.swift */,
 				C7CCF5033D14D2E7E9E93FB8 /* HLExtras.swift */,
 				058FEEB4DB424CF5D1491D87 /* HLSplash.swift */,
@@ -2482,6 +2485,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94AB70A0EB60C06A7E95A1E6 /* HLCarPlay.swift in Sources */,
 				FDD697D4F058CAC828EBD0B2 /* HLMix.swift in Sources */,
 				A7CDD3B500D1D1AA721D0E9A /* HLExtras.swift in Sources */,
 				9159A8EE56B854BD0502E8D6 /* HLSplash.swift in Sources */,
