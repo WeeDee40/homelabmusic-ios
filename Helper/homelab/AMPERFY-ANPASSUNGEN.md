@@ -26,7 +26,7 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/Screens/Player/PlayerUIHandler.swift` | Vorschau-Titel/Untertitel | «Vorschau · Künstler» |
 | `AmperfyKit/Screens/LibraryEntityImage.swift` | `vorschauInfo` / `vorschauBild` / `vorschauBildSofort` | Cover der Vorschau bzw. bei echten Radiosendern das Cover des laufenden Songs (sonst Senderbild aus Navidrome) statt Radio-Symbol |
 | `AmperfyKit/Player/NowPlayingInfoCenterHandler.swift` | Vorschau-Titel, Cover (auch Radio-Cover) | Sperrbildschirm |
-| `Amperfy/CarPlay/CarPlayHomeTabExtension.swift`, `CarPlayCommonListExtension.swift` (3 Stellen) | `HLCarPlay.nachladen(…)` nach dem Anlegen eines Eintrags | Playlist-Cover und Senderbilder auch in CarPlay |
+| `Amperfy/CarPlay/CarPlayHomeTabExtension.swift`, `CarPlayCommonListExtension.swift`, `CarPlaySceneDelegate.swift` (5 Stellen) | `HLCarPlay.nachladen(…)` nach dem Anlegen eines Eintrags | Playlist-Cover und Senderbilder auch in CarPlay |
 | `Amperfy/Screens/Player/PopupPlayer+Visuals.swift`, `PopupPlayerVC.swift` | Herz-Knopf wird bei Vorschauen zu «+» (Hinzufügen) | im Player direkt zur Bibliothek hinzufügen |
 
 **Bewusst nicht angepasst (seit 04.10.2026):** Amperfys Wiedergabe-Kern (`AudioPlayer`, `PlayerFacade`,

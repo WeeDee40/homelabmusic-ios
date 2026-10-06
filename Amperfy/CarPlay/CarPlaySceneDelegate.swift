@@ -487,6 +487,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
       )
       for rowImage in imageRowImages {
         rowImage.image = image.carPlayImage(carTraitCollection: traits)
+        HLCarPlay.nachladen(container.entity, traits: traits) { rowImage.image = $0 }   // HomeLabMusic
       }
     }
 
@@ -513,6 +514,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
             subtitle: container.item.playableContainable.subtitle
           )
           detailRow.elements[elementIndex] = newElement
+          HLCarPlay.nachladen(container.entity, traits: traits) { newElement.image = $0 }   // HomeLabMusic
           newCreatedRowImages.append(newElement)
         }
       }
