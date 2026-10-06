@@ -38,7 +38,6 @@ Pause, kein Spulen. Ein Versuch, sie wie Songs zu behandeln (Build 15–17), mac
 |---|---|
 | `Amperfy.xcodeproj/project.pbxproj` | Bundle-ID `ch.gerber.homelabmusic`, Team `C4LESUKP6H`, Version, eigene Dateien (Gruppe «HomeLab»). Konflikte hier entstehen am ehesten; eigene Dateien mit `python3 Helper/homelab/add_files.py` neu eintragen |
 | `Amperfy/Info.plist` | Anzeigename, Mikrofon-Text (Shazam), `ITSAppUsesNonExemptEncryption = false` |
-| `Amperfy/Amperfy.entitlements` | CarPlay bis zur Freigabe für diese App entfernt |
 | `Amperfy/Screens/LaunchScreen.storyboard` | Startbild `HLStart` bildschirmfüllend |
 | `AmperfyKit/Assets/AmperfyAppIcon.icon/` | App-Symbol (HLM) |
 | `AmperfyKit/Assets/Assets.xcassets/Icon-monocolor.imageset/` | HLM-Zeichen (Anmeldeseite) |
