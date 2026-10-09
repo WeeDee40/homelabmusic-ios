@@ -49,6 +49,7 @@ class SplitVC: UISplitViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
+    HLTab.einrichten(account: account) // HomeLabMusic
     setViewController(
       embeddInNavigation(vc: AppStoryboard.Main.segueToSideBar(account: account)),
       for: .primary

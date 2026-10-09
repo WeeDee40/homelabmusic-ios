@@ -15,6 +15,10 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | Datei | Was | Warum |
 |---|---|---|
 | `Amperfy/Screens/ViewController/TabBarVC.swift` | `fixTabs.append(HLTab.erstellen(account:))` | Tab «Entdecken» |
+| `Amperfy/Screens/ViewController/LibraryNavigatorConfigurator.swift` | `TabNavigatorItem.entdecken` (Titel, Symbol, `HLTab.ansicht()`) | Mac: «Entdecken» in der Seitenleiste |
+| `Amperfy/Screens/ViewController/SideBarVC.swift` | Eintrag «Entdecken» nach «Home» | Mac-Seitenleiste |
+| `Amperfy/Screens/ViewController/SplitVC.swift` | `HLTab.einrichten(account:)` in `viewDidLoad` | Mac nutzt SplitVC statt TabBarVC |
+| `Amperfy/Screens/ViewController/TabBarVC.swift` (`pushTabCategory`) | `case .entdecken: break` | Switch vollständig |
 | `Amperfy/SceneDelegate.swift` | `HLSplash.zeigen(in: window)` | Startbild kurz stehen lassen |
 | `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `menuActions.append(contentsOf: HLMenue.aktionen(…))` nach den Abspiel-Befehlen | «Mix ab diesem Song» (Untermenü Nur Bibliothek / Etwas / Viel Neues) und «Nicht mein Ding» in jedem Song-Menü |
 | `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `if isInstantMix, !HLMenue.ersetztInstantMix` | Amperfys «Instant Mix» ausgeblendet; unser Mix nutzt ihn intern als Ersatz, wenn der Musikwunsch-Dienst nicht antwortet |
@@ -38,6 +42,7 @@ Pause, kein Spulen. Ein Versuch, sie wie Songs zu behandeln (Build 15–17), mac
 | Datei | Was |
 |---|---|
 | `Amperfy.xcodeproj/project.pbxproj` | Bundle-ID `ch.gerber.homelabmusic`, Team `C4LESUKP6H`, Version, eigene Dateien (Gruppe «HomeLab»). Konflikte hier entstehen am ehesten; eigene Dateien mit `python3 Helper/homelab/add_files.py` neu eintragen |
+| `Amperfy/Amperfy.entitlements` | `com.apple.security.device.audio-input` (Mikrofon für Shazam auf dem Mac) |
 | `Amperfy/Info.plist` | Anzeigename, Mikrofon-Text (Shazam), `ITSAppUsesNonExemptEncryption = false` |
 | `Amperfy/Screens/LaunchScreen.storyboard` | Startbild `HLStart` bildschirmfüllend |
 | `AmperfyKit/Assets/AmperfyAppIcon.icon/` | App-Symbol (HLM) |
@@ -49,4 +54,5 @@ Pause, kein Spulen. Ein Versuch, sie wie Songs zu behandeln (Build 15–17), mac
 1. Bauen (`xcodebuild … build`), Konflikte in der Projektdatei lösen.
 2. Im Simulator: Tab «Entdecken» da, Startbild, Anmeldeseite, Song-Menü mit «HomeLabMusic»-Abschnitt,
    Playlist-Cover, «Mix ab diesem Song» (lädt nach 10 Songs nach), Shazam-Knopf.
-3. `Helper/homelab/testflight.sh` für den Upload.
+3. Mac-Version (Mac Catalyst) bauen: Seitenleiste mit «Entdecken».
+4. `Helper/homelab/testflight.sh` für den Upload (iPhone und Mac; nur eines: `… ios` bzw. `… mac`).

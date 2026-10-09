@@ -283,6 +283,7 @@ extension TabBarVC: MainSceneHostingViewController {
       selectedTab = homeTab
     case .search:
       selectedTab = searchTab
+    case .entdecken: break // HomeLabMusic: nur Mac-Seitenleiste
     }
     configureTraitChangesForMiniPlayer()
   }

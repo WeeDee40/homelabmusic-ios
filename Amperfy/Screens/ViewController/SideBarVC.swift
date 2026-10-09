@@ -38,6 +38,7 @@ class SideBarVC: KeyCommandCollectionViewController {
     [
       LibraryNavigatorItem(title: "Search", tab: .search),
       LibraryNavigatorItem(title: "Home", tab: .home),
+      LibraryNavigatorItem(title: "Entdecken", tab: .entdecken), // HomeLabMusic
       LibraryNavigatorItem(title: "Library", isInteractable: false),
     ]
   }()

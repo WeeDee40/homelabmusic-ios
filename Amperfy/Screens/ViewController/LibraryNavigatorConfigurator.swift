@@ -65,11 +65,13 @@ final class LibraryNavigatorItem: Hashable, Sendable {
 enum TabNavigatorItem: Int, Hashable, CaseIterable {
   case search
   case home
+  case entdecken // HomeLabMusic (Mac-Seitenleiste)
 
   var title: String {
     switch self {
     case .home: return "Home"
     case .search: return "Search"
+    case .entdecken: return "Entdecken" // HomeLabMusic
     }
   }
 
@@ -78,6 +80,7 @@ enum TabNavigatorItem: Int, Hashable, CaseIterable {
     switch self {
     case .home: return .home
     case .search: return .search
+    case .entdecken: return UIImage(systemName: "sparkles") ?? .home // HomeLabMusic
     }
   }
 
@@ -86,6 +89,7 @@ enum TabNavigatorItem: Int, Hashable, CaseIterable {
     switch self {
     case .home: return AppStoryboard.Main.segueToHome(account: account)
     case .search: return AppStoryboard.Main.segueToSearch(account: account)
+    case .entdecken: return HLTab.ansicht() // HomeLabMusic
     }
   }
 }
