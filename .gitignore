@@ -76,3 +76,4 @@ fastlane/test_output
 # HomeLabMusic: App-Store-Connect-API-Schlüssel (geheim, nur lokal)
 AuthKey_*.p8
 Helper/homelab/asc.env
+.build-mac/
