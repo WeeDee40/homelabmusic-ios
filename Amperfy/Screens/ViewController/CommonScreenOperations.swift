@@ -149,5 +149,6 @@ extension UIViewController {
 
     userBarButtonItem = UIBarButtonItem(customView: button)
     navigationItem.leftBarButtonItem = userBarButtonItem!
+    HLBibliothek.shared.knopfEinsetzen(in: navigationItem) // HomeLabMusic
   }
 }

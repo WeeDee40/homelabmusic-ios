@@ -261,6 +261,17 @@ final class HLAPI {
     return teile.url
   }
 
+  /// Subsonic-Abfrage mit den Amperfy-Zugangsdaten; liefert den Inhalt von «subsonic-response».
+  func subsonic(_ endpunkt: String, _ parameter: [String: String] = [:]) async -> [String: Any]? {
+    guard let url = subsonicURL(endpunkt, parameter.merging(["f": "json"]) { $1 }),
+          let (daten, _) = try? await session.data(from: url),
+          let json = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
+          let antwort = json["subsonic-response"] as? [String: Any],
+          antwort["status"] as? String == "ok"
+    else { return nil }
+    return antwort
+  }
+
   /// Senderbilder aus Navidrome (Radio-ID -> coverArt), leer wenn keine hochgeladen sind.
   func senderBilder() async -> [String: String] {
     guard let url = subsonicURL("getInternetRadioStations", ["f": "json"]),

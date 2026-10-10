@@ -31,6 +31,9 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `AmperfyKit/Screens/LibraryEntityImage.swift` | `vorschauInfo` / `vorschauBild` / `vorschauBildSofort` | Cover der Vorschau bzw. bei echten Radiosendern das Cover des laufenden Songs (sonst Senderbild aus Navidrome) statt Radio-Symbol |
 | `AmperfyKit/Player/NowPlayingInfoCenterHandler.swift` | Vorschau-Titel, Cover (auch Radio-Cover) | Sperrbildschirm |
 | `Amperfy/CarPlay/CarPlayHomeTabExtension.swift`, `CarPlayCommonListExtension.swift`, `CarPlaySceneDelegate.swift` (5 Stellen) | `HLCarPlay.nachladen(…)` nach dem Anlegen eines Eintrags | Playlist-Cover und Senderbilder auch in CarPlay |
+| `AmperfyKit/Storage/ResultController/BasicFetchedResultsController.swift` | `hlBibliotheksFilter` + `hlBibliotheksPraedikat`; in `NSFetchedResultsController.fetch()` ein Aufruf `hlVorDemLaden` | Bibliothek «Meine Musik» / «Kinder»: filtert alle Listen (Alben, Künstler, Songs) zentral |
+| `AmperfyKit/Storage/LibraryStorage.swift` (6 Zeilen) | `hlBibliothekFiltern(fetchRequest)` vor Zufallsalben/-künstler/-songs und der Suche | dieselbe Filterung für Startseite und Suche |
+| `Amperfy/Screens/ViewController/CommonScreenOperations.swift` (`setupUserNavButton`) | `HLBibliothek.shared.knopfEinsetzen(in:)` | Umschalter «Meine Musik ⌄ / Kinder ⌄» neben dem Konto-Knopf (Home, Bibliothek, Suche) |
 | `Amperfy/Screens/Player/PopupPlayer+Visuals.swift`, `PopupPlayerVC.swift` | Herz-Knopf wird bei Vorschauen zu «+» (Hinzufügen) | im Player direkt zur Bibliothek hinzufügen |
 
 **Bewusst nicht angepasst (seit 04.10.2026):** Amperfys Wiedergabe-Kern (`AudioPlayer`, `PlayerFacade`,

@@ -1280,6 +1280,7 @@ public class LibraryStorage: PlayableFileCachable {
         ]),
       ])
     }
+    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
     let foundArtists = try? context.fetch(fetchRequest)
     let artists = foundArtists?[randomPick: count].compactMap { Artist(managedObject: $0) }
     return artists ?? [Artist]()
@@ -1402,6 +1403,7 @@ public class LibraryStorage: PlayableFileCachable {
         ]),
       ])
     }
+    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
     let foundAlbums = try? context.fetch(fetchRequest)
     let albums = foundAlbums?[randomPick: count].compactMap { Album(managedObject: $0) }
     return albums ?? [Album]()
@@ -1651,6 +1653,7 @@ public class LibraryStorage: PlayableFileCachable {
       SongMO.excludeServerDeleteUncachedSongsFetchPredicate,
       getFetchPredicate(onlyCachedSongs: onlyCached),
     ])
+    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
     let foundSongs = try? context.fetch(fetchRequest)
     let songs = foundSongs?[randomPick: count].compactMap { Song(managedObject: $0) }
     return songs ?? [Song]()
@@ -2196,6 +2199,7 @@ public class LibraryStorage: PlayableFileCachable {
       onlyCached: onlyCached,
       displayFilter: displayFilter
     )
+    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Artist(managedObject: $0) }
     return wrapped ?? [Artist]()
@@ -2235,6 +2239,7 @@ public class LibraryStorage: PlayableFileCachable {
       onlyCached: onlyCached,
       displayFilter: displayFilter
     )
+    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Album(managedObject: $0) }
     return wrapped ?? [Album]()
@@ -2316,6 +2321,7 @@ public class LibraryStorage: PlayableFileCachable {
       onlyCached: onlyCached,
       displayFilter: displayFilter
     )
+    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Song(managedObject: $0) }
     return wrapped ?? [Song]()

@@ -22,9 +22,45 @@
 import CoreData
 import Foundation
 
+// MARK: - HomeLabMusic: Bibliotheksfilter
+
+/// Filter je Entität («Album», «Artist», «Song»), gesetzt von HLBibliothek in der App (Musik / Kinder).
+nonisolated(unsafe) public var hlBibliotheksFilter: ((String) -> NSPredicate?)?
+nonisolated(unsafe) private var hlBasisSchluessel: UInt8 = 0
+nonisolated(unsafe) private var hlFilterSchluessel: UInt8 = 0
+
+/// Ergänzt ein Prädikat um den Bibliotheksfilter; ein schon ergänztes Prädikat wird neu aufgebaut.
+public func hlBibliotheksPraedikat(_ praedikat: NSPredicate?, entitaet: String?) -> NSPredicate? {
+  let basis = praedikat.flatMap { objc_getAssociatedObject($0, &hlBasisSchluessel) as? NSPredicate } ?? praedikat
+  guard let entitaet, let filter = hlBibliotheksFilter?(entitaet) else { return basis }
+  if let praedikat, objc_getAssociatedObject(praedikat, &hlFilterSchluessel) as? NSPredicate === filter {
+    return praedikat
+  }
+  let neu = basis.map { NSCompoundPredicate(andPredicateWithSubpredicates: [$0, filter]) } ?? NSCompoundPredicate(andPredicateWithSubpredicates: [filter])
+  objc_setAssociatedObject(neu, &hlBasisSchluessel, basis, .OBJC_ASSOCIATION_RETAIN)
+  objc_setAssociatedObject(neu, &hlFilterSchluessel, filter, .OBJC_ASSOCIATION_RETAIN)
+  return neu
+}
+
+public func hlBibliothekFiltern(_ anfrage: NSFetchRequest<some NSFetchRequestResult>) {
+  anfrage.predicate = hlBibliotheksPraedikat(anfrage.predicate, entitaet: anfrage.entityName ?? anfrage.entity?.name)
+}
+
+/// Vor jedem Laden einer Liste den Bibliotheksfilter setzen (Cache verwerfen, wenn er sich ändert).
+private func hlVorDemLaden(_ objekt: AnyObject) {
+  guard let controller = objekt as? NSFetchedResultsController<NSFetchRequestResult> else { return }
+  let anfrage = controller.fetchRequest
+  let vorher = anfrage.predicate
+  anfrage.predicate = hlBibliotheksPraedikat(vorher, entitaet: anfrage.entityName ?? anfrage.entity?.name)
+  if anfrage.predicate !== vorher, let cacheName = controller.cacheName {
+    NSFetchedResultsController<NSFetchRequestResult>.deleteCache(withName: cacheName)
+  }
+}
+
 extension NSFetchedResultsController {
   @objc
   func fetch() {
+    hlVorDemLaden(self as AnyObject) // HomeLabMusic
     do {
       try performFetch()
     } catch let error as NSError {
