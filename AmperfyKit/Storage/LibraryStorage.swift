@@ -2272,6 +2272,7 @@ public class LibraryStorage: PlayableFileCachable {
       searchText: searchText,
       playlistSearchCategory: playlistSearchCategory
     )
+    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Playlist(library: self, managedObject: $0) }
     return wrapped ?? [Playlist]()

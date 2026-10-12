@@ -230,6 +230,8 @@ final class HLAPI {
     return URLSession(configuration: c)
   }()
 
+  var benutzername: String? { credentials?.username }
+
   private var credentials: LoginCredentials? {
     guard let account else { return nil }
     return AmperKit.shared.storage.settings.accounts.getSetting(account.info).read.loginCredentials

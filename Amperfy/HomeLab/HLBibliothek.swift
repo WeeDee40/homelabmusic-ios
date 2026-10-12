@@ -86,6 +86,7 @@ final class HLBibliothek {
 
   /// Album- und Künstler-IDs je Bibliothek von Navidrome holen.
   func aktualisieren() async {
+    await fremdePlaylistsLaden()
     guard let antwort = await HLAPI.shared.subsonic("getMusicFolders"),
           let ordner = (antwort["musicFolders"] as? [String: Any])?["musicFolder"] as? [[String: Any]]
     else { return }
@@ -130,13 +131,43 @@ final class HLBibliothek {
     }
   }
 
+  // MARK: Nur eigene Playlists
+
+  /// Playlists anderer Personen. Navidrome zeigt sie Admins mit an (auch private); in der App
+  /// sieht jede Person nur ihre eigenen. Ausblenden statt Einschliessen, damit neue eigene
+  /// Playlists sofort erscheinen.
+  private var fremdePlaylists: [String] {
+    get { UserDefaults.standard.stringArray(forKey: "homelabmusic.fremdePlaylists") ?? [] }
+    set { UserDefaults.standard.set(newValue, forKey: "homelabmusic.fremdePlaylists") }
+  }
+
+  private func fremdePlaylistsLaden() async {
+    guard let ich = HLAPI.shared.benutzername,
+          let antwort = await HLAPI.shared.subsonic("getPlaylists") else { return }
+    let liste = (antwort["playlists"] as? [String: Any])?["playlist"] as? [[String: Any]] ?? []
+    let fremde = liste.filter { ($0["owner"] as? String).map { $0 != ich } ?? false }
+      .compactMap { $0["id"] as? String }.sorted()
+    guard fremde != fremdePlaylists else { return }
+    let ersteLadung = fremdePlaylists.isEmpty
+    fremdePlaylists = fremde
+    filterBerechnen()
+    if ersteLadung, let info = appDelegate.storage.settings.accounts.active {
+      appDelegate.switchAccount(accountInfo: info) // Listen gleich ohne fremde Playlists neu laden
+    }
+  }
+
   // MARK: Filter
 
   /// Fertige Prädikate je Entität; wird von AmperfyKit beim Laden jeder Liste gelesen.
   nonisolated(unsafe) static var filter = [String: NSPredicate]()
 
   private func filterBerechnen() {
-    guard let wahl = gewaehlt else { Self.filter = [:]; return }
+    var filter = [String: NSPredicate]()
+    if !fremdePlaylists.isEmpty {
+      filter["Playlist"] = NSPredicate(format: "NOT (id IN %@)", fremdePlaylists)
+    }
+    defer { Self.filter = filter }
+    guard let wahl = gewaehlt else { return }
     let andere = bibliotheken.filter { $0.id != wahl.id }
     let album = praedikat(
       schluessel: "id", drin: Set(wahl.alben), andere: Set(andere.flatMap(\.alben))
@@ -147,7 +178,9 @@ final class HLBibliothek {
     let kuenstler = praedikat(
       schluessel: "id", drin: Set(wahl.kuenstler), andere: Set(andere.flatMap(\.kuenstler))
     )
-    Self.filter = ["Album": album, "Song": songs, "Artist": kuenstler]
+    filter["Album"] = album
+    filter["Song"] = songs
+    filter["Artist"] = kuenstler
   }
 
   /// Kürzere Liste gewinnt: nur die gewählten zeigen oder die der anderen Bibliotheken ausblenden.
