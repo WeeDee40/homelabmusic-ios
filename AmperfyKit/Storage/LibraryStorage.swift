@@ -607,7 +607,7 @@ public class LibraryStorage: PlayableFileCachable {
     return PodcastEpisode(managedObject: podcastEpisodeMO)
   }
 
-  func createSong(account: Account) -> Song {
+  public func createSong(account: Account) -> Song { // HomeLabMusic: public für frisch gelieferte Songs
     let songMO = SongMO(context: context)
     songMO.account = account.managedObject
     return Song(managedObject: songMO)

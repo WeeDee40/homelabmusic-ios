@@ -26,7 +26,7 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/AppDelegate.swift` (`performBackgroundFetchTask`) | `await HLBenachrichtigung.pruefen()` | gelieferte Wünsche auch im Hintergrund melden |
 | `Amperfy/Screens/ViewController/LoginVC.swift` | Titel «HomeLabMusic», Server-Adresse vorausgefüllt | Anmeldung für die Familie |
 | `AmperfyKit/Screens/EntityImageView.swift` | `playlistCover`-Haken (Playlist-ID → Bild) | eigene Playlist-Cover von Navidrome statt Mosaik |
-| `AmperfyKit/Storage/LibraryStorage.swift` | `createRadio` / `deleteRadio` auf `public` | Vorschauen als versteckte Radio-Einträge im Player |
+| `AmperfyKit/Storage/LibraryStorage.swift` | `createRadio` / `deleteRadio` / `createSong` auf `public` | Vorschauen als versteckte Radio-Einträge im Player; frisch gelieferte Songs gezielt nachladen |
 | `Amperfy/Screens/Player/PlayerUIHandler.swift` | Vorschau-Titel/Untertitel | «Vorschau · Künstler» |
 | `AmperfyKit/Screens/LibraryEntityImage.swift` | `vorschauInfo` / `vorschauBild` / `vorschauBildSofort` | Cover der Vorschau bzw. bei echten Radiosendern das Cover des laufenden Songs (sonst Senderbild aus Navidrome) statt Radio-Symbol |
 | `AmperfyKit/Player/NowPlayingInfoCenterHandler.swift` | Vorschau-Titel, Cover (auch Radio-Cover) | Sperrbildschirm |

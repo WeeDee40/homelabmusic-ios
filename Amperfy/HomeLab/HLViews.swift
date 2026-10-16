@@ -556,7 +556,7 @@ struct HLStartView: View {
   }
 
   static let statusText = ["angefragt": "⏳ kommt bald", "geliefert": "✓ da", "gefunden": "✓ hattest du",
-                           "nicht_gefunden": "– nicht gefunden"]
+                           "nicht_gefunden": "– nicht gefunden", "weg": "– nicht mehr da"]
 
   /// Neu laden, höchstens alle 3 Sekunden; der alte Inhalt bleibt bis dahin stehen.
   private func neuLaden() {

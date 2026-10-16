@@ -68,7 +68,7 @@ final class HLPlayer: ObservableObject {
   func spielen(_ songs: [HLSong], ab start: Int, kontext: String = HLPlayer.kontext) {
     Task {
       let alteRadios = gemerkteRadios()
-      guard let (playables, startIndex) = vorbereiten(songs, ab: start, neu: true) else {
+      guard let (playables, startIndex) = await vorbereiten(songs, ab: start, neu: true) else {
         zeigeHinweis("Nichts abspielbar.")
         return
       }
@@ -81,20 +81,20 @@ final class HLPlayer: ObservableObject {
   /// Songs hinten an die laufende Warteschlange hängen (Mix lädt nach).
   func anhaengen(_ songs: [HLSong]) {
     Task {
-      guard let (playables, _) = vorbereiten(songs, ab: 0, neu: false) else { return }
+      guard let (playables, _) = await vorbereiten(songs, ab: 0, neu: false) else { return }
       amperfy.appendContextQueue(playables: playables)
     }
   }
 
   /// Playables für Amperfy: Bibliotheks-Songs direkt, Vorschauen als versteckte Radio-Einträge (30 s, ohne
   /// Spulen; bewusst ohne Eingriff in Amperfys Wiedergabe-Kern).
-  private func vorbereiten(_ songs: [HLSong], ab start: Int, neu: Bool) -> ([AbstractPlayable], Int)? {
+  private func vorbereiten(_ songs: [HLSong], ab start: Int, neu: Bool) async -> ([AbstractPlayable], Int)? {
     guard let account = HLAPI.shared.account else { return nil }
     var playables = [AbstractPlayable](), startIndex = 0, radios = [String]()
     var neueZuordnung = neu ? [String: HLSong]() : zuordnung
     for (i, s) in songs.enumerated() {
       if i == start { startIndex = playables.count }
-      if !s.istVorschau, let id = s.navidromeId, let song = bibliothek.getSong(for: account, id: id) {
+      if !s.istVorschau, let id = s.navidromeId, let song = await bibliotheksSong(id, account: account) {
         playables.append(song)
         neueZuordnung[song.id] = s
       } else if s.istVorschau, let url = HLAPI.shared.url(s.vorschau) {
@@ -113,6 +113,27 @@ final class HLPlayer: ObservableObject {
     zuordnung = neueZuordnung
     merken((neu ? [] : gemerkteRadios()) + radios)
     return (playables, startIndex)
+  }
+
+  /// Song aus Amperfys Bibliothek. Fehlt er dort (frisch geliefert und noch nicht abgeglichen), wird er
+  /// gezielt bei Navidrome nachgeladen (Subsonic getSong über Amperfys eigenen Abgleich).
+  private func bibliotheksSong(_ id: String, account: Account) async -> Song? {
+    if let song = bibliothek.getSong(for: account, id: id), !song.title.isEmpty { return song }
+    let song = bibliothek.getSong(for: account, id: id) ?? {
+      let neu = bibliothek.createSong(account: account)
+      neu.id = id
+      return neu
+    }()
+    bibliothek.saveContext()
+    let syncer = (UIApplication.shared.delegate as! AppDelegate).getMeta(account.info).librarySyncer
+    try? await syncer.sync(song: song)
+    if let geladen = bibliothek.getSong(for: account, id: id), !geladen.title.isEmpty {
+      if geladen.remoteStatus == .deleted { geladen.remoteStatus = .available; bibliothek.saveContext() }
+      return geladen
+    }
+    song.remoteStatus = .deleted                       // gibt es auf dem Server nicht: Platzhalter verstecken
+    bibliothek.saveContext()
+    return nil
   }
 
   /// Amperfy-Songs direkt abspielen (Ersatz-Mix über Navidromes Instant Mix).
