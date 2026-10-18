@@ -21,7 +21,7 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/Screens/ViewController/TabBarVC.swift` (`pushTabCategory`) | `case .entdecken: break` | Switch vollständig |
 | `Amperfy/SceneDelegate.swift` | `HLSplash.zeigen(in: window)` | Startbild kurz stehen lassen |
 | `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `menuActions.append(contentsOf: HLMenue.aktionen(…))` nach den Abspiel-Befehlen | «Mix ab diesem Song» (Untermenü Nur Bibliothek / Etwas / Viel Neues) und «Nicht mein Ding» in jedem Song-Menü |
-| `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `if isInstantMix, !HLMenue.ersetztInstantMix` | Amperfys «Instant Mix» ausgeblendet; unser Mix nutzt ihn intern als Ersatz, wenn der Musikwunsch-Dienst nicht antwortet |
+| `Amperfy/Screens/ViewController/EntityPreviewVC.swift` | `if isInstantMix, !HLMenue.ersetztInstantMix` | Amperfys «Instant Mix» ausgeblendet; unser Mix nutzt ihn intern als Ersatz, wenn der Medienwunsch-Dienst nicht antwortet |
 | `Amperfy/AppDelegateNotificationExtensions.swift` | `if HLBenachrichtigung.behandeln(userInfo) { return }` | Antippen von «Dein Wunsch ist da» spielt den Song |
 | `Amperfy/AppDelegate.swift` (`performBackgroundFetchTask`) | `await HLBenachrichtigung.pruefen()` | gelieferte Wünsche auch im Hintergrund melden |
 | `Amperfy/Screens/ViewController/LoginVC.swift` | Titel «HomeLabMusic», Server-Adresse vorausgefüllt | Anmeldung für die Familie |

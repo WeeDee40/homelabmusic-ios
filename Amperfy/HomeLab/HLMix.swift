@@ -5,7 +5,7 @@
 //  «Mix ab diesem Song»: endloser Mix nach Klang (AudioMuse), mit regelbarem Anteil neuer Songs und Lernen im
 //  laufenden Mix (ganz gehört, Stern, Wunsch -> hin; früh übersprungen, «Nicht mein Ding» -> weg). Der Server
 //  rechnet zustandslos: die App schickt bei jedem Nachladen die bisherigen Songs und Reaktionen mit.
-//  Antwortet der Musikwunsch-Dienst nicht, spielt Navidromes Instant Mix (nur Bibliothek).
+//  Antwortet der Medienwunsch-Dienst nicht, spielt Navidromes Instant Mix (nur Bibliothek).
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -114,14 +114,14 @@ final class HLMix: ObservableObject {
     }
   }
 
-  /// Ersatz, wenn der Musikwunsch-Dienst nicht antwortet: Navidromes Instant Mix (nur Bibliothek).
+  /// Ersatz, wenn der Medienwunsch-Dienst nicht antwortet: Navidromes Instant Mix (nur Bibliothek).
   private func ersatzMix(navidromeId: String) async -> Bool {
     guard let account = HLAPI.shared.account,
           let song = AmperKit.shared.storage.main.library.getSong(for: account, id: navidromeId),
           let aehnlich = try? await (UIApplication.shared.delegate as! AppDelegate).getMeta(account.info)
             .librarySyncer.requestSimilarSongs(song: song, count: 99), !aehnlich.isEmpty else { return false }
     HLPlayer.shared.spielenAmperfy([song] + aehnlich, kontext: "Instant Mix")
-    HLPlayer.shared.zeigeHinweis("Musikwunsch nicht erreichbar – Instant Mix aus der Bibliothek.")
+    HLPlayer.shared.zeigeHinweis("Medienwunsch nicht erreichbar – Instant Mix aus der Bibliothek.")
     return true
   }
 }

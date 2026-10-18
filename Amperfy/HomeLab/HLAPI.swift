@@ -2,7 +2,7 @@
 //  HLAPI.swift
 //  HomeLabMusic
 //
-//  Schnittstelle zum Musikwunsch-Dienst (/entdecken/…): Suche, Künstler, Alben, Sender,
+//  Schnittstelle zum Medienwunsch-Dienst (/entdecken/…): Suche, Künstler, Alben, Sender,
 //  Wünsche. Die App meldet sich mit den Navidrome-Zugangsdaten des Amperfy-Kontos an
 //  (Subsonic-Verfahren, Passwort wird nie übertragen) und bekommt das Token der Person.
 //
@@ -237,7 +237,7 @@ final class HLAPI {
     return AmperKit.shared.storage.settings.accounts.getSetting(account.info).read.loginCredentials
   }
 
-  /// Musikwunsch läuft auf demselben Rechner wie Navidrome, Port 30370.
+  /// Der Medienwunsch-Dienst läuft auf demselben Rechner wie Navidrome, Port 30370.
   var basisURL: URL? {
     guard let cred = credentials else { return nil }
     let server = cred.activeBackendServerUrl.isEmpty ? cred.serverUrl : cred.activeBackendServerUrl
@@ -330,7 +330,7 @@ final class HLAPI {
     req.httpBody = try JSONEncoder().encode(["u": cred.username, "t": hash, "s": salz])
     let (daten, antwort) = try await session.data(for: req)
     guard (antwort as? HTTPURLResponse)?.statusCode == 200 else {
-      throw HLAPIFehler.server(Self.meldung(daten) ?? "Anmeldung beim Musikwunsch-Dienst fehlgeschlagen.")
+      throw HLAPIFehler.server(Self.meldung(daten) ?? "Anmeldung beim Medienwunsch-Dienst fehlgeschlagen.")
     }
     let a = try Self.decoder.decode(HLAnmeldung.self, from: daten)
     token = a.token
