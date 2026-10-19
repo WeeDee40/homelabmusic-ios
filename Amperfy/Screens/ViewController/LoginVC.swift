@@ -96,8 +96,8 @@ class LoginVC: UIViewController {
   fileprivate lazy var serverUrlTF: UITextField = {
     let textField = UITextField()
     textField.configuteForLogin(image: .serverUrl)
-    textField.placeholder = "http://100.104.108.124:30043"
-    textField.text = "http://100.104.108.124:30043" // HomeLabMusic: Navidrome über Tailscale vorausgefüllt
+    textField.placeholder = "https://musik.bi-gerbers.ch"
+    textField.text = "https://musik.bi-gerbers.ch" // HomeLabMusic: Navidrome über Caddy (zu Hause und im Tailnet) vorausgefüllt
     textField.textContentType = .URL
     textField.keyboardType = .URL
     textField.autocorrectionType = .no

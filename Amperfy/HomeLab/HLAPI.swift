@@ -237,15 +237,21 @@ final class HLAPI {
     return AmperKit.shared.storage.settings.accounts.getSetting(account.info).read.loginCredentials
   }
 
-  /// Der Medienwunsch-Dienst läuft auf demselben Rechner wie Navidrome, Port 30370.
+  /// Der Medienwunsch-Dienst läuft auf demselben Rechner wie Navidrome.
+  /// Server ohne Port (z. B. https://musik.bi-gerbers.ch): gleiche Adresse, der Proxy (Caddy) leitet
+  /// /entdecken/… und /wunsch an Medienwunsch weiter. Server mit Port (alte Adresse …:30043): Port 30370 per http.
   var basisURL: URL? {
     guard let cred = credentials else { return nil }
     let server = cred.activeBackendServerUrl.isEmpty ? cred.serverUrl : cred.activeBackendServerUrl
     guard let url = URL(string: server), let host = url.host else { return nil }
     var teile = URLComponents()
-    teile.scheme = "http"
     teile.host = host
-    teile.port = Self.port
+    if url.port == nil, let scheme = url.scheme {
+      teile.scheme = scheme
+    } else {
+      teile.scheme = "http"
+      teile.port = Self.port
+    }
     return teile.url
   }
 
