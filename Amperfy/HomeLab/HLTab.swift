@@ -46,4 +46,18 @@ enum HLTab {
   static func ansicht() -> UIViewController {
     UIHostingController(rootView: HLEntdeckenView())
   }
+
+  /// Künstler, Album oder Mix aus der Suche: Seite im UIKit-Stapel statt im NavigationStack des Tabs.
+  static func zielAnsicht(_ ziel: HLZiel, navigation: UINavigationController) -> UIViewController {
+    let oeffnen: @MainActor (HLZiel) -> () = { [weak navigation] weiter in
+      guard let navigation else { return }
+      navigation.pushViewController(zielAnsicht(weiter, navigation: navigation), animated: true)
+    }
+    let ansicht = HLZielView(ziel: ziel)
+      .environment(\.hlOeffnen, oeffnen)
+      .modifier(HLSpielRahmen(oeffnen: oeffnen))
+    let host = UIHostingController(rootView: ansicht)
+    host.navigationItem.largeTitleDisplayMode = .never
+    return host
+  }
 }

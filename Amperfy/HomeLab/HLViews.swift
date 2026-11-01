@@ -2,7 +2,7 @@
 //  HLViews.swift
 //  HomeLabMusic
 //
-//  Tab «Entdecken»: Läuft gerade, Suche, Künstler, Alben, Mix, Wünschen.
+//  Tab «Entdecken»: Läuft gerade, Künstler, Alben, Mix, Wünschen. Die Suche steckt in Amperfys Suche (HLSuche.swift).
 //  Vorbild ist die Web-Seite /app des Medienwunsch-Dienstes.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -17,16 +17,13 @@ import UIKit
 // MARK: - Navigation
 
 enum HLZiel: Hashable {
-  case suche(String)
   case kuenstler(Int)
   case album(Int)
   case sender(art: String, id: String)
 }
 
 struct HLEntdeckenView: View {
-  @ObservedObject private var player = HLPlayer.shared
   @State private var pfad = NavigationPath()
-  @State private var suchtext = ""
   @State private var shazamOffen = false
   @State private var abgelehntOffen = false
 
@@ -34,11 +31,6 @@ struct HLEntdeckenView: View {
     NavigationStack(path: $pfad) {
       HLStartView()
         .navigationTitle("Entdecken")
-        .searchable(text: $suchtext, prompt: "Künstler, Song, Genre oder Stimmung")
-        .onSubmit(of: .search) {
-          let q = suchtext.trimmingCharacters(in: .whitespaces)
-          if !q.isEmpty { pfad.append(HLZiel.suche(q)) }
-        }
         .toolbar {
           ToolbarItem(placement: .topBarTrailing) {
             Button { shazamOffen = true } label: { Image(systemName: "shazam.logo") }
@@ -54,30 +46,68 @@ struct HLEntdeckenView: View {
         .sheet(isPresented: $shazamOffen) {
           HLShazamView { ziel in pfad.append(ziel) }
         }
-        .navigationDestination(for: HLZiel.self) { ziel in
-          switch ziel {
-          case let .suche(q): HLSucheView(q: q)
-          case let .kuenstler(id): HLKuenstlerView(id: id)
-          case let .album(id): HLAlbumView(id: id)
-          case let .sender(art, id): HLMixView(art: art, id: id)
-          }
-        }
+        .navigationDestination(for: HLZiel.self) { HLZielView(ziel: $0) }
     }
     .environment(\.hlOeffnen) { pfad.append($0) }
-    .safeAreaInset(edge: .bottom) {
-      if player.aktuell != nil { HLMiniPlayer { pfad.append($0) } }
+    .modifier(HLSpielRahmen { pfad.append($0) })
+  }
+}
+
+struct HLZielView: View {
+  let ziel: HLZiel
+
+  var body: some View {
+    switch ziel {
+    case let .kuenstler(id): HLKuenstlerView(id: id)
+    case let .album(id): HLAlbumView(id: id)
+    case let .sender(art, id): HLMixView(art: art, id: id)
     }
-    .overlay(alignment: .bottom) {
-      if let text = player.hinweis {
-        Text(text)
-          .font(.subheadline)
-          .padding(.horizontal, 16).padding(.vertical, 10)
-          .background(.thinMaterial, in: Capsule())
-          .padding(.bottom, player.aktuell != nil ? 90 : 24)
-          .transition(.opacity)
+  }
+}
+
+/// Leiste zum laufenden Song und Hinweise über einer ganzen Seite.
+struct HLSpielRahmen: ViewModifier {
+  let oeffnen: @MainActor (HLZiel) -> ()
+  @ObservedObject private var player = HLPlayer.shared
+
+  func body(content: Content) -> some View {
+    content
+      .safeAreaInset(edge: .bottom) {
+        if player.aktuell != nil { HLMiniPlayer(oeffnen: oeffnen) }
       }
+      .overlay(alignment: .bottom) {
+        if let text = player.hinweis {
+          HLHinweis(text: text).padding(.bottom, player.aktuell != nil ? 90 : 24)
+        }
+      }
+      .animation(.default, value: player.hinweis)
+  }
+}
+
+/// Dasselbe für die Suche, deren Tabelle aus Amperfy kommt: Die Ansicht ist nur so gross wie ihr Inhalt.
+struct HLSpielLeiste: View {
+  let oeffnen: @MainActor (HLZiel) -> ()
+  @ObservedObject private var player = HLPlayer.shared
+
+  var body: some View {
+    VStack(spacing: 8) {
+      if let text = player.hinweis { HLHinweis(text: text) }
+      if player.aktuell != nil { HLMiniPlayer(oeffnen: oeffnen) }
     }
+    .frame(maxWidth: .infinity)
     .animation(.default, value: player.hinweis)
+  }
+}
+
+struct HLHinweis: View {
+  let text: String
+
+  var body: some View {
+    Text(text)
+      .font(.subheadline)
+      .padding(.horizontal, 16).padding(.vertical, 10)
+      .background(.thinMaterial, in: Capsule())
+      .transition(.opacity)
   }
 }
 
@@ -576,45 +606,6 @@ struct HLStartView: View {
   }
 }
 
-struct HLSucheView: View {
-  let q: String
-
-  var body: some View {
-    HLLaden(laden: { try await HLAPI.shared.suche(q) }) { d in
-      List {
-        // Genre/Stimmung erkannt: diese Abschnitte zuerst, die Titelsuche danach
-        ForEach(d.abschnitte ?? [], id: \.self) { a in
-          Section {
-            ForEach(a.songs.prefix(10).indices, id: \.self) { HLSongZeile(songs: a.songs, i: $0) }
-          } header: {
-            HStack(alignment: .bottom) {
-              VStack(alignment: .leading, spacing: 1) {
-                Text(a.titel)
-                if let u = a.untertitel { Text(u).font(.caption).textCase(nil) }
-              }
-              Spacer()
-              Button { HLPlayer.shared.spielen(a.songs, ab: 0) } label: {
-                Label("Alle", systemImage: "play.fill").font(.caption.weight(.semibold))
-              }
-              .buttonStyle(.plain).foregroundStyle(Color.accentColor).textCase(nil)
-            }
-          }
-        }
-        if !d.kuenstler.isEmpty { Section("Künstler") { HLKuenstlerBand(liste: d.kuenstler) } }
-        if !d.songs.isEmpty || d.abschnitte?.isEmpty != false {
-          Section("Songs") {
-            if d.songs.isEmpty { Text("Nichts gefunden.").foregroundStyle(.secondary) }
-            ForEach(d.songs.indices, id: \.self) { HLSongZeile(songs: d.songs, i: $0) }
-          }
-        }
-        if !d.alben.isEmpty { Section("Alben") { HLAlbumGitter(liste: d.alben) } }
-      }
-    }
-    .navigationTitle(q)
-    .navigationBarTitleDisplayMode(.inline)
-  }
-}
-
 struct HLKuenstlerView: View {
   let id: Int
   @State private var folgt: Bool?
@@ -751,7 +742,7 @@ struct HLAlbumView: View {
 // MARK: - Leiste zum laufenden Song (Abspielen/Weiter macht der Amperfy-Mini-Player darunter)
 
 struct HLMiniPlayer: View {
-  let oeffnen: (HLZiel) -> ()
+  let oeffnen: @MainActor (HLZiel) -> ()
   @ObservedObject private var player = HLPlayer.shared
 
   var body: some View {

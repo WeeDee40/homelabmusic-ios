@@ -31,6 +31,7 @@ public enum SearchSection: Int, CaseIterable {
   case Album
   case Playlist
   case Song
+  case Entdecken // HomeLabMusic
 }
 
 // MARK: - SearchDiffableDataSource
@@ -58,6 +59,8 @@ class SearchDiffableDataSource: BasicUITableViewDiffableDataSource {
       return "Albums"
     case .Song:
       return "Songs"
+    case .Entdecken: // HomeLabMusic
+      return "Entdecken"
     case .none:
       return ""
     }
@@ -85,6 +88,7 @@ class SearchVC: BasicTableViewController {
   private var accountObjectId: NSManagedObjectID?
   private let account: Account
   private var accountNotificationHandler: AccountNotificationHandler?
+  private let hlSuche = HLSuchEinbau() // HomeLabMusic
 
   init(account: Account) {
     self.account = account
@@ -135,6 +139,10 @@ class SearchVC: BasicTableViewController {
       songs.compactMap { $0.managedObject.objectID },
       toSection: SearchSection.Song.rawValue
     )
+    // HomeLabMusic: eine Zeile mit allen Treffern; die Konto-ID ist nur ihr Platzhalter in der Tabelle
+    if isSearchActive, hlSuche.modell.sichtbar, let accountObjectId {
+      snapshot.appendItems([accountObjectId], toSection: SearchSection.Entdecken.rawValue)
+    }
     dataSource.apply(snapshot, animatingDifferences: animated)
   }
 
@@ -159,6 +167,14 @@ class SearchVC: BasicTableViewController {
     tableView.sectionFooterHeight = 0.0
     tableView.estimatedSectionFooterHeight = 0.0
     tableView.backgroundColor = .backgroundColor
+    tableView.keyboardDismissMode = .onDrag // HomeLabMusic
+
+    // HomeLabMusic: Abschnitt «Entdecken»
+    hlSuche.leisteEinbauen(in: self)
+    hlSuche.modell.geaendert = { [weak self] in
+      self?.updateDataSource(animated: false)
+      self?.updateContentUnavailable()
+    }
 
     containableAtIndexPathCallback = { indexPath in
       switch SearchSection(rawValue: indexPath.section) {
@@ -172,7 +188,7 @@ class SearchVC: BasicTableViewController {
         return self.albums[indexPath.row]
       case .Song:
         return self.songs[indexPath.row]
-      case .none:
+      case .Entdecken, .none:
         return nil
       }
     }
@@ -194,7 +210,7 @@ class SearchVC: BasicTableViewController {
       case .Song:
         let entity = self.songs[indexPath.row]
         return PlayContext(containable: entity)
-      case .none:
+      case .Entdecken, .none:
         return nil
       }
     }
@@ -228,7 +244,7 @@ class SearchVC: BasicTableViewController {
     extendSafeAreaToAccountForMiniPlayer()
     appDelegate.userStatistics.visited(.search)
     configureSearchController(
-      placeholder: "Search in \"Library\"",
+      placeholder: "Künstler, Song, Genre", // HomeLabMusic
       scopeButtonTitles: ["All", "Cached"]
     )
   }
@@ -334,7 +350,7 @@ class SearchVC: BasicTableViewController {
     case .Song:
       let song = songs[indexPath.row]
       completionHandler(SwipeActionContext(containable: song))
-    case .none:
+    case .Entdecken, .none:
       completionHandler(nil)
     }
   }
@@ -396,6 +412,8 @@ class SearchVC: BasicTableViewController {
       let song = songs[indexPath.row]
       cell.display(playable: song, playContextCb: convertCellViewToPlayContext, rootView: self)
       return cell
+    case .Entdecken: // HomeLabMusic
+      return hlSuche.zelle()
     case .none:
       return UITableViewCell()
     }
@@ -420,6 +438,9 @@ class SearchVC: BasicTableViewController {
         .tableSectionHeightLarge : 0
     case .Song:
       return (isSearchActive && !songs.isEmpty) ? CommonScreenOperations.tableSectionHeightLarge : 0
+    case .Entdecken: // HomeLabMusic
+      return (isSearchActive && hlSuche.modell.sichtbar) ? CommonScreenOperations
+        .tableSectionHeightLarge : 0
     case .none:
       return 0.0
     }
@@ -449,6 +470,8 @@ class SearchVC: BasicTableViewController {
       return GenericTableCell.rowHeight
     case .Song:
       return PlayableTableCell.rowHeight
+    case .Entdecken: // HomeLabMusic
+      return UITableView.automaticDimension
     case .none:
       return 0.0
     }
@@ -487,7 +510,7 @@ class SearchVC: BasicTableViewController {
     case .Song:
       let song = songs[indexPath.row]
       let _ = appDelegate.storage.main.library.createOrUpdateSearchHistory(container: song)
-    case .none: break
+    case .Entdecken, .none: break
     }
     appDelegate.storage.main.library.saveContext()
   }
@@ -501,6 +524,8 @@ class SearchVC: BasicTableViewController {
 
   override func updateSearchResults(for searchController: UISearchController) {
     guard let searchText = searchController.searchBar.text, let accountObjectId else { return }
+    // HomeLabMusic: im Tab «Cached» nur, was offline da ist
+    hlSuche.modell.suchen(searchController.searchBar.selectedScopeButtonIndex == 0 ? searchText : "")
     if !searchText.isEmpty, searchController.searchBar.selectedScopeButtonIndex == 0 {
       Task { @MainActor in do {
         try await self.appDelegate.getMeta(self.account.info).librarySyncer
@@ -677,7 +702,7 @@ class SearchVC: BasicTableViewController {
 
   func updateContentUnavailable() {
     if isSearchActive {
-      if artists.isEmpty, albums.isEmpty, playlists.isEmpty, songs.isEmpty {
+      if artists.isEmpty, albums.isEmpty, playlists.isEmpty, songs.isEmpty, !hlSuche.modell.sichtbar {
         contentUnavailableConfiguration = UIContentUnavailableConfiguration.search()
       } else {
         contentUnavailableConfiguration = nil

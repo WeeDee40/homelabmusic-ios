@@ -33,6 +33,7 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/CarPlay/CarPlayHomeTabExtension.swift`, `CarPlayCommonListExtension.swift`, `CarPlaySceneDelegate.swift` (5 Stellen) | `HLCarPlay.nachladen(…)` nach dem Anlegen eines Eintrags | Playlist-Cover und Senderbilder auch in CarPlay |
 | `AmperfyKit/Storage/ResultController/BasicFetchedResultsController.swift` | `hlBibliotheksFilter` + `hlBibliotheksPraedikat`; in `NSFetchedResultsController.fetch()` ein Aufruf `hlVorDemLaden` | Bibliothek «Meine Musik» / «Kinder»: filtert alle Listen (Alben, Künstler, Songs) zentral; blendet Playlists anderer Personen aus |
 | `AmperfyKit/Storage/LibraryStorage.swift` (7 Zeilen) | `hlBibliothekFiltern(fetchRequest)` vor Zufallsalben/-künstler/-songs und der Suche (inkl. Playlists) | dieselbe Filterung für Startseite und Suche |
+| `Amperfy/Screens/ViewController/SearchVC.swift` | Abschnitt «Entdecken» unter den Bibliothekstreffern (`SearchSection.Entdecken`, `HLSuchEinbau`), Suchfeld-Text, Tastatur schliesst beim Scrollen | Bibliothek und Medienwunsch in einer Suche, wie bei HomeLabTV; der Tab «Entdecken» hat keine eigene Suche mehr |
 | `Amperfy/Screens/ViewController/CommonScreenOperations.swift` (`setupUserNavButton`) | `HLBibliothek.shared.knopfEinsetzen(in:)` | Umschalter «Meine Musik ⌄ / Kinder ⌄» neben dem Konto-Knopf (Home, Bibliothek, Suche) |
 | `Amperfy/Screens/Player/PopupPlayer+Visuals.swift`, `PopupPlayerVC.swift` | Herz-Knopf wird bei Vorschauen zu «+» (Hinzufügen) | im Player direkt zur Bibliothek hinzufügen |
 
@@ -56,6 +57,6 @@ Pause, kein Spulen. Ein Versuch, sie wie Songs zu behandeln (Build 15–17), mac
 
 1. Bauen (`xcodebuild … build`), Konflikte in der Projektdatei lösen.
 2. Im Simulator: Tab «Entdecken» da, Startbild, Anmeldeseite, Song-Menü mit «HomeLabMusic»-Abschnitt,
-   Playlist-Cover, «Mix ab diesem Song» (lädt nach 10 Songs nach), Shazam-Knopf.
+   Playlist-Cover, «Mix ab diesem Song» (lädt nach 10 Songs nach), Shazam-Knopf, Suche mit Abschnitt «Entdecken».
 3. Mac-Version (Mac Catalyst) bauen: Seitenleiste mit «Entdecken».
 4. `Helper/homelab/testflight.sh` für den Upload (iPhone und Mac; nur eines: `… ios` bzw. `… mac`).

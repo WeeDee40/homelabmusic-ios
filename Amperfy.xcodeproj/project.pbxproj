@@ -547,6 +547,7 @@
 		FDD697D4F058CAC828EBD0B2 /* HLMix.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BF2FF4EE56CF27F6434544 /* HLMix.swift */; };
 		94AB70A0EB60C06A7E95A1E6 /* HLCarPlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 395092190915AA09E186CBF8 /* HLCarPlay.swift */; };
 		113ECF5D3FD5B7F696828C59 /* HLBibliothek.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0E15EB67E1B7FA0F33AEC8 /* HLBibliothek.swift */; };
+		D18B277ECFA8378D4BF4F7FE /* HLSuche.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C91F5D10EA3AFFB436ED4D5 /* HLSuche.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1180,6 +1181,7 @@
 		17BF2FF4EE56CF27F6434544 /* HLMix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLMix.swift; sourceTree = "<group>"; };
 		395092190915AA09E186CBF8 /* HLCarPlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLCarPlay.swift; sourceTree = "<group>"; };
 		FF0E15EB67E1B7FA0F33AEC8 /* HLBibliothek.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLBibliothek.swift; sourceTree = "<group>"; };
+		2C91F5D10EA3AFFB436ED4D5 /* HLSuche.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSuche.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2199,6 +2201,7 @@
 		08DDD6DE514A52B923C9F555 /* HomeLab */ = {
 			isa = PBXGroup;
 			children = (
+				2C91F5D10EA3AFFB436ED4D5 /* HLSuche.swift */,
 				FF0E15EB67E1B7FA0F33AEC8 /* HLBibliothek.swift */,
 				395092190915AA09E186CBF8 /* HLCarPlay.swift */,
 				17BF2FF4EE56CF27F6434544 /* HLMix.swift */,
@@ -2488,6 +2491,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D18B277ECFA8378D4BF4F7FE /* HLSuche.swift in Sources */,
 				113ECF5D3FD5B7F696828C59 /* HLBibliothek.swift in Sources */,
 				94AB70A0EB60C06A7E95A1E6 /* HLCarPlay.swift in Sources */,
 				FDD697D4F058CAC828EBD0B2 /* HLMix.swift in Sources */,
