@@ -27,6 +27,7 @@ import SwiftUI
 struct SettingsView: View {
   @EnvironmentObject
   private var settings: Settings
+  @State private var neuigkeitenOffen = false // HomeLabMusic
 
   func screenLockPreventionOffPressed() {
     settings.screenLockPreventionPreference = .never
@@ -62,6 +63,9 @@ struct SettingsView: View {
           SettingsRow(title: "Build Number") {
             SecondaryText(AppDelegate.buildNumber)
           }
+          // HomeLabMusic
+          Button("Neuigkeiten") { neuigkeitenOffen = true }
+            .sheet(isPresented: $neuigkeitenOffen) { HLNeuigkeitenView(eintraege: HLNeuigkeiten.alle) }
         }
 
         SettingsSection(

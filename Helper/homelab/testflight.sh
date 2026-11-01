@@ -36,5 +36,11 @@ for ziel in "${ZIELE[@]}"; do
     exit 1
   fi
   echo "$ziel: Upload ok"
+  # Neuesten Eintrag aus NEUIGKEITEN.md (auch in der App zu sehen) als TestFlight-Text setzen
+  if [ ${#AUTH[@]} -gt 0 ]; then
+    [ "$ziel" = mac ] && asc_plattform=MAC_OS || asc_plattform=IOS
+    ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_KEY_PATH="$ASC_KEY_PATH" python3 Helper/homelab/neuigkeiten_testflight.py \
+      Amperfy/HomeLab/NEUIGKEITEN.md ch.gerber.homelabmusic "$neu" "$asc_plattform" || echo "WARNUNG: TestFlight-Text nicht gesetzt, der Build ist aber hochgeladen."
+  fi
 done
 git commit -q -m "TestFlight: Build $neu" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" "$P" && echo "Build $neu hochgeladen und committet"

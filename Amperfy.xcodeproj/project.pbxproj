@@ -548,6 +548,8 @@
 		94AB70A0EB60C06A7E95A1E6 /* HLCarPlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 395092190915AA09E186CBF8 /* HLCarPlay.swift */; };
 		113ECF5D3FD5B7F696828C59 /* HLBibliothek.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0E15EB67E1B7FA0F33AEC8 /* HLBibliothek.swift */; };
 		D18B277ECFA8378D4BF4F7FE /* HLSuche.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C91F5D10EA3AFFB436ED4D5 /* HLSuche.swift */; };
+		556C3D8A4ADDF627DC6A094B /* HLNeuigkeiten.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFDFAE30458AAEDC70DB5ED0 /* HLNeuigkeiten.swift */; };
+		653BED801A7B496DF7EA163F /* NEUIGKEITEN.md in Resources */ = {isa = PBXBuildFile; fileRef = 24597A16067654126A4F5B5E /* NEUIGKEITEN.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1182,6 +1184,8 @@
 		395092190915AA09E186CBF8 /* HLCarPlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLCarPlay.swift; sourceTree = "<group>"; };
 		FF0E15EB67E1B7FA0F33AEC8 /* HLBibliothek.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLBibliothek.swift; sourceTree = "<group>"; };
 		2C91F5D10EA3AFFB436ED4D5 /* HLSuche.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSuche.swift; sourceTree = "<group>"; };
+		AFDFAE30458AAEDC70DB5ED0 /* HLNeuigkeiten.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLNeuigkeiten.swift; sourceTree = "<group>"; };
+		24597A16067654126A4F5B5E /* NEUIGKEITEN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = NEUIGKEITEN.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2201,6 +2205,8 @@
 		08DDD6DE514A52B923C9F555 /* HomeLab */ = {
 			isa = PBXGroup;
 			children = (
+				24597A16067654126A4F5B5E /* NEUIGKEITEN.md */,
+				AFDFAE30458AAEDC70DB5ED0 /* HLNeuigkeiten.swift */,
 				2C91F5D10EA3AFFB436ED4D5 /* HLSuche.swift */,
 				FF0E15EB67E1B7FA0F33AEC8 /* HLBibliothek.swift */,
 				395092190915AA09E186CBF8 /* HLCarPlay.swift */,
@@ -2381,6 +2387,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				653BED801A7B496DF7EA163F /* NEUIGKEITEN.md in Resources */,
 				502E56BD27561C2700638BD2 /* UserQueueSectionHeader.xib in Resources */,
 				50A30E502B73DFE500722894 /* PlayerControlView.xib in Resources */,
 				5078AFB42B44AE260038FD17 /* AppIntentVocabulary.plist in Resources */,
@@ -2491,6 +2498,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				556C3D8A4ADDF627DC6A094B /* HLNeuigkeiten.swift in Sources */,
 				D18B277ECFA8378D4BF4F7FE /* HLSuche.swift in Sources */,
 				113ECF5D3FD5B7F696828C59 /* HLBibliothek.swift in Sources */,
 				94AB70A0EB60C06A7E95A1E6 /* HLCarPlay.swift in Sources */,

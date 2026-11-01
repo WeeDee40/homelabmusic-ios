@@ -24,6 +24,8 @@ import Foundation
 @MainActor
 class WelcomePopupPresenter: NSObject {
   func displayInfoPopupsIfNeeded() {
+    // HomeLabMusic: Wer die Sync-Info noch nicht gelesen hat, hat die App frisch installiert
+    HLNeuigkeiten.zeigenFallsNeu(neuInstalliert: !appDelegate.storage.settings.app.isLibrarySyncInfoReadByUser)
     if !appDelegate.storage.settings.app.isLibrarySyncInfoReadByUser {
       displaySyncInfo()
     } else {
