@@ -11,6 +11,7 @@
 //  (at your option) any later version.
 //
 
+import AmperfyKit
 import SwiftUI
 import UIKit
 
@@ -35,7 +36,12 @@ final class HLSuchModell: ObservableObject {
 
   var sichtbar: Bool { laedt || fehler != nil || ergebnis?.hatInhalt == true }
 
-  /// Mit Pause, weil die Suche bei jedem Tastendruck kommt: ab drei Wörtern fragt der Dienst Claude (kostet etwas).
+  /// Mit Pause, weil die Suche bei jedem Tastendruck kommt. Kurz für Namen, lang ab drei Wörtern:
+  /// dann fragt der Dienst Claude (kostet etwas), also erst, wenn die Eingabe steht.
+  static func pause(fuer q: String) -> Duration {
+    q.split(separator: " ").count >= 3 ? .milliseconds(1250) : .milliseconds(400)
+  }
+
   func suchen(_ eingabe: String) {
     let q = eingabe.trimmingCharacters(in: .whitespaces)
     guard q != text else { return }                  // auch beim Zurückkehren von einer Künstlerseite
@@ -51,7 +57,7 @@ final class HLSuchModell: ObservableObject {
     laedt = true
     geaendert?()
     aufgabe = Task {
-      try? await Task.sleep(for: .milliseconds(1250))
+      try? await Task.sleep(for: Self.pause(fuer: q))
       guard !Task.isCancelled else { return }
       do {
         let r = try await HLAPI.shared.suche(q)
@@ -71,7 +77,6 @@ final class HLSuchModell: ObservableObject {
 /// Eine einzige Tabellenzeile: Amperfys Tabelle kennt nur Einträge aus der Datenbank.
 struct HLSuchTreffer: View {
   @ObservedObject var modell: HLSuchModell
-  @ObservedObject private var player = HLPlayer.shared
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -86,7 +91,6 @@ struct HLSuchTreffer: View {
       if let d = modell.ergebnis { inhalt(d) }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.bottom, player.aktuell != nil ? 84 : 0)  // Platz für die Leiste zum laufenden Song
   }
 
   @ViewBuilder private func inhalt(_ d: HLSuche) -> some View {
@@ -129,50 +133,155 @@ struct HLSuchTreffer: View {
   }
 }
 
-/// Alles, was SearchVC vom Abschnitt «Entdecken» braucht.
+/// Alles, was SearchVC von «Entdecken» braucht: Treffer-Abschnitt, Kacheln zum Stöbern, Hinweise.
 @MainActor
 final class HLSuchEinbau {
   let modell = HLSuchModell()
-
   private weak var vc: UIViewController?
+  private var genres: [HLKachel]?
 
   /// Künstler, Album oder Mix im Navigationsstapel der Suche öffnen.
   private var oeffnen: @MainActor (HLZiel) -> () {
     { [weak self] ziel in
-      guard let nav = self?.vc?.navigationController else { return }
-      nav.pushViewController(HLTab.zielAnsicht(ziel, navigation: nav), animated: true)
+      self?.vc?.navigationController?.pushViewController(HLTab.zielAnsicht(ziel), animated: true)
     }
   }
 
   func zelle() -> UITableViewCell {
+    hostZelle {
+      HLSuchTreffer(modell: self.modell).environment(\.hlOeffnen, self.oeffnen)
+    }
+  }
+
+  /// Leere Suche: Kacheln für Stimmungen und die grössten Genres der Bibliothek (wie «Alles durchsuchen»).
+  func stoebernZelle(account: Account) -> UITableViewCell {
+    if genres == nil { genres = HLKachel.genres(account: account) }
+    let liste = genres ?? []
+    return hostZelle {
+      HLStoebernView(genres: liste) { [weak self] k in self?.oeffnen(.stoebern(titel: k.titel, suche: k.suche)) }
+    }
+  }
+
+  private func hostZelle(@ViewBuilder _ inhalt: () -> some View) -> UITableViewCell {
     let zelle = UITableViewCell()
     zelle.selectionStyle = .none
     zelle.backgroundColor = .clear
-    zelle.contentConfiguration = UIHostingConfiguration {
-      HLSuchTreffer(modell: modell).environment(\.hlOeffnen, oeffnen)
-    }
+    zelle.contentConfiguration = UIHostingConfiguration(content: inhalt)
     return zelle
   }
 
-  /// Leiste zum laufenden Song und Hinweise («Gewünscht»): steht über der Tabelle und scrollt nicht mit.
+  /// Hinweise («Gewünscht»): stehen über der Tabelle und scrollen nicht mit.
   func leisteEinbauen(in vc: UIViewController) {
     self.vc = vc
-    let host = UIHostingController(rootView: HLSpielLeiste(oeffnen: oeffnen))
-    host.sizingOptions = .intrinsicContentSize
-    host.safeAreaRegions = []
-    host.view.backgroundColor = .clear
-    host.view.translatesAutoresizingMaskIntoConstraints = false
-    host.view.layer.zPosition = 100
-    vc.addChild(host)
-    vc.view.addSubview(host.view)
-    let unten = host.view.bottomAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.bottomAnchor)
-    unten.priority = .defaultHigh
-    NSLayoutConstraint.activate([
-      host.view.leadingAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.leadingAnchor),
-      host.view.trailingAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.trailingAnchor),
-      unten,
-      host.view.bottomAnchor.constraint(lessThanOrEqualTo: vc.view.keyboardLayoutGuide.topAnchor),
-    ])
-    host.didMove(toParent: vc)
+    HLSpielLeiste.einbauen(in: vc)
+  }
+}
+
+// MARK: - Stöbern
+
+struct HLKachel: Hashable {
+  let titel: String
+  let suche: String
+  let symbol: String
+
+  /// Stimmungen, die der Medienwunsch-Dienst erkennt (entdecken.py, STIMMUNG; er schreibt klein). Höchstens
+  /// zwei Wörter: ab drei Wörtern fragt er Claude. Der Suchtext erscheint in der Überschrift («Klingt nach …»).
+  static let stimmungen: [HLKachel] = [
+    HLKachel(titel: "Entspannt", suche: "Entspannt", symbol: "leaf.fill"),
+    HLKachel(titel: "Gute Laune", suche: "Gute Laune", symbol: "sun.max.fill"),
+    HLKachel(titel: "Party", suche: "Party", symbol: "party.popper.fill"),
+    HLKachel(titel: "Zum Joggen", suche: "Zum Joggen", symbol: "figure.run"),
+    HLKachel(titel: "Konzentration", suche: "Konzentration", symbol: "brain.head.profile"),
+    HLKachel(titel: "Melancholisch", suche: "Melancholisch", symbol: "cloud.rain.fill"),
+    HLKachel(titel: "Romantisch", suche: "Romantisch", symbol: "heart.fill"),
+    HLKachel(titel: "Autofahren", suche: "Autofahren", symbol: "car.fill"),
+  ]
+
+  /// Die grössten Genres der Bibliothek (ohne Hörspiele), höchstens acht.
+  @MainActor static func genres(account: Account) -> [HLKachel] {
+    let weg = ["hörspiel", "hörbuch", "audio drama", "audiobook", "podcast", "kinder", "children", "unknown"]
+    return (UIApplication.shared.delegate as! AppDelegate).storage.main.library.getGenres(for: account)
+      .filter { g in g.songCount >= 10 && !weg.contains { g.name.lowercased().contains($0) } }
+      .sorted { $0.songCount > $1.songCount }
+      .prefix(8)
+      .map { HLKachel(titel: $0.name, suche: $0.name, symbol: "music.note") }
+  }
+
+  /// Farben der Reihe nach, damit nebeneinander keine gleichen stehen.
+  static let farben: [Color] = [.indigo, .teal, .pink, .orange, .purple, .blue, .green, .red, .mint, .brown]
+}
+
+struct HLStoebernView: View {
+  let genres: [HLKachel]
+  let waehlen: (HLKachel) -> ()
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 20) {
+      gruppe("Stimmungen", HLKachel.stimmungen, farbeAb: 0)
+      if !genres.isEmpty { gruppe("Genres in deiner Bibliothek", genres, farbeAb: 4) }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, 8)
+  }
+
+  private func gruppe(_ titel: String, _ liste: [HLKachel], farbeAb: Int) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text(titel).font(.title3.bold())
+      LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        ForEach(Array(liste.enumerated()), id: \.element) { i, k in
+          Button { waehlen(k) } label: {
+            HStack(alignment: .top) {
+              Text(k.titel).font(.subheadline.weight(.bold)).lineLimit(2).multilineTextAlignment(.leading)
+              Spacer(minLength: 4)
+              Image(systemName: k.symbol).font(.title3)
+            }
+            .foregroundStyle(.white)
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
+            .background(HLKachel.farben[(farbeAb + i) % HLKachel.farben.count].gradient,
+                        in: RoundedRectangle(cornerRadius: 12))
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
+  }
+}
+
+/// Seite zu einer Kachel: nur die erkannte Stimmung bzw. das Genre (aus der Bibliothek und neu zum Reinhören),
+/// ohne die Namens-Treffer der normalen Suche («Party» fände sonst «Knife Party»).
+struct HLStoebernSeite: View {
+  let titel: String
+  let suche: String
+
+  var body: some View {
+    HLLaden(laden: { try await HLAPI.shared.suche(suche) }) { d in
+      let abschnitte = d.abschnitte ?? []
+      if abschnitte.isEmpty {
+        ContentUnavailableView("Nichts gefunden", systemImage: "music.note",
+                               description: Text("Zu «\(titel)» gibt es gerade keine passenden Songs."))
+      } else {
+        List {
+          ForEach(abschnitte, id: \.self) { a in
+            Section {
+              ForEach(a.songs.indices, id: \.self) { HLSongZeile(songs: a.songs, i: $0) }
+            } header: {
+              HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 1) {
+                  Text(a.titel)
+                  if let u = a.untertitel { Text(u).font(.caption).textCase(nil) }
+                }
+                Spacer()
+                Button { HLPlayer.shared.spielen(a.songs, ab: 0) } label: {
+                  Label("Alle", systemImage: "play.fill").font(.caption.weight(.semibold))
+                }
+                .buttonStyle(HLKapsel(haupt: true))
+              }
+            }
+          }
+        }
+      }
+    }
+    .navigationTitle(titel)
   }
 }

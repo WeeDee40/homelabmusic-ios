@@ -3,7 +3,7 @@
 HomeLabMusic ist eine Kopie von [Amperfy](https://github.com/BLeeEZ/amperfy) (GPL-3), Basis **v2.1.1**.
 Fast alles Eigene liegt in **eigenen Dateien**, die Amperfy nie anfasst:
 
-- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, CarPlay-Bilder, lernender Mix, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild
+- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, CarPlay-Bilder, lernender Mix, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild, Stöbern-Kacheln der Suche (`HLSuche.swift`), Wunsch-Knopf im Mini-Player (`HLMiniKnopf.swift`), Entdecken-Block der Künstlerseite (`HLKuenstlerBlock.swift`)
 - `Helper/homelab/` – Hilfsskripte (Dateien ins Projekt eintragen, Symbol zeichnen, TestFlight-Upload)
 
 Im Amperfy-Code selbst gibt es nur die folgenden Eingriffe. Beim Übernehmen einer neuen Amperfy-Version
@@ -34,7 +34,11 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `AmperfyKit/Storage/ResultController/BasicFetchedResultsController.swift` | `hlBibliotheksFilter` + `hlBibliotheksPraedikat`; in `NSFetchedResultsController.fetch()` ein Aufruf `hlVorDemLaden` | Bibliothek «Meine Musik» / «Kinder»: filtert alle Listen (Alben, Künstler, Songs) zentral; blendet Playlists anderer Personen aus |
 | `AmperfyKit/Storage/LibraryStorage.swift` (7 Zeilen) | `hlBibliothekFiltern(fetchRequest)` vor Zufallsalben/-künstler/-songs und der Suche (inkl. Playlists) | dieselbe Filterung für Startseite und Suche |
 | `Amperfy/Screens/ViewController/WelcomePopupPresenter.swift` (1 Zeile), `Amperfy/SwiftUI/Settings/SettingsView.swift` | `HLNeuigkeiten` beim Start, Knopf «Neuigkeiten» | Fenster «Neu in dieser Version» nach einem Update; Text in `Amperfy/HomeLab/NEUIGKEITEN.md` |
-| `Amperfy/Screens/ViewController/SearchVC.swift` | Abschnitt «Entdecken» unter den Bibliothekstreffern (`SearchSection.Entdecken`, `HLSuchEinbau`), Suchfeld-Text, Tastatur schliesst beim Scrollen | Bibliothek und Medienwunsch in einer Suche, wie bei HomeLabTV; der Tab «Entdecken» hat keine eigene Suche mehr |
+| `Amperfy/Screens/ViewController/SearchVC.swift` | Abschnitt «Entdecken» nach Künstlern, Alben und Songs der Bibliothek, vor den Playlists (`SearchSection`-Reihenfolge, `HLSuchEinbau`); in «Alle» nur 5 Treffer je Art (`categoryItemLimitAlle`); Texte deutsch (Überschriften, «Alle / Offline», leerer Verlauf); Tastatur schliesst beim Scrollen | Bibliothek und Medienwunsch in einer Suche, wie bei HomeLabTV; Entdecken ohne langes Scrollen sichtbar; der Tab «Entdecken» hat keine eigene Suche mehr |
+| `Amperfy/Screens/ViewController/SearchVC.swift` (Stöbern) | `SearchSection.Stoebern` vor dem Verlauf: bei leerer Suche Kacheln für Stimmungen und die grössten Genres (`HLSuchEinbau.stoebernZelle`); öffnet eine eigene Seite (`HLZiel.stoebern`); «Noch nichts gesucht» entfällt | wie «Alles durchsuchen» bei Spotify und Apple Music |
+| `Amperfy/Screens/Player/MiniPlayerView.swift` (`configureForiOS`, `refreshPlayer`) | `HLMiniKnopf.einbauen(in:vor:)` vor dem Abspielknopf; Titel, Untertitel und Tippfläche enden am Knopf statt am Abspielknopf | eine Leiste für den laufenden Song: «+» bei Vorschauen, langes Drücken = Menü (Künstler, Album, Mix, Nicht mein Ding); die eigene Leiste über dem Mini-Player (`HLMiniPlayer`) ist weg |
+| `Amperfy/Screens/ViewController/ArtistDetailVC.swift` (5 Zeilen) | oberster, sonst leerer Abschnitt (Index 0) zeigt `HLKuenstlerEinbau`: Mix, Folgen, «Beliebt, noch nicht bei dir», Link zur Entdecken-Seite | eine Künstlerseite wie bei Spotify; die Entdecken-Seite verlinkt zurück («n Songs in deiner Bibliothek»). Deezer-ID über api.deezer.com, nur bei gleichem Namen |
+| `AmperfyKit/Player/BackendAudioPlayer.swift` (`restartPlayer`) | alten Player vor dem Ersetzen anhalten (`delegate = nil`, `stop()`) und 3 s am Leben halten | Abstürze Build 24/25: nach einem Wiedergabefehler griffen Audio-Thread bzw. Netzwerk auf den schon freigegebenen Player zu |
 | `Amperfy/Screens/ViewController/CommonScreenOperations.swift` (`setupUserNavButton`) | `HLBibliothek.shared.knopfEinsetzen(in:)` | Umschalter «Meine Musik ⌄ / Kinder ⌄» neben dem Konto-Knopf (Home, Bibliothek, Suche) |
 | `Amperfy/Screens/Player/PopupPlayer+Visuals.swift`, `PopupPlayerVC.swift` | Herz-Knopf wird bei Vorschauen zu «+» (Hinzufügen) | im Player direkt zur Bibliothek hinzufügen |
 
@@ -47,6 +51,7 @@ Pause, kein Spulen. Ein Versuch, sie wie Songs zu behandeln (Build 15–17), mac
 | Datei | Was |
 |---|---|
 | `Amperfy.xcodeproj/project.pbxproj` | Bundle-ID `ch.gerber.homelabmusic`, Team `C4LESUKP6H`, Version, eigene Dateien (Gruppe «HomeLab»). Konflikte hier entstehen am ehesten; eigene Dateien mit `python3 Helper/homelab/add_files.py` neu eintragen |
+| `Amperfy.xcodeproj/…/Package.resolved` und Projektdatei | AudioStreaming 1.4.5 statt 1.4.4 (Absturz-Fix in `DispatchTimerSource.deinit`); bei einem Amperfy-Update nicht auf eine ältere Version zurückfallen |
 | `Amperfy/Amperfy.entitlements` | `com.apple.security.device.audio-input` (Mikrofon für Shazam auf dem Mac) |
 | `Amperfy/Info.plist` | Anzeigename, Mikrofon-Text (Shazam), `ITSAppUsesNonExemptEncryption = false` |
 | `Amperfy/Screens/LaunchScreen.storyboard` | Startbild `HLStart` bildschirmfüllend |
@@ -58,6 +63,7 @@ Pause, kein Spulen. Ein Versuch, sie wie Songs zu behandeln (Build 15–17), mac
 
 1. Bauen (`xcodebuild … build`), Konflikte in der Projektdatei lösen.
 2. Im Simulator: Tab «Entdecken» da, Startbild, Anmeldeseite, Song-Menü mit «HomeLabMusic»-Abschnitt,
-   Playlist-Cover, «Mix ab diesem Song» (lädt nach 10 Songs nach), Shazam-Knopf, Suche mit Abschnitt «Entdecken».
+   Playlist-Cover, «Mix ab diesem Song» (lädt nach 10 Songs nach), Shazam-Knopf, Suche mit Abschnitt «Entdecken»,
+   leere Suche mit Kacheln, Vorschau abspielen → «+» und Menü im Mini-Player, Künstlerseite der Bibliothek mit Mix/Folgen.
 3. Mac-Version (Mac Catalyst) bauen: Seitenleiste mit «Entdecken».
 4. `Helper/homelab/testflight.sh` für den Upload (iPhone und Mac; nur eines: `… ios` bzw. `… mac`).

@@ -26,12 +26,13 @@ import UIKit
 // MARK: - SearchSection
 
 public enum SearchSection: Int, CaseIterable {
+  case Stoebern // HomeLabMusic: Kacheln bei leerer Suche
   case History
   case Artist
   case Album
-  case Playlist
-  case Song
+  case Song // HomeLabMusic: Reihenfolge, Entdecken vor den Playlists
   case Entdecken // HomeLabMusic
+  case Playlist
 }
 
 // MARK: - SearchDiffableDataSource
@@ -49,18 +50,20 @@ class SearchDiffableDataSource: BasicUITableViewDiffableDataSource {
       if searchVC.searchHistory.isEmpty {
         return ""
       } else {
-        return "Recently Searched"
+        return "Zuletzt gesucht" // HomeLabMusic
       }
     case .Playlist:
       return "Playlists"
     case .Artist:
-      return "Artists"
+      return "Künstler" // HomeLabMusic
     case .Album:
-      return "Albums"
+      return "Alben" // HomeLabMusic
     case .Song:
       return "Songs"
     case .Entdecken: // HomeLabMusic
       return "Entdecken"
+    case .Stoebern: // HomeLabMusic: Überschriften stehen in den Kacheln
+      return ""
     case .none:
       return ""
     }
@@ -70,9 +73,11 @@ class SearchDiffableDataSource: BasicUITableViewDiffableDataSource {
 // MARK: - SearchVC
 
 class SearchVC: BasicTableViewController {
-  override var sceneTitle: String { "Search" }
+  override var sceneTitle: String { "Suche" } // HomeLabMusic
 
   nonisolated private static let categoryItemLimit = 10
+  // HomeLabMusic: in «Alle» nur die besten Treffer je Art, damit «Entdecken» ohne langes Scrollen sichtbar ist
+  nonisolated private static let categoryItemLimitAlle = 5
 
   private var diffableDataSource: SearchDiffableDataSource?
   fileprivate var searchHistory: [SearchHistoryItem] = []
@@ -143,6 +148,10 @@ class SearchVC: BasicTableViewController {
     if isSearchActive, hlSuche.modell.sichtbar, let accountObjectId {
       snapshot.appendItems([accountObjectId], toSection: SearchSection.Entdecken.rawValue)
     }
+    // HomeLabMusic: Stöbern nur ohne Suche, darum kann es denselben Platzhalter nutzen wie «Entdecken»
+    if !isSearchActive, let accountObjectId {
+      snapshot.appendItems([accountObjectId], toSection: SearchSection.Stoebern.rawValue)
+    }
     dataSource.apply(snapshot, animatingDifferences: animated)
   }
 
@@ -188,7 +197,7 @@ class SearchVC: BasicTableViewController {
         return self.albums[indexPath.row]
       case .Song:
         return self.songs[indexPath.row]
-      case .Entdecken, .none:
+      case .Entdecken, .Stoebern, .none:
         return nil
       }
     }
@@ -210,7 +219,7 @@ class SearchVC: BasicTableViewController {
       case .Song:
         let entity = self.songs[indexPath.row]
         return PlayContext(containable: entity)
-      case .Entdecken, .none:
+      case .Entdecken, .Stoebern, .none:
         return nil
       }
     }
@@ -245,7 +254,7 @@ class SearchVC: BasicTableViewController {
     appDelegate.userStatistics.visited(.search)
     configureSearchController(
       placeholder: "Künstler, Song, Genre", // HomeLabMusic
-      scopeButtonTitles: ["All", "Cached"]
+      scopeButtonTitles: ["Alle", "Offline"] // HomeLabMusic
     )
   }
 
@@ -268,7 +277,7 @@ class SearchVC: BasicTableViewController {
     // Install the options button
     optionsButton = UIBarButtonItem.createOptionsBarButton()
     optionsButton.menu = UIMenu(children: [
-      UIAction(title: "Clear Search History", image: .clear, handler: { _ in
+      UIAction(title: "Suchverlauf löschen" /* HomeLabMusic */, image: .clear, handler: { _ in
         self.appDelegate.storage.main.library.deleteSearchHistory()
         self.appDelegate.storage.main.library.saveContext()
         self.searchHistory = []
@@ -350,7 +359,7 @@ class SearchVC: BasicTableViewController {
     case .Song:
       let song = songs[indexPath.row]
       completionHandler(SwipeActionContext(containable: song))
-    case .Entdecken, .none:
+    case .Entdecken, .Stoebern, .none:
       completionHandler(nil)
     }
   }
@@ -414,6 +423,8 @@ class SearchVC: BasicTableViewController {
       return cell
     case .Entdecken: // HomeLabMusic
       return hlSuche.zelle()
+    case .Stoebern: // HomeLabMusic
+      return hlSuche.stoebernZelle(account: account)
     case .none:
       return UITableViewCell()
     }
@@ -441,6 +452,8 @@ class SearchVC: BasicTableViewController {
     case .Entdecken: // HomeLabMusic
       return (isSearchActive && hlSuche.modell.sichtbar) ? CommonScreenOperations
         .tableSectionHeightLarge : 0
+    case .Stoebern: // HomeLabMusic
+      return 0
     case .none:
       return 0.0
     }
@@ -470,7 +483,7 @@ class SearchVC: BasicTableViewController {
       return GenericTableCell.rowHeight
     case .Song:
       return PlayableTableCell.rowHeight
-    case .Entdecken: // HomeLabMusic
+    case .Entdecken, .Stoebern: // HomeLabMusic
       return UITableView.automaticDimension
     case .none:
       return 0.0
@@ -510,7 +523,7 @@ class SearchVC: BasicTableViewController {
     case .Song:
       let song = songs[indexPath.row]
       let _ = appDelegate.storage.main.library.createOrUpdateSearchHistory(container: song)
-    case .Entdecken, .none: break
+    case .Entdecken, .Stoebern, .none: break
     }
     appDelegate.storage.main.library.saveContext()
   }
@@ -577,19 +590,19 @@ class SearchVC: BasicTableViewController {
 
           var result = SearchResultObjectContainer()
           result.artistsIDs = FuzzySearcher.findBestMatch(in: artists, search: searchText)
-            .prefix(upToAsArray: Self.categoryItemLimit)
+            .prefix(upToAsArray: Self.categoryItemLimitAlle)
             .compactMap { $0 as? Artist }
             .compactMap { $0.managedObject.objectID }
           result.albumsIDs = FuzzySearcher.findBestMatch(in: albums, search: searchText)
-            .prefix(upToAsArray: Self.categoryItemLimit)
+            .prefix(upToAsArray: Self.categoryItemLimitAlle)
             .compactMap { $0 as? Album }
             .compactMap { $0.managedObject.objectID }
           result.playlistsIDs = FuzzySearcher.findBestMatch(in: playlists, search: searchText)
-            .prefix(upToAsArray: Self.categoryItemLimit)
+            .prefix(upToAsArray: Self.categoryItemLimitAlle)
             .compactMap { $0 as? Playlist }
             .compactMap { $0.managedObject.objectID }
           result.songsIDs = FuzzySearcher.findBestMatch(in: songs, search: searchText)
-            .prefix(upToAsArray: Self.categoryItemLimit)
+            .prefix(upToAsArray: Self.categoryItemLimitAlle)
             .compactMap { $0 as? Song }
             .compactMap { $0.managedObject.objectID }
           return result
@@ -708,15 +721,15 @@ class SearchVC: BasicTableViewController {
         contentUnavailableConfiguration = nil
       }
     } else {
-      contentUnavailableConfiguration = searchHistory.isEmpty ? noSearchHistoryConfig : nil
+      contentUnavailableConfiguration = nil // HomeLabMusic: statt «Noch nichts gesucht» die Kacheln zum Stöbern
     }
   }
 
   lazy var noSearchHistoryConfig: UIContentUnavailableConfiguration = {
     var config = UIContentUnavailableConfiguration.empty()
     config.image = .clock
-    config.text = "No Search History"
-    config.secondaryText = "Your search history will appear here."
+    config.text = "Noch nichts gesucht" // HomeLabMusic
+    config.secondaryText = "Hier erscheinen deine letzten Suchen."
     return config
   }()
 }

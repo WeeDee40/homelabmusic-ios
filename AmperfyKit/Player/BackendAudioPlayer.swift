@@ -347,6 +347,16 @@ class BackendAudioPlayer: NSObject {
   }
 
   private func restartPlayer() {
+    // HomeLabMusic: den alten Player erst anhalten und kurz am Leben halten. Sofort freigegeben lief
+    // seine Audio- und Netzwerk-Arbeit noch weiter und griff auf freigegebenen Speicher zu (Abstürze Build 24/25).
+    if let alt = player {
+      alt.delegate = nil
+      alt.stop()
+      Task { @MainActor in
+        try? await Task.sleep(for: .seconds(3))
+        withExtendedLifetime(alt) {}
+      }
+    }
     player = nil
     initAudioStreamingPlayerAndNodes()
   }

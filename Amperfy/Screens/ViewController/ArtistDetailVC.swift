@@ -32,6 +32,7 @@ class ArtistDetailVC: MultiSourceTableViewController {
   private var songsFetchedResultsController: ArtistSongsItemsFetchedResultsController!
   private var optionsButton: UIBarButtonItem!
   private var detailOperationsView: GenericDetailTableHeader?
+  private var hlBlock: HLKuenstlerEinbau? // HomeLabMusic: Entdecken-Teil im obersten Abschnitt
 
   init(account: Account, artist: Artist) {
     self.artist = artist
@@ -45,6 +46,7 @@ class ArtistDetailVC: MultiSourceTableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     appDelegate.userStatistics.visited(.artistDetail)
+    hlBlock = HLKuenstlerEinbau(name: artist.name, vc: self) // HomeLabMusic
 
     optionsButton = UIBarButtonItem.createOptionsBarButton()
 
@@ -258,7 +260,7 @@ class ArtistDetailVC: MultiSourceTableViewController {
     case LibraryElement.Song.rawValue:
       return songsFetchedResultsController.sections?[0].numberOfObjects ?? 0
     default:
-      return 0
+      return section == 0 ? hlBlock?.zeilen ?? 0 : 0 // HomeLabMusic
     }
   }
 
@@ -285,6 +287,7 @@ class ArtistDetailVC: MultiSourceTableViewController {
       cell.display(playable: song, playContextCb: convertCellViewToPlayContext, rootView: self)
       return cell
     default:
+      if indexPath.section == 0, let hlBlock { return hlBlock.zelle() } // HomeLabMusic
       return UITableViewCell()
     }
   }
@@ -317,7 +320,7 @@ class ArtistDetailVC: MultiSourceTableViewController {
     case LibraryElement.Song.rawValue:
       return PlayableTableCell.rowHeight
     default:
-      return 0.0
+      return indexPath.section == 0 ? UITableView.automaticDimension : 0.0 // HomeLabMusic
     }
   }
 
@@ -332,7 +335,7 @@ class ArtistDetailVC: MultiSourceTableViewController {
     case LibraryElement.Song.rawValue:
       return PlayableTableCell.rowHeight
     default:
-      return 0.0
+      return indexPath.section == 0 ? 260 : 0.0 // HomeLabMusic
     }
   }
 

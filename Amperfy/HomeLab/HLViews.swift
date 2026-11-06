@@ -20,15 +20,29 @@ enum HLZiel: Hashable {
   case kuenstler(Int)
   case album(Int)
   case sender(art: String, id: String)
+  case bibliothek(kuenstler: String)                   // Amperfys Künstlerseite der Bibliothek
+  case stoebern(titel: String, suche: String)          // Kachel der leeren Suche
+}
+
+/// Navigationsstapel des Tabs «Entdecken»; geteilt, damit auch der Mini-Player dort Seiten öffnen kann.
+@MainActor
+final class HLNavigation: ObservableObject {
+  static let shared = HLNavigation()
+  @Published var pfad = NavigationPath()
+
+  /// Amperfys Seiten sind UIKit: die öffnet Amperfy im Tab «Library», alles andere kommt auf den eigenen Stapel.
+  func oeffnen(_ ziel: HLZiel) {
+    if case let .bibliothek(name) = ziel { HLTab.bibliothekOeffnen(kuenstler: name) } else { pfad.append(ziel) }
+  }
 }
 
 struct HLEntdeckenView: View {
-  @State private var pfad = NavigationPath()
+  @ObservedObject private var navigation = HLNavigation.shared
   @State private var shazamOffen = false
   @State private var abgelehntOffen = false
 
   var body: some View {
-    NavigationStack(path: $pfad) {
+    NavigationStack(path: $navigation.pfad) {
       HLStartView()
         .navigationTitle("Entdecken")
         .toolbar {
@@ -44,12 +58,12 @@ struct HLEntdeckenView: View {
         }
         .sheet(isPresented: $abgelehntOffen) { HLAbgelehntView() }
         .sheet(isPresented: $shazamOffen) {
-          HLShazamView { ziel in pfad.append(ziel) }
+          HLShazamView { ziel in navigation.oeffnen(ziel) }
         }
         .navigationDestination(for: HLZiel.self) { HLZielView(ziel: $0) }
     }
-    .environment(\.hlOeffnen) { pfad.append($0) }
-    .modifier(HLSpielRahmen { pfad.append($0) })
+    .environment(\.hlOeffnen) { navigation.oeffnen($0) }
+    .modifier(HLSpielRahmen())
   }
 }
 
@@ -61,41 +75,59 @@ struct HLZielView: View {
     case let .kuenstler(id): HLKuenstlerView(id: id)
     case let .album(id): HLAlbumView(id: id)
     case let .sender(art, id): HLMixView(art: art, id: id)
+    case .bibliothek: EmptyView()                      // läuft über HLTab.bibliothekOeffnen
+    case let .stoebern(titel, suche): HLStoebernSeite(titel: titel, suche: suche)
     }
   }
 }
 
-/// Leiste zum laufenden Song und Hinweise über einer ganzen Seite.
+/// Hinweise («Gewünscht») über einer ganzen Seite. Den laufenden Song zeigt nur Amperfys Mini-Player
+/// (mit Wunsch-Knopf und Menü, HLMiniKnopf.swift), eine eigene Leiste gibt es seit 06.11.2026 nicht mehr.
 struct HLSpielRahmen: ViewModifier {
-  let oeffnen: @MainActor (HLZiel) -> ()
   @ObservedObject private var player = HLPlayer.shared
 
   func body(content: Content) -> some View {
     content
-      .safeAreaInset(edge: .bottom) {
-        if player.aktuell != nil { HLMiniPlayer(oeffnen: oeffnen) }
-      }
       .overlay(alignment: .bottom) {
-        if let text = player.hinweis {
-          HLHinweis(text: text).padding(.bottom, player.aktuell != nil ? 90 : 24)
-        }
+        if let text = player.hinweis { HLHinweis(text: text).padding(.bottom, 24) }
       }
       .animation(.default, value: player.hinweis)
   }
 }
 
-/// Dasselbe für die Suche, deren Tabelle aus Amperfy kommt: Die Ansicht ist nur so gross wie ihr Inhalt.
+/// Dasselbe für Amperfys UIKit-Seiten (Suche, Künstlerseite): Die Ansicht ist nur so gross wie ihr Inhalt.
 struct HLSpielLeiste: View {
-  let oeffnen: @MainActor (HLZiel) -> ()
   @ObservedObject private var player = HLPlayer.shared
 
   var body: some View {
     VStack(spacing: 8) {
       if let text = player.hinweis { HLHinweis(text: text) }
-      if player.aktuell != nil { HLMiniPlayer(oeffnen: oeffnen) }
     }
     .frame(maxWidth: .infinity)
+    .padding(.bottom, 8)
     .animation(.default, value: player.hinweis)
+  }
+
+  /// Über einer UIKit-Seite einbauen, unten über der Tab-Leiste bzw. der Tastatur.
+  @MainActor static func einbauen(in vc: UIViewController) {
+    let host = UIHostingController(rootView: HLSpielLeiste())
+    host.sizingOptions = .intrinsicContentSize
+    host.safeAreaRegions = []
+    host.view.backgroundColor = .clear
+    host.view.isUserInteractionEnabled = false
+    host.view.translatesAutoresizingMaskIntoConstraints = false
+    host.view.layer.zPosition = 100
+    vc.addChild(host)
+    vc.view.addSubview(host.view)
+    let unten = host.view.bottomAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.bottomAnchor)
+    unten.priority = .defaultHigh
+    NSLayoutConstraint.activate([
+      host.view.leadingAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.leadingAnchor),
+      host.view.trailingAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.trailingAnchor),
+      unten,
+      host.view.bottomAnchor.constraint(lessThanOrEqualTo: vc.view.keyboardLayoutGuide.topAnchor),
+    ])
+    host.didMove(toParent: vc)
   }
 }
 
@@ -622,8 +654,17 @@ struct HLKuenstlerView: View {
               Text(d.kuenstler.name).font(.title2.bold())
               Text("\((d.kuenstler.fans ?? 0).formatted()) Fans · \(d.kuenstler.albenAnzahl ?? 0) Alben")
                 .font(.subheadline).foregroundStyle(.secondary)
-              Text(Self.bibliothekText(d.kuenstler.inBibliothek ?? 0))
-                .font(.subheadline).foregroundStyle(.secondary)
+              if (d.kuenstler.inBibliothek ?? 0) > 0 {    // zur Künstlerseite der Bibliothek
+                Button {
+                  oeffnen(.bibliothek(kuenstler: d.kuenstler.name))
+                } label: {
+                  Label(Self.bibliothekText(d.kuenstler.inBibliothek ?? 0), systemImage: "music.note.house")
+                    .font(.subheadline)
+                }
+                .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+              } else {
+                Text(Self.bibliothekText(0)).font(.subheadline).foregroundStyle(.secondary)
+              }
             }
           }
           let istGefolgt = folgt ?? d.kuenstler.folgt ?? false
@@ -736,43 +777,5 @@ struct HLAlbumView: View {
       .navigationTitle(a.titel ?? "Album")
     }
     .navigationBarTitleDisplayMode(.inline)
-  }
-}
-
-// MARK: - Leiste zum laufenden Song (Abspielen/Weiter macht der Amperfy-Mini-Player darunter)
-
-struct HLMiniPlayer: View {
-  let oeffnen: @MainActor (HLZiel) -> ()
-  @ObservedObject private var player = HLPlayer.shared
-
-  var body: some View {
-    if let s = player.aktuell {
-      VStack(spacing: 0) {
-        GeometryReader { g in
-          Rectangle().fill(Color.accentColor).frame(width: g.size.width * player.fortschritt)
-        }
-        .frame(height: 3)
-        HStack(spacing: 10) {
-          HLBild(pfad: s.bild, groesse: 44)
-          VStack(alignment: .leading, spacing: 1) {
-            Text(s.titel ?? "").font(.subheadline.weight(.semibold)).lineLimit(1)
-            Text((s.istVorschau ? "Vorschau · " : "") + (s.kuenstler ?? ""))
-              .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .contentShape(Rectangle())
-          .onTapGesture { if let k = s.kuenstlerId { oeffnen(.kuenstler(k)) } }
-          HLStatusKnopf(song: s, kurz: true)
-          Button {
-            if let id = s.deezerId { oeffnen(.sender(art: "song", id: "\(id)")) }
-            else if let nd = s.navidromeId { oeffnen(.sender(art: "navidrome", id: nd)) }
-          } label: { Image(systemName: "dot.radiowaves.left.and.right").frame(width: 36, height: 36) }
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 12).padding(.vertical, 8)
-      }
-      .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-      .padding(.horizontal, 10).padding(.bottom, 6)
-    }
   }
 }

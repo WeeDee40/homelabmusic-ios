@@ -580,6 +580,7 @@ class MiniPlayerView: UIView {
   }
 
   public var tabAccessoryTraitChangeCB: VoidFunctionCallback?
+  private var hlKnopf: HLMiniKnopf? // HomeLabMusic
 
   private func refreshForTabAccessoryTraitChange() {
     let isInline = traitCollection.tabAccessoryEnvironment == .inline
@@ -665,13 +666,15 @@ class MiniPlayerView: UIView {
     addSubview(liveLabel)
     addSubview(playButton)
     addSubview(nextButton)
+    let hlKnopf = HLMiniKnopf.einbauen(in: self, vor: playButton) // HomeLabMusic: Wunsch-Knopf und Menü
+    self.hlKnopf = hlKnopf
 
     NSLayoutConstraint.activate([
       miniPlayerGotTouchedView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 0),
       miniPlayerGotTouchedView.heightAnchor.constraint(equalTo: heightAnchor),
       miniPlayerGotTouchedView.bottomAnchor.constraint(equalTo: bottomAnchor),
       miniPlayerGotTouchedView.trailingAnchor.constraint(
-        equalTo: playButton.leadingAnchor,
+        equalTo: hlKnopf.leadingAnchor, // HomeLabMusic: statt playButton
         constant: -8
       ),
 
@@ -693,12 +696,12 @@ class MiniPlayerView: UIView {
       titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 8),
       titleLabel.bottomAnchor.constraint(equalTo: playButton.centerYAnchor),
       titleLabel.leadingAnchor.constraint(equalTo: artworkImage.trailingAnchor, constant: 8),
-      titleLabel.trailingAnchor.constraint(equalTo: playButton.leadingAnchor, constant: -8),
+      titleLabel.trailingAnchor.constraint(equalTo: hlKnopf.leadingAnchor, constant: -8), // HomeLabMusic
 
       subtitleLabel.topAnchor.constraint(equalTo: playButton.centerYAnchor, constant: 0),
       subtitleLabel.bottomAnchor.constraint(equalTo: timeSlider.topAnchor, constant: -8),
       subtitleLabel.leadingAnchor.constraint(equalTo: artworkImage.trailingAnchor, constant: 8),
-      subtitleLabel.trailingAnchor.constraint(equalTo: playButton.leadingAnchor, constant: -8),
+      subtitleLabel.trailingAnchor.constraint(equalTo: hlKnopf.leadingAnchor, constant: -8), // HomeLabMusic
 
       playButton.centerYAnchor.constraint(equalTo: artworkImage.centerYAnchor, constant: 0),
       playButton.widthAnchor.constraint(equalToConstant: 30),
@@ -875,6 +878,7 @@ class MiniPlayerView: UIView {
     )
     refreshMoreButton()
     refreshTrailingButtons()
+    hlKnopf?.aktualisieren() // HomeLabMusic
   }
 
   required init?(coder: NSCoder) {

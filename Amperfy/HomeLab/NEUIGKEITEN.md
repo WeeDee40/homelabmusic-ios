@@ -1,3 +1,14 @@
+## 2026-11-06
+### Neu
+- Stöbern: Ohne Suchbegriff zeigt die Suche Kacheln für Stimmungen (Entspannt, Party, Zum Joggen …) und deine grössten Genres. Ein Tipp öffnet passende Musik aus deiner Bibliothek und Neues zum Reinhören.
+- Eine Leiste für den laufenden Song: Bei Vorschauen fügst du den Song mit «+» direkt im Mini-Player hinzu. Lange drücken öffnet Künstler, Album, Mix oder «Nicht mein Ding».
+- Künstlerseiten aus deiner Bibliothek zeigen jetzt auch Mix, Folgen und beliebte Songs, die du noch nicht hast. Von der Entdecken-Seite kommst du mit «… in deiner Bibliothek» zurück.
+### Anders
+- Die Suche antwortet schneller und zeigt «Entdecken» weiter oben: aus deiner Bibliothek kommen je Art nur noch die besten fünf Treffer.
+- Die Suche ist jetzt auf Deutsch, der Umschalter heisst «Alle / Offline».
+### Behoben
+- Seltener Absturz, wenn ein Song nicht geladen werden konnte und die Wiedergabe neu startete.
+
 ## 2026-11-01
 ### Neu
 - Eine Suche für alles: Unter den Treffern aus deiner Bibliothek stehen jetzt auch Künstler, Songs und Alben zum Reinhören und Wünschen.
