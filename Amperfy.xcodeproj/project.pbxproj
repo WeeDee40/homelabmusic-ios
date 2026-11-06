@@ -552,6 +552,7 @@
 		653BED801A7B496DF7EA163F /* NEUIGKEITEN.md in Resources */ = {isa = PBXBuildFile; fileRef = 24597A16067654126A4F5B5E /* NEUIGKEITEN.md */; };
 		9B888816333B100FCAA8D452 /* HLKuenstlerBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40719B6BB5D462808CF79307 /* HLKuenstlerBlock.swift */; };
 		D86070DC277DB9F1FAEAA274 /* HLMiniKnopf.swift in Sources */ = {isa = PBXBuildFile; fileRef = E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */; };
+		290546E1324D823ECB67F744 /* HLSpeicher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1190,6 +1191,7 @@
 		24597A16067654126A4F5B5E /* NEUIGKEITEN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = NEUIGKEITEN.md; sourceTree = "<group>"; };
 		40719B6BB5D462808CF79307 /* HLKuenstlerBlock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLKuenstlerBlock.swift; sourceTree = "<group>"; };
 		E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLMiniKnopf.swift; sourceTree = "<group>"; };
+		1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSpeicher.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2209,6 +2211,7 @@
 		08DDD6DE514A52B923C9F555 /* HomeLab */ = {
 			isa = PBXGroup;
 			children = (
+				1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */,
 				E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */,
 				40719B6BB5D462808CF79307 /* HLKuenstlerBlock.swift */,
 				24597A16067654126A4F5B5E /* NEUIGKEITEN.md */,
@@ -2504,6 +2507,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				290546E1324D823ECB67F744 /* HLSpeicher.swift in Sources */,
 				D86070DC277DB9F1FAEAA274 /* HLMiniKnopf.swift in Sources */,
 				9B888816333B100FCAA8D452 /* HLKuenstlerBlock.swift in Sources */,
 				556C3D8A4ADDF627DC6A094B /* HLNeuigkeiten.swift in Sources */,

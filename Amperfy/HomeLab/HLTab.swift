@@ -28,6 +28,7 @@ enum HLTab {
     HLBenachrichtigung.starten()
     HLPlayer.hakenEinrichten()
     HLBibliothek.shared.einrichten()
+    HLSpeicher.einrichten()
   }
 
   /// iPhone/iPad: Tab in der Tab-Leiste.

@@ -3,7 +3,7 @@
 HomeLabMusic ist eine Kopie von [Amperfy](https://github.com/BLeeEZ/amperfy) (GPL-3), Basis **v2.1.1**.
 Fast alles Eigene liegt in **eigenen Dateien**, die Amperfy nie anfasst:
 
-- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, CarPlay-Bilder, lernender Mix, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild, Stöbern-Kacheln der Suche (`HLSuche.swift`), Wunsch-Knopf im Mini-Player (`HLMiniKnopf.swift`), Entdecken-Block der Künstlerseite (`HLKuenstlerBlock.swift`)
+- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, CarPlay-Bilder, lernender Mix, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild, Stöbern-Kacheln der Suche (`HLSuche.swift`), Wunsch-Knopf im Mini-Player (`HLMiniKnopf.swift`), Entdecken-Block der Künstlerseite (`HLKuenstlerBlock.swift`), Speichergrenze für Songs und Cover (`HLSpeicher.swift`)
 - `Helper/homelab/` – Hilfsskripte (Dateien ins Projekt eintragen, Symbol zeichnen, TestFlight-Upload)
 
 Im Amperfy-Code selbst gibt es nur die folgenden Eingriffe. Beim Übernehmen einer neuen Amperfy-Version
@@ -38,6 +38,7 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/Screens/ViewController/SearchVC.swift` (Stöbern) | `SearchSection.Stoebern` vor dem Verlauf: bei leerer Suche Kacheln für Stimmungen und die grössten Genres (`HLSuchEinbau.stoebernZelle`); öffnet eine eigene Seite (`HLZiel.stoebern`); «Noch nichts gesucht» entfällt | wie «Alles durchsuchen» bei Spotify und Apple Music |
 | `Amperfy/Screens/Player/MiniPlayerView.swift` (`configureForiOS`, `refreshPlayer`) | `HLMiniKnopf.einbauen(in:vor:)` vor dem Abspielknopf; Titel, Untertitel und Tippfläche enden am Knopf statt am Abspielknopf | eine Leiste für den laufenden Song: «+» bei Vorschauen, langes Drücken = Menü (Künstler, Album, Mix, Nicht mein Ding); die eigene Leiste über dem Mini-Player (`HLMiniPlayer`) ist weg |
 | `Amperfy/Screens/ViewController/ArtistDetailVC.swift` (5 Zeilen) | oberster, sonst leerer Abschnitt (Index 0) zeigt `HLKuenstlerEinbau`: Mix, Folgen, «Beliebt, noch nicht bei dir», Link zur Entdecken-Seite | eine Künstlerseite wie bei Spotify; die Entdecken-Seite verlinkt zurück («n Songs in deiner Bibliothek»). Deezer-ID über api.deezer.com, nur bei gleichem Namen |
+| `AmperfyKit/Api/Subsonic/SubsonicServerApi.swift` (`generateUrl(forArtworkId:)`) | `size=1000` bei `getCoverArt` | Cover in Originalgrösse waren bis 1,8 MB; zusammen mit `HLSpeicher` (Songs 4 GB nach «zuletzt gehört», Cover 300 MB) gegen 12 GB Speicher auf einem iPhone |
 | `AmperfyKit/Player/BackendAudioPlayer.swift` (`restartPlayer`) | alten Player vor dem Ersetzen anhalten (`delegate = nil`, `stop()`) und 3 s am Leben halten | Abstürze Build 24/25: nach einem Wiedergabefehler griffen Audio-Thread bzw. Netzwerk auf den schon freigegebenen Player zu |
 | `Amperfy/Screens/ViewController/CommonScreenOperations.swift` (`setupUserNavButton`) | `HLBibliothek.shared.knopfEinsetzen(in:)` | Umschalter «Meine Musik ⌄ / Kinder ⌄» neben dem Konto-Knopf (Home, Bibliothek, Suche) |
 | `Amperfy/Screens/Player/PopupPlayer+Visuals.swift`, `PopupPlayerVC.swift` | Herz-Knopf wird bei Vorschauen zu «+» (Hinzufügen) | im Player direkt zur Bibliothek hinzufügen |

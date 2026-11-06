@@ -182,19 +182,20 @@ final class HLSuchEinbau {
 struct HLKachel: Hashable {
   let titel: String
   let suche: String
-  let symbol: String
+  /// Suchwort für das Hintergrundbild (Titelbild einer passenden Deezer-Playlist), Englisch trifft besser.
+  let bild: String
 
   /// Stimmungen, die der Medienwunsch-Dienst erkennt (entdecken.py, STIMMUNG; er schreibt klein). Höchstens
   /// zwei Wörter: ab drei Wörtern fragt er Claude. Der Suchtext erscheint in der Überschrift («Klingt nach …»).
   static let stimmungen: [HLKachel] = [
-    HLKachel(titel: "Entspannt", suche: "Entspannt", symbol: "leaf.fill"),
-    HLKachel(titel: "Gute Laune", suche: "Gute Laune", symbol: "sun.max.fill"),
-    HLKachel(titel: "Party", suche: "Party", symbol: "party.popper.fill"),
-    HLKachel(titel: "Zum Joggen", suche: "Zum Joggen", symbol: "figure.run"),
-    HLKachel(titel: "Konzentration", suche: "Konzentration", symbol: "brain.head.profile"),
-    HLKachel(titel: "Melancholisch", suche: "Melancholisch", symbol: "cloud.rain.fill"),
-    HLKachel(titel: "Romantisch", suche: "Romantisch", symbol: "heart.fill"),
-    HLKachel(titel: "Autofahren", suche: "Autofahren", symbol: "car.fill"),
+    HLKachel(titel: "Entspannt", suche: "Entspannt", bild: "chill"),
+    HLKachel(titel: "Gute Laune", suche: "Gute Laune", bild: "good vibes"),
+    HLKachel(titel: "Party", suche: "Party", bild: "party"),
+    HLKachel(titel: "Zum Joggen", suche: "Zum Joggen", bild: "running"),
+    HLKachel(titel: "Konzentration", suche: "Konzentration", bild: "focus"),
+    HLKachel(titel: "Melancholisch", suche: "Melancholisch", bild: "melancholic"),
+    HLKachel(titel: "Romantisch", suche: "Romantisch", bild: "love songs"),
+    HLKachel(titel: "Autofahren", suche: "Autofahren", bild: "road trip"),
   ]
 
   /// Die grössten Genres der Bibliothek (ohne Hörspiele), höchstens acht.
@@ -204,16 +205,66 @@ struct HLKachel: Hashable {
       .filter { g in g.songCount >= 10 && !weg.contains { g.name.lowercased().contains($0) } }
       .sorted { $0.songCount > $1.songCount }
       .prefix(8)
-      .map { HLKachel(titel: $0.name, suche: $0.name, symbol: "music.note") }
+      .map { HLKachel(titel: $0.name, suche: $0.name, bild: $0.name) }
   }
 
-  /// Farben der Reihe nach, damit nebeneinander keine gleichen stehen.
+  /// Farben der Reihe nach: Hintergrund, solange das Bild lädt oder wenn es keines gibt.
   static let farben: [Color] = [.indigo, .teal, .pink, .orange, .purple, .blue, .green, .red, .mint, .brown]
+}
+
+/// Hintergrundbilder der Kacheln: Titelbild der passendsten Deezer-Playlist (mindestens 15 Songs), je Kachel
+/// ein anderes. Direkt bei Deezers öffentlicher Schnittstelle wie HLDeezer; die Adressen bleiben 30 Tage gemerkt.
+@MainActor
+final class HLKachelBilder: ObservableObject {
+  static let shared = HLKachelBilder()
+  @Published private(set) var urls = [String: URL]()
+  private static let schluessel = "homelabmusic.kachelbilder"           // Suchwort -> [Adresse, Zeitpunkt]
+  private var laeuft = false
+
+  private init() {
+    let gemerkt = UserDefaults.standard.dictionary(forKey: Self.schluessel) as? [String: [String]] ?? [:]
+    let frisch = Date().timeIntervalSince1970 - 30 * 24 * 3600
+    for (wort, w) in gemerkt where w.count == 2 && (Double(w[1]) ?? 0) > frisch {
+      if let url = URL(string: w[0]) { urls[wort] = url }
+    }
+  }
+
+  func laden(_ kacheln: [HLKachel]) async {
+    guard !laeuft else { return }
+    laeuft = true
+    defer { laeuft = false }
+    var vergeben = Set(urls.values)
+    for k in kacheln where urls[k.bild] == nil {
+      guard let url = await suchen(k.bild, ausser: vergeben) else { continue }
+      urls[k.bild] = url
+      vergeben.insert(url)
+      var gemerkt = UserDefaults.standard.dictionary(forKey: Self.schluessel) as? [String: [String]] ?? [:]
+      gemerkt[k.bild] = [url.absoluteString, "\(Date().timeIntervalSince1970)"]
+      UserDefaults.standard.set(gemerkt, forKey: Self.schluessel)
+    }
+  }
+
+  private func suchen(_ wort: String, ausser: Set<URL>) async -> URL? {
+    var teile = URLComponents(string: "https://api.deezer.com/search/playlist")!
+    teile.queryItems = [URLQueryItem(name: "q", value: wort), URLQueryItem(name: "limit", value: "10")]
+    struct Antwort: Decodable {
+      struct Liste: Decodable { let nb_tracks: Int?; let picture_xl: String? }
+      let data: [Liste]?
+    }
+    guard let url = teile.url,
+          let (daten, _) = try? await URLSession.shared.data(from: url),
+          let antwort = try? JSONDecoder().decode(Antwort.self, from: daten) else { return nil }
+    return (antwort.data ?? [])
+      .filter { ($0.nb_tracks ?? 0) >= 15 }
+      .compactMap { $0.picture_xl.flatMap(URL.init(string:)) }
+      .first { !ausser.contains($0) }
+  }
 }
 
 struct HLStoebernView: View {
   let genres: [HLKachel]
   let waehlen: (HLKachel) -> ()
+  @ObservedObject private var bilder = HLKachelBilder.shared
 
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
@@ -222,6 +273,7 @@ struct HLStoebernView: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, 8)
+    .task { await bilder.laden(HLKachel.stimmungen + genres) }
   }
 
   private func gruppe(_ titel: String, _ liste: [HLKachel], farbeAb: Int) -> some View {
@@ -230,21 +282,47 @@ struct HLStoebernView: View {
       LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
         ForEach(Array(liste.enumerated()), id: \.element) { i, k in
           Button { waehlen(k) } label: {
-            HStack(alignment: .top) {
-              Text(k.titel).font(.subheadline.weight(.bold)).lineLimit(2).multilineTextAlignment(.leading)
-              Spacer(minLength: 4)
-              Image(systemName: k.symbol).font(.title3)
-            }
-            .foregroundStyle(.white)
-            .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
-            .background(HLKachel.farben[(farbeAb + i) % HLKachel.farben.count].gradient,
-                        in: RoundedRectangle(cornerRadius: 12))
+            HLKachelBild(url: bilder.urls[k.bild], farbe: HLKachel.farben[(farbeAb + i) % HLKachel.farben.count])
+              .aspectRatio(1.6, contentMode: .fit)
+              .overlay(alignment: .bottomLeading) {
+                Text(k.titel)
+                  .font(.headline).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading)
+                  .shadow(color: .black.opacity(0.5), radius: 3)
+                  .padding(10)
+              }
+              .clipShape(RoundedRectangle(cornerRadius: 12))
+              .contentShape(RoundedRectangle(cornerRadius: 12))
           }
           .buttonStyle(.plain)
         }
       }
     }
+  }
+}
+
+/// Bild füllend, unten dunkler Verlauf für die Schrift; vor dem Laden die Farbe.
+struct HLKachelBild: View {
+  let url: URL?
+  let farbe: Color
+  @State private var bild: UIImage?
+
+  var body: some View {
+    Color.clear
+      .background(farbe.gradient)
+      .overlay {
+        if let bild {
+          Image(uiImage: bild).resizable().scaledToFill().transition(.opacity)
+        }
+      }
+      .overlay {
+        LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom)
+      }
+      .clipped()
+      .task(id: url) {
+        guard let url else { return }
+        let b = await HLBildSpeicher.shared.bild(url)
+        withAnimation(.easeIn(duration: 0.2)) { bild = b }
+      }
   }
 }
 

@@ -381,11 +381,14 @@ final class SubsonicServerApi: URLCleanser, Sendable {
 
   public func generateUrl(forArtworkId id: String) async throws -> URL {
     let version = try await determineApiVersionToUse()
-    return try createUrl(from: try createAuthApiUrlComponent(
+    var urlComp = try createAuthApiUrlComponent(
       version: version,
       forAction: "getCoverArt",
       id: id
-    ))
+    )
+    // HomeLabMusic: höchstens 1000 px statt Original (bis 1,8 MB je Cover), reicht für den grossen Player
+    urlComp.queryItems = (urlComp.queryItems ?? []) + [URLQueryItem(name: "size", value: "1000")]
+    return try createUrl(from: urlComp)
   }
 
   private func requestServerApiVersionPromise(

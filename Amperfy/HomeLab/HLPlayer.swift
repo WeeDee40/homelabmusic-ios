@@ -253,7 +253,10 @@ final class HLPlayer: ObservableObject {
 
   private func abgleichen() {
     let laufend = amperfy.currentlyPlaying
-    if laufend?.id != letzteId { wechselAuswerten(neueId: laufend?.id) }
+    if laufend?.id != letzteId {
+      wechselAuswerten(neueId: laufend?.id)
+      if let id = laufend?.id, laufend?.isRadio == false { HLSpeicher.gespielt(id) }  // für das Aufräumen
+    }
     if laufend != nil {
       letzteZeit = max(letzteZeit, amperfy.elapsedTime)
       if amperfy.duration > 0 { letzteDauer = amperfy.duration }

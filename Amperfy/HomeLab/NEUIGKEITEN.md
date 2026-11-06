@@ -1,3 +1,9 @@
+## 2026-11-06b
+### Anders
+- Die Kacheln zum Stöbern zeigen jetzt ein passendes Bild statt einer Farbe.
+- Weniger Speicher: Die App behält gehörte Songs höchstens bis 4 GB und löscht darüber die am längsten nicht gehörten. Die Grenze kannst du in den Einstellungen unter «Cache Size Limit» ändern.
+- Cover werden kleiner geladen und belegen höchstens 300 MB. Gelöschte Cover lädt die App bei Bedarf neu.
+
 ## 2026-11-06
 ### Neu
 - Stöbern: Ohne Suchbegriff zeigt die Suche Kacheln für Stimmungen (Entspannt, Party, Zum Joggen …) und deine grössten Genres. Ein Tipp öffnet passende Musik aus deiner Bibliothek und Neues zum Reinhören.
