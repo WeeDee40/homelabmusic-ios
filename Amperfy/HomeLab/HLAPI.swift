@@ -305,7 +305,7 @@ final class HLAPI {
 
   /// Header für eigene Adressen (Cover, Songs aus der Bibliothek).
   func kopf(fuer url: URL) async -> [String: String] {
-    guard url.host == basisURL?.host, url.port == Self.port else { return [:] }
+    guard let basis = basisURL, url.scheme == basis.scheme, url.host == basis.host, url.port == basis.port else { return [:] }
     guard let tok = try? await gueltigesToken() else { return [:] }
     return ["Authorization": "Bearer \(tok)"]
   }
