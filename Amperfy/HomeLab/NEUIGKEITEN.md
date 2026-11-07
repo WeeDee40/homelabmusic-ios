@@ -1,3 +1,7 @@
+## 2026-11-07b
+### Behoben
+- Das Cover im Player fehlte trotzdem noch bei manchen Songs, die auf dem Gerät gespeichert waren. Jetzt nimmt der Player das nächste vorhandene Cover (aus der Datei, vom Song oder vom Album), wenn eines fehlt oder nicht lesbar ist.
+
 ## 2026-11-07
 ### Behoben
 - Im Player fehlte manchmal das Cover, obwohl es in der Übersicht zu sehen war. Jetzt zeigt der Player sofort das Album-Cover und lädt fehlende Cover nach, auch wenn ein Download früher fehlgeschlagen ist.

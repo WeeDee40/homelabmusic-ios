@@ -22,6 +22,7 @@
 import AVFoundation
 import CoreData
 import Foundation
+import os
 import UIKit
 
 // MARK: - DerivedPlayableType
@@ -57,18 +58,38 @@ public class AbstractPlayable: AbstractLibraryEntity, Downloadable {
     super.init(managedObject: managedObject)
   }
 
+  // HomeLabMusic: Das erste Cover nehmen, das wirklich als Bild lesbar ist, sonst das nächste: eingebettetes
+  // Cover, eigenes Song-Cover (Navidrome mf-…), bei Songs zuletzt das Album-Cover. Amperfy nahm nur das erste
+  // mit Pfad, auch wenn die Datei fehlte (eingebettete Cover bleiben nach dem Löschen des Songs eingetragen)
+  // oder kaputt war; dann zeigte der Player kein Bild, obwohl das Album eines hat. Steht hier und nicht in
+  // Song, weil der Player (currentlyPlaying) mit AbstractPlayable arbeitet. Gilt auch für Sperrbildschirm
+  // und CarPlay.
   override public func imagePath(setting: ArtworkDisplayPreference) -> String? {
+    let eingebettet = embeddedArtwork?.imagePath
+    let server = artwork?.imagePath
+    var liste: [String?]
     switch setting {
-    case .id3TagOnly:
-      return embeddedArtwork?.imagePath
-    case .serverArtworkOnly:
-      return super.imagePath(setting: setting)
-    case .preferServerArtwork:
-      return artwork?.imagePath ?? embeddedArtwork?.imagePath
-    case .preferId3Tag:
-      return embeddedArtwork?.imagePath ?? artwork?.imagePath
+    case .id3TagOnly: liste = [eingebettet]
+    case .serverArtworkOnly: liste = [server]
+    case .preferServerArtwork: liste = [server, eingebettet]
+    case .preferId3Tag: liste = [eingebettet, server]
     }
+    if isSong { liste.append(asSong?.album?.imagePath(setting: setting)) }
+    let pfade = liste.compactMap { $0 }
+    return pfade.first(where: { Self.bildBrauchbar($0) }) ?? pfade.first
   }
+
+  /// HomeLabMusic: Datei da und nicht als unlesbar gemeldet (LibraryEntityImage meldet Dateien, die UIImage
+  /// nicht öffnen kann).
+  public static func bildBrauchbar(_ pfad: String) -> Bool {
+    FileManager.default.fileExists(atPath: pfad) && !defekteBilder.withLock { $0.contains(pfad) }
+  }
+
+  public static func bildDefekt(_ pfad: String) {
+    defekteBilder.withLock { _ = $0.insert(pfad) }
+  }
+
+  private static let defekteBilder = OSAllocatedUnfairLock(initialState: Set<String>())
 
   public var embeddedArtwork: EmbeddedArtwork? {
     get {

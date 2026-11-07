@@ -338,8 +338,8 @@ class PlayerUIHandler: NSObject {
 
   func refreshArtwork(artworkImage: LibraryEntityImage) {
     if let playableInfo = player.currentlyPlaying {
-      artworkImage.display(entity: playableInfo)
       HLCover.nachladen(playableInfo) // HomeLabMusic: Song- und Album-Cover anfordern, falls noch nicht da
+      artworkImage.display(entity: playableInfo)
     } else {
       switch player.playerMode {
       case .music:

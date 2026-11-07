@@ -196,6 +196,16 @@ public class LibraryEntityImage: RoundedImage {
     let loadedImage = UIImage(contentsOfFile: imagePath)
     let readyImage = await loadedImage?.byPreparingForDisplay()
     guard !Task.isCancelled else { return }
+    // HomeLabMusic: Datei da, aber kein Bild (abgebrochener Download, kaputtes eingebettetes Cover):
+    // merken und neu wählen, AbstractPlayable.imagePath nimmt dann das nächste Cover (siehe AbstractPlayable.swift).
+    if loadedImage == nil, FileManager.default.fileExists(atPath: imagePath) {
+      AbstractPlayable.bildDefekt(imagePath)
+      Task { @MainActor [weak self] in
+        guard let self, entityImagePathToDisplay != imagePath else { return }
+        refresh()
+      }
+      return
+    }
     Task { @MainActor [weak self] in
       guard let self, let readyImage else { return }
       Self.cache.setObject(readyImage, forKey: imagePath as NSString)
@@ -220,9 +230,11 @@ public class LibraryEntityImage: RoundedImage {
       }
     }
     // HomeLabMusic: bei Songs auch das Album-Cover (Ersatz, solange das eigene Song-Cover fehlt)
-    if let artwork = entity.artwork ?? (entity as? Song)?.album?.artwork,
+    // (Der Player gibt AbstractPlayable, nicht Song: darum asSong statt «as? Song».)
+    let albumCover = (entity as? Song)?.album?.artwork ?? (entity as? AbstractPlayable)?.asSong?.album?.artwork
+    if let artwork = entity.artwork ?? albumCover,
        artwork.uniqueID == downloadNotification.id ||
-       (entity as? Song)?.album?.artwork?.uniqueID == downloadNotification.id,
+       albumCover?.uniqueID == downloadNotification.id,
        let accountInfo = artwork.account?.info {
       Task { @MainActor in
         guard let imagePath = entity.imagePath(
