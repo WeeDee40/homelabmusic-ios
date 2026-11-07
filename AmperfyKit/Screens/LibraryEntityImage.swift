@@ -57,6 +57,8 @@ public class LibraryEntityImage: RoundedImage {
   @MainActor public static var vorschauInfo: ((AbstractPlayable) -> (titel: String, untertitel: String, album: String?)?)?
   @MainActor public static var vorschauBild: ((String) async -> UIImage?)?   // Playable-ID
   @MainActor public static var vorschauBildSofort: ((AbstractPlayable) -> UIImage?)?
+  // HomeLabMusic: Künstler ohne Bildeintrag (später über Songs/Alben angelegt), siehe HLCover.kuenstlerBild
+  @MainActor public static var fehlendesKuenstlerBild: ((Artist) -> ())?
   private var vorschauAufgabe: Task<(), Never>?
 
   private let appDelegate: AmperKit
@@ -117,6 +119,9 @@ public class LibraryEntityImage: RoundedImage {
     self.entity = entity
     backupArtworkType = entity.getDefaultArtworkType()
     refresh()
+    if entity.artwork == nil, let artist = entity as? Artist {      // HomeLabMusic
+      Self.fehlendesKuenstlerBild?(artist)
+    }
     vorschauAufgabe?.cancel()                                        // HomeLabMusic
     if let playable = entity as? AbstractPlayable, playable.isRadio, let quelle = Self.vorschauBild {
       if let sofort = Self.vorschauBildSofort?(playable) { self.image = sofort }
@@ -129,7 +134,14 @@ public class LibraryEntityImage: RoundedImage {
   }
 
   public func displayAndUpdate(entity: AbstractLibraryEntity) {
-    guard self.entity != entity else { return }
+    // HomeLabMusic: Gleiches Objekt, aber das Bild ist erst jetzt bekannt (Künstlerseite nach dem
+    // Abgleich): laden statt beim Platzhalter bleiben.
+    if self.entity == entity {
+      if let artwork = entity.artwork, artwork.status != .CustomImage, let accountInfo = entity.account?.info {
+        appDelegate.getMeta(accountInfo).artworkDownloadManager.download(object: artwork)
+      }
+      return
+    }
 
     display(entity: entity)
     if let artwork = entity.artwork, let accountInfo = entity.account?.info {

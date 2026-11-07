@@ -1,3 +1,8 @@
+## 2026-11-07c
+### Behoben
+- Künstler, die später dazugekommen sind (z. B. durch einen erfüllten Wunsch), zeigten nur ein Mikrofon statt eines Bildes. Die App holt das Bild jetzt nach.
+- Seltener Absturz beim Öffnen einer Künstlerseite, während gerade neue Songs dieses Künstlers geladen wurden. Dabei entstanden manchmal auch doppelte Einträge in der Bibliothek.
+
 ## 2026-11-07b
 ### Behoben
 - Das Cover im Player fehlte trotzdem noch bei manchen Songs, die auf dem Gerät gespeichert waren. Jetzt nimmt der Player das nächste vorhandene Cover (aus der Datei, vom Song oder vom Album), wenn eines fehlt oder nicht lesbar ist.

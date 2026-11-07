@@ -269,6 +269,12 @@ class ArtistDetailVC: MultiSourceTableViewController {
     cellForRowAt indexPath: IndexPath
   )
     -> UITableViewCell {
+    // HomeLabMusic: Ändert ein Abgleich die Liste, während die Tabelle noch die alte Zeilenzahl hat
+    // (Absturz «no object at index 1», Nov. 2026), leere Zelle liefern und die Tabelle neu laden.
+    if indexPath.section > 0, indexPath.row >= self.tableView(tableView, numberOfRowsInSection: indexPath.section) {
+      DispatchQueue.main.async { tableView.reloadData() }
+      return UITableViewCell()
+    }
     switch indexPath.section + 1 {
     case LibraryElement.Album.rawValue:
       let cell: GenericTableCell = dequeueCell(for: tableView, at: indexPath)

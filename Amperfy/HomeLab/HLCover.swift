@@ -13,6 +13,7 @@
 //
 
 import AmperfyKit
+import CoreData
 import UIKit
 
 @MainActor
@@ -22,6 +23,44 @@ enum HLCover {
 
   static func einrichten() {
     EntityImageView.playlistCover = { id in await bild(id) }
+    LibraryEntityImage.fehlendesKuenstlerBild = { artist in kuenstlerBild(artist) }
+  }
+
+  // MARK: - Künstlerbilder
+
+  private static var kuenstlerVersucht = Set<NSManagedObjectID>()
+
+  /// Amperfy gibt nur den Künstlern aus der ersten Vollsynchronisation (getArtists) einen Bildeintrag.
+  /// Wer später über Songs oder Alben dazukommt (z. B. ein erfüllter Wunsch), bleibt ohne und zeigt das
+  /// Mikrofon. Hier einmal pro App-Lauf über die Künstlersuche nachholen (eine Anfrage, liefert coverArt).
+  /// Doppelte Einträge mit derselben Server-ID (Amperfy-Fehler #809) füllt Amperfy nur einmal: dann das
+  /// Bild des Zwillings übernehmen.
+  static func kuenstlerBild(_ artist: Artist) {
+    guard artist.artwork == nil, !artist.id.isEmpty, !artist.name.isEmpty,
+          let konto = artist.account?.info,
+          kuenstlerVersucht.insert(artist.managedObject.objectID).inserted else { return }
+    let app = UIApplication.shared.delegate as! AppDelegate
+    Task { @MainActor in
+      if zwillingsBild(artist) == nil {
+        try? await app.getMeta(konto).librarySyncer.searchArtists(searchText: artist.name)
+      }
+      if artist.artwork == nil, let bild = zwillingsBild(artist) {
+        artist.artwork = bild
+        app.storage.main.library.saveContext()
+      }
+      guard let art = artist.artwork else { return }
+      app.getMeta(konto).artworkDownloadManager.download(object: art)
+    }
+  }
+
+  private static func zwillingsBild(_ artist: Artist) -> Artwork? {
+    guard let kontext = artist.managedObject.managedObjectContext else { return nil }
+    let anfrage = NSFetchRequest<ArtistMO>(entityName: "Artist")
+    guard let konto = artist.managedObject.account else { return nil }
+    anfrage.predicate = NSPredicate(format: "id == %@ AND account == %@ AND artwork != nil", artist.id, konto)
+    anfrage.fetchLimit = 1
+    guard let mo = (try? kontext.fetch(anfrage))?.first, let bild = mo.artwork else { return nil }
+    return Artwork(managedObject: bild)
   }
 
   private static var versucht = [String: Date]()
