@@ -1,3 +1,7 @@
+## 2026-11-07
+### Behoben
+- Im Player fehlte manchmal das Cover, obwohl es in der Übersicht zu sehen war. Jetzt zeigt der Player sofort das Album-Cover und lädt fehlende Cover nach, auch wenn ein Download früher fehlgeschlagen ist.
+
 ## 2026-11-06b
 ### Anders
 - Die Kacheln zum Stöbern zeigen jetzt ein passendes Bild statt einer Farbe.

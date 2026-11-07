@@ -43,6 +43,12 @@ public class Song: AbstractPlayable, Identifyable {
     }
   }
 
+  // HomeLabMusic: Navidrome führt für viele Songs ein eigenes Cover (mf-…). Solange es nicht geladen ist,
+  // das Album-Cover zeigen statt eines leeren Bildes (Player, Sperrbildschirm, CarPlay).
+  override public func imagePath(setting: ArtworkDisplayPreference) -> String? {
+    super.imagePath(setting: setting) ?? album?.imagePath(setting: setting)
+  }
+
   public var album: Album? {
     get {
       guard let albumMO = managedObject.album else { return nil }

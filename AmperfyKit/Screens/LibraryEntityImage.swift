@@ -219,8 +219,11 @@ public class LibraryEntityImage: RoundedImage {
         )
       }
     }
-    if let artwork = entity.artwork,
-       artwork.uniqueID == downloadNotification.id, let accountInfo = artwork.account?.info {
+    // HomeLabMusic: bei Songs auch das Album-Cover (Ersatz, solange das eigene Song-Cover fehlt)
+    if let artwork = entity.artwork ?? (entity as? Song)?.album?.artwork,
+       artwork.uniqueID == downloadNotification.id ||
+       (entity as? Song)?.album?.artwork?.uniqueID == downloadNotification.id,
+       let accountInfo = artwork.account?.info {
       Task { @MainActor in
         guard let imagePath = entity.imagePath(
           setting: appDelegate.storage.settings.accounts.getSetting(accountInfo).read
