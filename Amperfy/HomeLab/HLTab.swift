@@ -29,6 +29,7 @@ enum HLTab {
     HLPlayer.hakenEinrichten()
     HLBibliothek.shared.einrichten()
     HLSpeicher.einrichten()
+    HLPocketID.einrichten()
   }
 
   /// iPhone/iPad: Tab in der Tab-Leiste.

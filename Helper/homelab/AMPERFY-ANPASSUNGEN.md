@@ -3,7 +3,7 @@
 HomeLabMusic ist eine Kopie von [Amperfy](https://github.com/BLeeEZ/amperfy) (GPL-3), Basis **v2.1.1**.
 Fast alles Eigene liegt in **eigenen Dateien**, die Amperfy nie anfasst:
 
-- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, CarPlay-Bilder, lernender Mix, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild, Stöbern-Kacheln der Suche (`HLSuche.swift`), Wunsch-Knopf im Mini-Player (`HLMiniKnopf.swift`), Entdecken-Block der Künstlerseite (`HLKuenstlerBlock.swift`), Speichergrenze für Songs und Cover (`HLSpeicher.swift`)
+- `Amperfy/HomeLab/` – Entdecken-Tab, Player-Anbindung, CarPlay-Bilder, lernender Mix, Shazam, Radio, Benachrichtigungen, Menü-Einträge, Startbild, Stöbern-Kacheln der Suche (`HLSuche.swift`), Anmeldung mit Pocket ID (`HLPocketID.swift`: Ablauf, Widerruf erkennen, Abmelden), Wunsch-Knopf im Mini-Player (`HLMiniKnopf.swift`), Entdecken-Block der Künstlerseite (`HLKuenstlerBlock.swift`), Speichergrenze für Songs und Cover (`HLSpeicher.swift`)
 - `Helper/homelab/` – Hilfsskripte (Dateien ins Projekt eintragen, Symbol zeichnen, TestFlight-Upload)
 
 Im Amperfy-Code selbst gibt es nur die folgenden Eingriffe. Beim Übernehmen einer neuen Amperfy-Version
@@ -25,6 +25,8 @@ Jede Code-Stelle ist mit `// HomeLabMusic` markiert (`git grep -n "HomeLabMusic"
 | `Amperfy/AppDelegateNotificationExtensions.swift` | `if HLBenachrichtigung.behandeln(userInfo) { return }` | Antippen von «Dein Wunsch ist da» spielt den Song |
 | `Amperfy/AppDelegate.swift` (`performBackgroundFetchTask`) | `await HLBenachrichtigung.pruefen()` | gelieferte Wünsche auch im Hintergrund melden |
 | `Amperfy/Screens/ViewController/LoginVC.swift` | Titel «HomeLabMusic», Server-Adresse vorausgefüllt | Anmeldung für die Familie |
+| `Amperfy/Screens/ViewController/LoginVC.swift` (Pocket ID) | Knopf «Mit Pocket ID anmelden» unter «Login» (`pocketIDPressed` → `HLPocketID.anmelden`); `login()` aufgeteilt in Prüfung und `login(credentials:apiType:)`; `showErrorMsg` mit Titel und OK-Aktion; beim Vorausfüllen nie die Kopfzeile `x-homelab-geraet` übernehmen | Anmeldung über den Einrichtungsdienst (Gerätetoken als eigene Kopfzeile, Caddy setzt `Remote-User`). Ohne den Filter würde eine Passwort-Anmeldung das Token des aktiven Kontos mitschicken und als diese Person angemeldet |
+| `Amperfy/SwiftUI/Settings/Account/AccountSettingsView.swift` | `HLPocketID.abmelden` am Anfang von `logout`; bei Pocket-ID-Konten «Mit Pocket ID neu anmelden» statt «Update Password» | Gerät beim Dienst entfernen; nach einem Widerruf neues Token holen |
 | `AmperfyKit/Screens/EntityImageView.swift` | `playlistCover`-Haken (Playlist-ID → Bild) | eigene Playlist-Cover von Navidrome statt Mosaik |
 | `AmperfyKit/Storage/LibraryStorage.swift` | `createRadio` / `deleteRadio` / `createSong` auf `public` | Vorschauen als versteckte Radio-Einträge im Player; frisch gelieferte Songs gezielt nachladen |
 | `Amperfy/Screens/Player/PlayerUIHandler.swift` | Vorschau-Titel/Untertitel | «Vorschau · Künstler» |

@@ -96,8 +96,8 @@ enum HLCover {
   private static func bild(_ id: String) async -> UIImage? {
     if let b = speicher.object(forKey: id as NSString) { return b }
     guard !id.isEmpty, !fehlgeschlagen.contains(id),
-          let url = HLAPI.shared.subsonicURL("getCoverArt", ["id": "pl-\(id)", "size": "600"]) else { return nil }
-    guard let (daten, antwort) = try? await URLSession.shared.data(from: url),
+          let req = HLAPI.shared.subsonicAnfrage("getCoverArt", ["id": "pl-\(id)", "size": "600"]) else { return nil }
+    guard let (daten, antwort) = try? await URLSession.shared.data(for: req),
           (antwort as? HTTPURLResponse)?.statusCode == 200,
           (antwort as? HTTPURLResponse)?.mimeType?.hasPrefix("image") == true,
           let b = UIImage(data: daten) else {

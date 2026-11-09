@@ -83,6 +83,8 @@ struct AccountSettingsView: View {
   }
 
   private func logout(accountInfo: AccountInfo) {
+    // HomeLabMusic: Gerät beim Einrichtungsdienst abmelden (nur Konten aus «Mit Pocket ID anmelden»)
+    HLPocketID.abmelden(appDelegate.storage.settings.accounts.getSetting(accountInfo).read.loginCredentials)
     appDelegate.closeAllButActiveMainTabs()
     if appDelegate.storage.settings.accounts.allAccounts.count <= 1 {
       appDelegate.stopForInit()
@@ -240,8 +242,14 @@ struct AccountSettingsView: View {
           }
 
           SettingsSection {
-            SettingsButtonRow(title: "Update Password") {
-              withPopupAnimation { isPwUpdateDialogVisible = true }
+            if HLPocketID.istPocketID(activeAccountInfo) { // HomeLabMusic
+              SettingsButtonRow(title: "Mit Pocket ID neu anmelden") {
+                Task { await HLPocketID.neuAnmelden(info: activeAccountInfo) }
+              }
+            } else {
+              SettingsButtonRow(title: "Update Password") {
+                withPopupAnimation { isPwUpdateDialogVisible = true }
+              }
             }
             SettingsButtonRow(title: "Resync Library") {
               isShowResyncLibraryAlert = true

@@ -221,7 +221,10 @@ final class HLAPI {
   static let shared = HLAPI()
   static let port = 30370
 
-  var account: Account?
+  var account: Account? {
+    // anderes Konto (z. B. zusätzlich mit Pocket ID angemeldet): Medienwunsch-Token des alten Kontos nicht weiterverwenden
+    didSet { if oldValue?.info != account?.info { token = nil } }
+  }
   private var token: String?
   private var anmeldung: Task<String, Error>?
   private let session: URLSession = {
@@ -269,10 +272,18 @@ final class HLAPI {
     return teile.url
   }
 
+  /// Subsonic-Anfrage mit den eigenen Kopfzeilen des Kontos (Gerätetoken nach «Mit Pocket ID anmelden»).
+  func subsonicAnfrage(_ endpunkt: String, _ parameter: [String: String]) -> URLRequest? {
+    guard let url = subsonicURL(endpunkt, parameter) else { return nil }
+    var req = URLRequest(url: url)
+    for (k, v) in credentials?.httpHeaders ?? [:] { req.setValue(v, forHTTPHeaderField: k) }
+    return req
+  }
+
   /// Subsonic-Abfrage mit den Amperfy-Zugangsdaten; liefert den Inhalt von «subsonic-response».
   func subsonic(_ endpunkt: String, _ parameter: [String: String] = [:]) async -> [String: Any]? {
-    guard let url = subsonicURL(endpunkt, parameter.merging(["f": "json"]) { $1 }),
-          let (daten, _) = try? await session.data(from: url),
+    guard let req = subsonicAnfrage(endpunkt, parameter.merging(["f": "json"]) { $1 }),
+          let (daten, _) = try? await session.data(for: req),
           let json = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
           let antwort = json["subsonic-response"] as? [String: Any],
           antwort["status"] as? String == "ok"
@@ -282,8 +293,8 @@ final class HLAPI {
 
   /// Senderbilder aus Navidrome (Radio-ID -> coverArt), leer wenn keine hochgeladen sind.
   func senderBilder() async -> [String: String] {
-    guard let url = subsonicURL("getInternetRadioStations", ["f": "json"]),
-          let (daten, _) = try? await session.data(from: url),
+    guard let req = subsonicAnfrage("getInternetRadioStations", ["f": "json"]),
+          let (daten, _) = try? await session.data(for: req),
           let json = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
           let antwort = json["subsonic-response"] as? [String: Any],
           let liste = (antwort["internetRadioStations"] as? [String: Any])?["internetRadioStation"] as? [[String: Any]]
@@ -306,6 +317,8 @@ final class HLAPI {
   /// Header für eigene Adressen (Cover, Songs aus der Bibliothek).
   func kopf(fuer url: URL) async -> [String: String] {
     guard let basis = basisURL, url.scheme == basis.scheme, url.host == basis.host, url.port == basis.port else { return [:] }
+    // Navidrome selbst (z. B. Senderbild über getCoverArt): eigene Kopfzeilen des Kontos (Gerätetoken)
+    if url.path.hasPrefix("/rest/") { return credentials?.httpHeaders ?? [:] }
     guard let tok = try? await gueltigesToken() else { return [:] }
     return ["Authorization": "Bearer \(tok)"]
   }
@@ -325,15 +338,29 @@ final class HLAPI {
     return try await aufgabe.value
   }
 
+  /// Nach erneuter Anmeldung mit Pocket ID: Medienwunsch-Token neu holen.
+  func medienwunschTokenVergessen() {
+    token = nil
+    HLSchluesselbund.loeschen(schluessel)
+  }
+
   private func anmelden() async throws -> String {
     guard let cred = credentials, let basis = basisURL else { throw HLAPIFehler.keinKonto }
+    // Konto aus «Mit Pocket ID anmelden»: kein Passwort, Medienwunsch prüft das Gerätetoken beim Einrichtungsdienst
+    if let geraet = HLPocketID.geraeteToken(cred) {
+      return try await anmeldenMit(["geraet": geraet.wert], basis: basis)
+    }
     let salz = (0 ..< 8).map { _ in String(format: "%02x", UInt8.random(in: 0 ... 255)) }.joined()
     let hash = Insecure.MD5.hash(data: Data((cred.password + salz).utf8))
       .map { String(format: "%02x", $0) }.joined()
+    return try await anmeldenMit(["u": cred.username, "t": hash, "s": salz], basis: basis)
+  }
+
+  private func anmeldenMit(_ inhalt: [String: String], basis: URL) async throws -> String {
     var req = URLRequest(url: basis.appendingPathComponent("entdecken/anmelden"))
     req.httpMethod = "POST"
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    req.httpBody = try JSONEncoder().encode(["u": cred.username, "t": hash, "s": salz])
+    req.httpBody = try JSONEncoder().encode(inhalt)
     let (daten, antwort) = try await session.data(for: req)
     guard (antwort as? HTTPURLResponse)?.statusCode == 200 else {
       throw HLAPIFehler.server(Self.meldung(daten) ?? "Anmeldung beim Medienwunsch-Dienst fehlgeschlagen.")

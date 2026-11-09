@@ -1,3 +1,10 @@
+## 2026-11-09
+### Neu
+- «Mit Pocket ID anmelden»: Auf der Anmeldeseite meldest du dich mit deinem Passkey an, ohne Passwort. Dein bisheriges Konto mit Verlauf und Favoriten bleibt dasselbe.
+- Hat jemand dieses Gerät auf einrichtung.bi-gerbers.ch abgemeldet, sagt dir die App das und du meldest dich mit einem Tipp neu an. Unter Einstellungen → Konto geht das auch jederzeit.
+### Anders
+- Die Anmeldung mit Passwort funktioniert weiter wie bisher.
+
 ## 2026-11-07c
 ### Behoben
 - Künstler, die später dazugekommen sind (z. B. durch einen erfüllten Wunsch), zeigten nur ein Mikrofon statt eines Bildes. Die App holt das Bild jetzt nach.

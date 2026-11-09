@@ -181,6 +181,44 @@ class LoginVC: UIViewController {
     return button
   }()
 
+  // HomeLabMusic: «Mit Pocket ID anmelden» über den Einrichtungsdienst (HLPocketID)
+  fileprivate lazy var pocketIDButton: UIButton = {
+    var config = UIButton.Configuration.glass()
+    config.image = UIImage(systemName: "person.badge.key")
+    config.imagePadding = 10.0
+    let button = UIButton(configuration: config)
+    button.setTitle("Mit Pocket ID anmelden", for: .normal)
+    button.accessibilityLabel = "Mit Pocket ID anmelden"
+    button.addTarget(self, action: #selector(Self.pocketIDPressed), for: .touchUpInside)
+    button.preferredBehavioralStyle = .pad
+    return button
+  }()
+
+  @IBAction
+  func pocketIDPressed() { // HomeLabMusic
+    view.endEditing(true)
+    pocketIDButton.isEnabled = false
+    Task { @MainActor in
+      defer { self.pocketIDButton.isEnabled = true }
+      do {
+        let credentials = try await HLPocketID.anmelden(fenster: self.view.window)
+        let info = Account.createInfo(credentials: credentials)
+        if self.appDelegate.storage.settings.accounts.allAccounts.contains(where: { $0 == info }) {
+          // Konto gibt es schon (z. B. bisher mit Passwort oder Gerät widerrufen): Zugang erneuern
+          HLPocketID.uebernehmen(credentials, fuer: info)
+          self.showErrorMsg(title: "Angemeldet", message: "Dein Konto «\(credentials.username)» nutzt jetzt Pocket ID.") {
+            self.closePressed()
+          }
+          return
+        }
+        self.login(credentials: credentials, apiType: .subsonic)
+      } catch is CancellationError {
+      } catch {
+        self.showErrorMsg(message: error.localizedDescription)
+      }
+    }
+  }
+
   fileprivate lazy var httpHeadersButton: UIButton = {
     var config = UIButton.Configuration.glass()
     let button = UIButton(configuration: config)
@@ -428,19 +466,25 @@ class LoginVC: UIViewController {
 
     var credentials = LoginCredentials(serverUrl: serverUrl, username: username, password: password)
     credentials.httpHeaders = httpHeaders
-    var accountInfo = Account.createInfo(credentials: credentials)
+    let accountInfo = Account.createInfo(credentials: credentials)
 
     guard !appDelegate.storage.settings.accounts.allAccounts.contains(where: { $0 == accountInfo })
     else {
       showErrorMsg(message: "Account already added!")
       return
     }
+    login(credentials: credentials, apiType: selectedApiType)
+  }
 
+  // HomeLabMusic: gemeinsamer Teil für Passwort und Pocket ID (vorher Teil von login())
+  func login(credentials: LoginCredentials, apiType: BackenApiType) {
+    var credentials = credentials
+    var accountInfo = Account.createInfo(credentials: credentials)
     Task { @MainActor in
       do {
         let meta = self.appDelegate.getMeta(accountInfo)
         let authenticatedApiType = try await meta.backendApi.login(
-          apiType: selectedApiType,
+          apiType: apiType,
           credentials: credentials
         )
         credentials.backendApi = authenticatedApiType
@@ -481,9 +525,9 @@ class LoginVC: UIViewController {
     }
   }
 
-  func showErrorMsg(message: String) {
-    let alert = UIAlertController(title: "Login failed", message: message, preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: "OK", style: .default))
+  func showErrorMsg(title: String = "Login failed", message: String, ok: (() -> ())? = nil) {
+    let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+    alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in ok?() })
     present(alert, animated: true, completion: nil)
   }
 
@@ -523,6 +567,8 @@ class LoginVC: UIViewController {
     view.addSubview(formGlassContainer)
     view.addSubview(loginGlassContainer)
     view.addSubview(closeButton)
+    pocketIDButton.translatesAutoresizingMaskIntoConstraints = false // HomeLabMusic
+    view.addSubview(pocketIDButton)
 
     formLeadingConstraing = formGlassContainer.leadingAnchor.constraint(
       equalTo: view.leadingAnchor,
@@ -564,6 +610,11 @@ class LoginVC: UIViewController {
       ),
       loginGlassContainer.widthAnchor.constraint(equalToConstant: 140),
       loginGlassContainer.heightAnchor.constraint(equalToConstant: 40),
+
+      // HomeLabMusic: unter «Login»
+      pocketIDButton.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: 0),
+      pocketIDButton.topAnchor.constraint(equalTo: loginGlassContainer.bottomAnchor, constant: 16),
+      pocketIDButton.heightAnchor.constraint(equalToConstant: 40),
 
       iconView.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: 0),
       iconView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: 0),
@@ -624,7 +675,8 @@ class LoginVC: UIViewController {
       .loginCredentials {
       serverUrlTF.text = credentials.serverUrl
       usernameTF.text = credentials.username
-      httpHeaders = credentials.httpHeaders
+      // HomeLabMusic: nie das Gerätetoken eines Pocket-ID-Kontos übernehmen (würde jede Anmeldung zu dieser Person machen)
+      httpHeaders = credentials.httpHeaders.filter { $0.key.lowercased() != HLPocketID.standardKopfzeile }
     }
   }
 
