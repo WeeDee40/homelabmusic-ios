@@ -60,7 +60,7 @@ Pause, kein Spulen. Ein Versuch, sie wie Songs zu behandeln (Build 15–17), mac
 | `Amperfy.xcodeproj/project.pbxproj` | Bundle-ID `ch.gerber.homelabmusic`, Team `C4LESUKP6H`, Version, eigene Dateien (Gruppe «HomeLab»). Konflikte hier entstehen am ehesten; eigene Dateien mit `python3 Helper/homelab/add_files.py` neu eintragen |
 | `Amperfy.xcodeproj/…/Package.resolved` und Projektdatei | AudioStreaming 1.4.5 statt 1.4.4 (Absturz-Fix in `DispatchTimerSource.deinit`); bei einem Amperfy-Update nicht auf eine ältere Version zurückfallen |
 | `Amperfy/Amperfy.entitlements` | `com.apple.security.device.audio-input` (Mikrofon für Shazam auf dem Mac) |
-| `Amperfy/Info.plist` | Anzeigename, Mikrofon-Text (Shazam), `ITSAppUsesNonExemptEncryption = false` |
+| `Amperfy/Info.plist` | Anzeigename, `CFBundleName` = HomeLabMusic (statt `$(PRODUCT_NAME)` = Amperfy; erscheint im Systemdialog der Pocket-ID-Anmeldung), Mikrofon-Text (Shazam), `ITSAppUsesNonExemptEncryption = false` |
 | `Amperfy/Screens/LaunchScreen.storyboard` | Startbild `HLStart` bildschirmfüllend |
 | `AmperfyKit/Assets/AmperfyAppIcon.icon/` | App-Symbol (HLM) |
 | `AmperfyKit/Assets/Assets.xcassets/Icon-monocolor.imageset/` | HLM-Zeichen (Anmeldeseite) |
