@@ -107,6 +107,7 @@ class PlayerControlView: UIView {
     skipBackwardButton.tintColor = .label
     skipForwardButton.tintColor = .label
     airplayButton.tintColor = .label
+    HLAusgabe.shared.beobachten(airplayButton) // HomeLabMusic: Symbol des aktuellen Ausgabegeräts
     playerModeButton.tintColor = .label
     volumeButton.tintColor = .label
     optionsButton.imageView?.tintColor = .label

@@ -1,3 +1,7 @@
+## 2026-11-11
+### Neu
+- Im Player zeigt der Knopf unten links jetzt, worüber die Musik läuft: das Symbol deiner AirPods, Kopfhörer, des Lautsprechers oder Autos, farbig hervorgehoben. Steht dort das gewohnte AirPlay-Zeichen ohne Farbe, spielt der Lautsprecher des iPhones.
+
 ## 2026-11-09
 ### Neu
 - «Mit Pocket ID anmelden»: Auf der Anmeldeseite meldest du dich mit deinem Passkey an, ohne Passwort. Dein bisheriges Konto mit Verlauf und Favoriten bleibt dasselbe.

@@ -506,6 +506,7 @@ class MiniPlayerView: UIView {
     self.lyricsButton.translatesAutoresizingMaskIntoConstraints = false
     self.playlistButton.translatesAutoresizingMaskIntoConstraints = false
     self.airplayButton.translatesAutoresizingMaskIntoConstraints = false
+    HLAusgabe.shared.beobachten(airplayButton) // HomeLabMusic: Symbol des aktuellen Ausgabegeräts
     self.volumeButton.translatesAutoresizingMaskIntoConstraints = false
 
     let stack = UIStackView(arrangedSubviews: [
