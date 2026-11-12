@@ -189,7 +189,31 @@ final class HLPlayer: ObservableObject {
 
   // MARK: Bilder für echte Radiosender
 
-  private var senderBilder: [String: String]?             // Radio-ID -> Navidrome-coverArt (falls hochgeladen)
+  // Radio-ID -> Navidrome-coverArt (falls hochgeladen). Auf dem Gerät gemerkt, damit die Senderbilder
+  // auch ohne Verbindung zum Server da sind; vom Server geholt einmal je App-Lauf.
+  private static let senderSchluessel = "homelabmusic.senderBilder"
+  private var senderBilder = UserDefaults.standard.dictionary(forKey: HLPlayer.senderSchluessel) as? [String: String]
+  private var senderGeholt = false
+  private var senderVersuch = Date.distantPast
+  private var senderAbfrage: Task<(), Never>?
+
+  /// Liste der Senderbilder: sofort die gemerkte, sonst (erster Start) auf den Server warten.
+  private func senderListe() async -> [String: String] {
+    if !senderGeholt, senderAbfrage == nil, Date().timeIntervalSince(senderVersuch) > 30 {
+      senderVersuch = Date()
+      senderAbfrage = Task { @MainActor [weak self] in
+        let neu = await HLAPI.shared.senderBilder()
+        guard let self else { return }
+        self.senderAbfrage = nil
+        guard let neu else { return }                 // keine Antwort: in 30 s wieder
+        self.senderGeholt = true
+        self.senderBilder = neu
+        UserDefaults.standard.set(neu, forKey: Self.senderSchluessel)
+      }
+    }
+    if senderBilder == nil, let abfrage = senderAbfrage { await abfrage.value }
+    return senderBilder ?? [:]
+  }
 
   /// Cover des Songs, der gerade im Radio läuft (Deezer); sonst das Senderbild aus Navidrome.
   func radioBild(_ radioId: String) async -> UIImage? {
@@ -203,10 +227,10 @@ final class HLPlayer: ObservableObject {
 
   /// Senderbild aus Navidrome (Radio → Sender → Bild), falls hochgeladen.
   func senderBild(_ radioId: String) async -> UIImage? {
-    if senderBilder == nil { senderBilder = await HLAPI.shared.senderBilder() }
-    guard let cover = senderBilder?[radioId], !cover.isEmpty,
-          let url = HLAPI.shared.subsonicURL("getCoverArt", ["id": cover, "size": "600"]) else { return nil }
-    return await HLBildSpeicher.shared.bild(url)
+    guard let cover = await senderListe()[radioId], !cover.isEmpty else { return nil }
+    return await HLBildAblage.shared.bild("sender-\(cover)", auffrischen: true) {
+      HLAPI.shared.subsonicAnfrage("getCoverArt", ["id": cover, "size": "600"])
+    }
   }
 
   func radioBildSofort(_ radioId: String) -> UIImage? {

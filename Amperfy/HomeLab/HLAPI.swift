@@ -291,14 +291,20 @@ final class HLAPI {
     return antwort
   }
 
-  /// Senderbilder aus Navidrome (Radio-ID -> coverArt), leer wenn keine hochgeladen sind.
-  func senderBilder() async -> [String: String] {
+  /// Senderbilder aus Navidrome (Radio-ID -> coverArt), leer wenn keine hochgeladen sind;
+  /// nil, wenn der Server nicht geantwortet hat (dann gilt die zuletzt gespeicherte Liste).
+  func senderBilder() async -> [String: String]? {
+    #if DEBUG
+      if HLBildAblage.ohneServer { return nil }
+    #endif
     guard let req = subsonicAnfrage("getInternetRadioStations", ["f": "json"]),
           let (daten, _) = try? await session.data(for: req),
           let json = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
           let antwort = json["subsonic-response"] as? [String: Any],
-          let liste = (antwort["internetRadioStations"] as? [String: Any])?["internetRadioStation"] as? [[String: Any]]
-    else { return [:] }
+          antwort["status"] as? String == "ok"
+    else { return nil }
+    // ohne Sender fehlt der Schlüssel «internetRadioStation» ganz
+    let liste = (antwort["internetRadioStations"] as? [String: Any])?["internetRadioStation"] as? [[String: Any]] ?? []
     var out = [String: String]()
     for r in liste { if let id = r["id"] as? String { out[id] = r["coverArt"] as? String ?? "" } }
     return out

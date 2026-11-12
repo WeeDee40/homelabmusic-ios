@@ -1,3 +1,7 @@
+## 2026-11-12
+### Behoben
+- Ohne Verbindung zum Server (zum Beispiel wenn Tailscale hängt) zeigte die App bei den Playlists nur ein Mosaik und bei den Radiosendern nur das Funk-Symbol, und das blieb so bis zum nächsten Neustart der App. Jetzt merkt sie sich diese Bilder auf dem Gerät und holt fehlende von selbst nach, sobald der Server wieder erreichbar ist.
+
 ## 2026-11-11
 ### Neu
 - Im Player zeigt der Knopf unten links jetzt, worüber die Musik läuft: das Symbol deiner AirPods, Kopfhörer, des Lautsprechers oder Autos, farbig hervorgehoben. Steht dort das gewohnte AirPlay-Zeichen ohne Farbe, spielt der Lautsprecher des iPhones.

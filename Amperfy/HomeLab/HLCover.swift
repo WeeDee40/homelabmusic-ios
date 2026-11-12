@@ -3,8 +3,12 @@
 //  HomeLabMusic
 //
 //  Playlist-Cover von Navidrome statt Amperfys Mosaik aus den ersten vier Songs: Navidrome liefert das
-//  hochgeladene Bild (z. B. die Wochenmix-Cover) und sonst ein eigenes Mosaik. Zwischengespeichert
-//  für die Laufzeit der App.
+//  hochgeladene Bild (z. B. die Wochenmix-Cover) und sonst ein eigenes Mosaik.
+//
+//  Die Bilder liegen auf dem Gerät (HLBildAblage, unten in dieser Datei; auch für die Senderbilder aus
+//  HLPlayer.senderBild). Ohne Verbindung zum Server (Tailscale hängt, Funkloch) zeigt die App darum die
+//  zuletzt geladenen Bilder, und ein fehlgeschlagener Abruf wird von selbst wiederholt. Bis Build 36
+//  merkte sie sich einen Fehlschlag bis zum nächsten App-Start und zeigte so lange Mosaik und Radio-Symbol.
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -18,9 +22,6 @@ import UIKit
 
 @MainActor
 enum HLCover {
-  private static let speicher = NSCache<NSString, UIImage>()
-  private static var fehlgeschlagen = Set<String>()
-
   static func einrichten() {
     EntityImageView.playlistCover = { id in await bild(id) }
     LibraryEntityImage.fehlendesKuenstlerBild = { artist in kuenstlerBild(artist) }
@@ -94,17 +95,150 @@ enum HLCover {
   }
 
   private static func bild(_ id: String) async -> UIImage? {
-    if let b = speicher.object(forKey: id as NSString) { return b }
-    guard !id.isEmpty, !fehlgeschlagen.contains(id),
-          let req = HLAPI.shared.subsonicAnfrage("getCoverArt", ["id": "pl-\(id)", "size": "600"]) else { return nil }
-    guard let (daten, antwort) = try? await URLSession.shared.data(for: req),
-          (antwort as? HTTPURLResponse)?.statusCode == 200,
-          (antwort as? HTTPURLResponse)?.mimeType?.hasPrefix("image") == true,
-          let b = UIImage(data: daten) else {
-      fehlgeschlagen.insert(id)                        // nicht bei jeder Anzeige erneut versuchen
-      return nil
+    guard !id.isEmpty else { return nil }
+    // auffrischen: Das Cover einer Playlist kann sich ändern, ihre ID bleibt gleich
+    return await HLBildAblage.shared.bild("pl-\(id)", auffrischen: true) {
+      HLAPI.shared.subsonicAnfrage("getCoverArt", ["id": "pl-\(id)", "size": "600"])
     }
-    speicher.setObject(b, forKey: id as NSString)
-    return b
+  }
+}
+
+// MARK: - Bilder auf dem Gerät
+
+/// Ablage für Bilder vom eigenen Server, die Amperfy nicht kennt (Playlist-Cover, Senderbilder):
+/// im Speicher, als Datei unter Caches/hl-bilder und sonst vom Server.
+@MainActor
+final class HLBildAblage {
+  static let shared = HLBildAblage()
+
+  private enum Antwort {
+    case bild(UIImage, Data)
+    case keines        // Server hat geantwortet, liefert aber kein Bild (404 oder kein Bildformat)
+    case fehler        // keine Antwort oder vorübergehender Fehler (401, 5xx): später nochmals
+  }
+
+  private static let pausen: [Double] = [5, 15, 30, 60, 120]   // Sekunden zwischen den Versuchen
+  private static let hoechstens = 400                          // Dateien
+
+  private let speicher = NSCache<NSString, UIImage>()
+  private var laufend = [String: Task<UIImage?, Never>]()
+  private var erledigt = Set<String>()            // in diesem App-Lauf hat der Server schon geantwortet
+  private var versucht = [String: Date]()         // letztes Auffrischen ohne Antwort
+  private let ordner: URL
+
+  private init() {
+    ordner = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+      .appendingPathComponent("hl-bilder", isDirectory: true)
+    try? FileManager.default.createDirectory(at: ordner, withIntermediateDirectories: true)
+    aufraeumen()
+  }
+
+  /// Bild zu einem Schlüssel. `anfrage` baut die Abfrage an den Server (jedes Mal neu, das Salz wechselt).
+  /// `auffrischen`: ein gespeichertes Bild einmal je App-Lauf im Hintergrund mit dem Server abgleichen;
+  /// angezeigt wird das neue Bild beim nächsten Aufbau der Ansicht.
+  func bild(_ schluessel: String, auffrischen: Bool, anfrage: @escaping @MainActor () -> URLRequest?) async -> UIImage? {
+    if let b = speicher.object(forKey: schluessel as NSString) {
+      if auffrischen { abgleichen(schluessel, anfrage) }
+      return b
+    }
+    let datei = pfad(schluessel)
+    if let daten = try? Data(contentsOf: datei), let b = UIImage(data: daten) {
+      speicher.setObject(b, forKey: schluessel as NSString)
+      if auffrischen { abgleichen(schluessel, anfrage) }
+      return b
+    }
+    if erledigt.contains(schluessel) { return nil }   // Server hat in diesem Lauf schon «kein Bild» gesagt
+    if let t = laufend[schluessel] { return await t.value }
+    let aufgabe = Task { @MainActor [weak self] () -> UIImage? in
+      defer { self?.laufend[schluessel] = nil }
+      for pause in [0.0] + Self.pausen {
+        if pause > 0 { try? await Task.sleep(for: .seconds(pause)) }
+        guard let self else { return nil }
+        switch await self.holen(anfrage) {
+        case let .bild(b, daten):
+          self.ablegen(schluessel, b, daten)
+          return b
+        case .keines:
+          self.erledigt.insert(schluessel)
+          return nil
+        case .fehler:
+          continue
+        }
+      }
+      return nil   // nichts gemerkt: die nächste Anzeige versucht es wieder
+    }
+    laufend[schluessel] = aufgabe
+    return await aufgabe.value
+  }
+
+  /// Gespeichertes Bild im Hintergrund mit dem Server abgleichen (ein Versuch, höchstens einmal je Minute).
+  private func abgleichen(_ schluessel: String, _ anfrage: @escaping @MainActor () -> URLRequest?) {
+    guard !erledigt.contains(schluessel), laufend[schluessel] == nil else { return }
+    if let t = versucht[schluessel], Date().timeIntervalSince(t) < 60 { return }
+    versucht[schluessel] = Date()
+    laufend[schluessel] = Task { @MainActor [weak self] () -> UIImage? in
+      guard let self else { return nil }
+      defer { self.laufend[schluessel] = nil }
+      switch await self.holen(anfrage) {
+      case let .bild(b, daten):
+        self.erledigt.insert(schluessel)
+        if (try? Data(contentsOf: self.pfad(schluessel))) != daten { self.ablegen(schluessel, b, daten) }
+        return b
+      case .keines:                                   // Bild gibt es auf dem Server nicht mehr
+        self.erledigt.insert(schluessel)
+        self.speicher.removeObject(forKey: schluessel as NSString)
+        try? FileManager.default.removeItem(at: self.pfad(schluessel))
+        return nil
+      case .fehler:
+        return self.speicher.object(forKey: schluessel as NSString)
+      }
+    }
+  }
+
+  #if DEBUG
+    /// Zum Prüfen im Simulator: Solange die Datei Caches/hl-ohne-server existiert, gilt der Server als
+    /// nicht erreichbar (Playlist-Cover, Senderbilder, Liste der Senderbilder). Anlegen und löschen vom Mac aus.
+    static var ohneServer: Bool {
+      FileManager.default.fileExists(atPath: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("hl-ohne-server").path)
+    }
+  #endif
+
+  private func holen(_ anfrage: @MainActor () -> URLRequest?) async -> Antwort {
+    #if DEBUG
+      if Self.ohneServer { return .fehler }
+    #endif
+    guard let req = anfrage() else { return .fehler }   // kein Konto angemeldet
+    guard let (daten, antwort) = try? await URLSession.shared.data(for: req),
+          let http = antwort as? HTTPURLResponse else { return .fehler }
+    if http.statusCode == 200 {
+      guard http.mimeType?.hasPrefix("image") == true, let b = UIImage(data: daten) else { return .keines }
+      return .bild(b, daten)
+    }
+    return http.statusCode == 404 ? .keines : .fehler
+  }
+
+  private func ablegen(_ schluessel: String, _ bild: UIImage, _ daten: Data) {
+    erledigt.insert(schluessel)
+    speicher.setObject(bild, forKey: schluessel as NSString)
+    try? daten.write(to: pfad(schluessel), options: .atomic)
+  }
+
+  private func pfad(_ schluessel: String) -> URL {
+    let name = String(schluessel.map { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" ? $0 : "_" })
+    return ordner.appendingPathComponent(name)
+  }
+
+  /// Mehr als `hoechstens` Dateien: die ältesten löschen (gelöschte Playlists, ersetzte Senderbilder).
+  private func aufraeumen() {
+    let fm = FileManager.default
+    guard let dateien = try? fm.contentsOfDirectory(at: ordner, includingPropertiesForKeys: [.contentModificationDateKey]),
+          dateien.count > Self.hoechstens else { return }
+    let nachAlter = dateien.sorted {
+      let a = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+      let b = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+      return a < b
+    }
+    for datei in nachAlter.prefix(dateien.count - Self.hoechstens) { try? fm.removeItem(at: datei) }
   }
 }
