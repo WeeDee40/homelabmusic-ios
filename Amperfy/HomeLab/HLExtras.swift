@@ -151,7 +151,10 @@ enum HLMenue {
   /// Zusätzliche Menüeinträge für einen Bibliotheks-Song (eingebunden in EntityPreviewActionBuilder).
   static func aktionen(fuer container: PlayableContainable, auf ansicht: UIViewController) -> [UIMenuElement] {
     if let vorschau = HLPlayer.shared.vorschau(container as? AbstractPlayable) { return vorschauAktionen(vorschau) }
-    guard let song = (container as? AbstractPlayable)?.asSong, HLAPI.shared.account != nil else { return [] }
+    let mediathek = HLMediathekUI.menue(fuer: container)
+    guard let song = (container as? AbstractPlayable)?.asSong, HLAPI.shared.account != nil else {
+      return mediathek.isEmpty ? [] : [UIMenu(title: "Mediathek", options: .displayInline, children: mediathek)]
+    }
     let id = song.id, titel = song.title, kuenstler = song.creatorName
     let mix = UIMenu(title: "Mix ab diesem Song", image: UIImage(systemName: "dot.radiowaves.left.and.right"),
                      children: HLMix.Stufe.allCases.map { stufe in
@@ -165,6 +168,6 @@ enum HLMenue {
                                       kuenstler: kuenstler, kuenstlerId: nil, album: nil, albumId: nil, bild: nil,
                                       bildGross: nil, dauer: nil, vorschau: nil, navidromeId: id, navidromeCover: nil))
     }
-    return [UIMenu(title: "HomeLabMusic", options: .displayInline, children: [mix, ablehnen])]
+    return [UIMenu(title: "HomeLabMusic", options: .displayInline, children: mediathek + [mix, ablehnen])]
   }
 }

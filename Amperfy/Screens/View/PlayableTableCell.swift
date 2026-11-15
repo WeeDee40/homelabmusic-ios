@@ -371,7 +371,8 @@ class PlayableTableCell: BasicTableCell {
         accessoryView = nil
       }
     } else {
-      accessoryView = nil
+      // HomeLabMusic: «+» für Songs, die nicht in der Mediathek sind
+      accessoryView = HLMediathekUI.zubehoer(fuer: playable) { [weak self] in self?.refresh() }
     }
 
     refreshSubtitleColor()

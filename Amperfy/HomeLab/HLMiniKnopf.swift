@@ -109,6 +109,7 @@ final class HLMiniMenue: NSObject, UIContextMenuInteractionDelegate {
         HLTab.ausMiniPlayerOeffnen(.sender(art: "navidrome", id: nd))
       })
     }
+    if let nd = s.navidromeId { aktionen.append(contentsOf: HLMediathekUI.menue(navidromeId: nd)) }
     aktionen.append(UIAction(
       title: "Nicht mein Ding",
       image: UIImage(systemName: "hand.thumbsdown"),
