@@ -1,7 +1,12 @@
+## 2026-11-15b
+### Behoben
+- Nach dem Einrichten der Mediathek zeigte die Bibliothek bis zum nächsten Neustart der App noch die ganze Musik der Familie. Jetzt zeigt sie sofort nur deine Mediathek.
+- Beim Einrichten kamen auch Songs dazu, die nur im Zwischenspeicher des Geräts lagen und die du nie bewusst ausgewählt hast. Das passiert nicht mehr; übernommen werden nur Favoriten, eigene Playlists und Wünsche.
+
 ## 2026-11-15
 ### Neu
 - Deine Mediathek: Die Bibliothek zeigt jetzt nur noch deine Musik, also Alben, Künstler und Songs, die du selbst hinzugefügt oder gewünscht hast. Alles andere aus der Familie findest du weiterhin über die Suche.
-- Beim ersten Start übernimmt die App, was schon dir gehört: deine Favoriten, die Songs aus deinen eigenen Playlists, alles, was du je gewünscht hast, und die Songs, die auf diesem Gerät gespeichert sind.
+- Beim ersten Start übernimmt die App, was schon dir gehört: deine Favoriten, die Songs aus deinen eigenen Playlists und alles, was du je gewünscht hast.
 - Mit «+» am Ende einer Zeile oder im Menü mit «Zur Mediathek hinzufügen» holst du Songs und ganze Alben in deine Mediathek. «Aus Mediathek entfernen» nimmt sie wieder heraus; die Musik bleibt für alle anderen da.
 - Was du dir wünschst, kommt nach dem Download von selbst in deine Mediathek und steht dann zuoberst unter «Newest Albums».
 - Was du im Modus «Kinder» wünschst, kommt gleich zu den Kindern und nicht in deine Mediathek.
