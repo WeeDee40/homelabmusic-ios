@@ -213,7 +213,6 @@ final class HLMediathek {
     let neueId = id != s.playlistId
     s.playlistId = id
     s.kommentar = playlist["comment"] as? String
-    if neueId { HLBibliothek.shared.playlistFilterNeu() }
     guard erzwingen || neueId || geaendert != s.geaendert || !flagsGesetzt(account) else {
       speichern(s, account)
       return
@@ -227,6 +226,9 @@ final class HLMediathek {
     schattenSpeichern(eintraege, account)
     UserDefaults.standard.set(true, forKey: standSchluessel(account) + ".flags")
     NotificationCenter.default.post(name: Self.geaendertNotification, object: nil)
+    // Erst jetzt (ID gespeichert, Markierungen gesetzt) den Filter einschalten und die Oberfläche neu aufbauen.
+    // Vorher las HLBibliothek noch den alten Stand ohne Mediathek, und der Filter blieb bis zum Neustart aus.
+    if neueId { HLBibliothek.shared.playlistFilterNeu() }
   }
 
   private func flagsGesetzt(_ account: Account) -> Bool {
