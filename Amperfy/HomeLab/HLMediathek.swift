@@ -110,7 +110,6 @@ final class HLMediathek {
     guard ident != kontoIdent else { return }
     let ersterStart = kontoIdent == nil
     kontoIdent = ident
-    HLListenFilter.eigeneKuenstler = []
     if !ersterStart { abgleichen(erzwingen: true) }
   }
 
@@ -184,7 +183,6 @@ final class HLMediathek {
       // (noch) keine Mediathek: nichts markieren; Anlegen übernimmt die Erstübernahme
       let hatte = s.playlistId != nil
       if hatte || erzwingen { try await flagsSetzen([], account: account) }
-      HLListenFilter.eigeneKuenstler = []
       speichern(Stand(), account)
       if hatte { HLBibliothek.shared.playlistFilterNeu() }
       return
@@ -197,32 +195,17 @@ final class HLMediathek {
     if neueId { HLBibliothek.shared.playlistFilterNeu() }
     guard erzwingen || neueId || geaendert != s.geaendert || !flagsGesetzt(account) else {
       speichern(s, account)
-      if HLListenFilter.eigeneKuenstler.isEmpty { await kuenstlerLaden(account) }
       return
     }
     let eintraege = try await eintraegeLaden(id!)
     try await songsSicherstellen(eintraege.map(\.id), playlistId: id!, account: account)
     try await flagsSetzen(eintraege, account: account)
-    await kuenstlerLaden(account)
     HLListenFilter.neuBerechnet()
     s.geaendert = geaendert
     speichern(s, account)
     schattenSpeichern(eintraege, account)
     UserDefaults.standard.set(true, forKey: standSchluessel(account) + ".flags")
     NotificationCenter.default.post(name: Self.geaendertNotification, object: nil)
-  }
-
-  /// Künstler mit eigenen Songs (für die Künstler-Detailseite im Modus Mediathek).
-  private func kuenstlerLaden(_ account: Account) async {
-    let accountId = account.managedObject.objectID
-    let ids: Set<NSManagedObjectID> = (try? await storage.async.performAndGet { c -> Set<NSManagedObjectID> in
-      let konto = c.context.object(with: accountId) as! AccountMO
-      let r = NSFetchRequest<NSManagedObjectID>(entityName: "Artist")
-      r.resultType = .managedObjectIDResultType
-      r.predicate = NSPredicate(format: "account == %@ AND hlInMediathek == YES", konto)
-      return Set((try? c.context.fetch(r)) ?? [])
-    }) ?? []
-    HLListenFilter.eigeneKuenstler = ids
   }
 
   private func flagsGesetzt(_ account: Account) -> Bool {

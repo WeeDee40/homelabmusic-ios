@@ -8,8 +8,8 @@
 //  1. Bibliothek (HLBibliothek): Musik oder Kinder, dazu fremde Playlists und die Mediathek-Playlist ausblenden.
 //  2. Mediathek (HLMediathek): im Modus «Mediathek» nur, was der Person gehört –
 //     Songs, Alben und Künstler mit mindestens einem eigenen Song, Genres mit eigenen Songs.
-//     Ausgenommen: Suche (findet alles), Favoriten, «Zuletzt gehört», Album-Detail (alle Songs des Albums),
-//     Künstler-Detail eines Künstlers ohne eigene Songs (z. B. aus der Suche geöffnet), Verzeichnisse.
+//     Ausgenommen: Suche (findet alles), Favoriten, «Zuletzt gehört», Verzeichnisse und die Detailseiten von
+//     Album und Künstler (zeigen alles, Eigenes markiert, Rest mit «+»).
 //     «Newest Albums» heisst dort: zuletzt in die Mediathek gekommen (Album.hlMediathekSeit absteigend).
 //     Solange es für das Konto noch keine Mediathek gibt, zeigt der Modus alles (wie bisher).
 //
@@ -27,8 +27,6 @@ enum HLListenFilter {
   /// Mediathek-Filter aktiv (Modus Mediathek und die Mediathek des Kontos ist bekannt). Wird auf dem Main-Thread
   /// gesetzt und aus beliebigen Kontexten gelesen (wie HLBibliothek.filter).
   nonisolated(unsafe) static var mediathekAktiv = false
-  /// Künstler mit eigenen Songs (Objekt-IDs), für die Künstler-Detailseite.
-  nonisolated(unsafe) static var eigeneKuenstler = Set<NSManagedObjectID>()
 
   static func einrichten() {
     hlListenFilter = { entitaet, basis, suche in praedikat(entitaet: entitaet, basis: basis, suche: suche) }
@@ -62,12 +60,11 @@ enum HLListenFilter {
     if schluessel.contains(where: { $0.pfad == "isFavorite" || $0.pfad == "recentIndex" }) { return nil }
     switch entitaet {
     case "Song":
-      // Album-Detail zeigt alle Songs (eigene hervorgehoben); Verzeichnisse sind im Modus ausgeblendet
-      if schluessel.contains(where: { $0.pfad == "album" || $0.pfad == "directory" }) { return nil }
-      if fremderKuenstler(schluessel) { return nil }
+      // Detailseiten von Album und Künstler zeigen alles; Verzeichnisse sind im Modus ausgeblendet
+      if schluessel.contains(where: { ["album", "artist", "directory"].contains($0.pfad) }) { return nil }
       return NSPredicate(format: "hlInMediathek == YES")
     case "Album":
-      if fremderKuenstler(schluessel) { return nil }
+      if schluessel.contains(where: { $0.pfad == "artist" }) { return nil }   // Künstler-Detail
       return NSPredicate(format: "hlMediathekSeit != nil")
     case "Artist":
       return NSPredicate(format: "hlInMediathek == YES")
@@ -76,12 +73,6 @@ enum HLListenFilter {
     default:
       return nil
     }
-  }
-
-  /// Künstler-Detail eines Künstlers ohne eigene Songs (aus der Suche geöffnet): alles zeigen.
-  private static func fremderKuenstler(_ v: [Vergleich]) -> Bool {
-    guard let k = v.first(where: { $0.pfad == "artist" })?.wert as? NSManagedObjectID else { return false }
-    return !eigeneKuenstler.contains(k)
   }
 
   // MARK: Einträge der Bibliothek
@@ -104,17 +95,15 @@ enum HLListenFilter {
 
   private struct Vergleich {
     var pfad: String
-    var wert: Any?
   }
 
-  /// Alle einfachen Vergleiche «Schlüssel ⋯ Wert» in einem (zusammengesetzten) Prädikat.
+  /// Schlüssel aller einfachen Vergleiche in einem (zusammengesetzten) Prädikat.
   private static func vergleiche(_ p: NSPredicate) -> [Vergleich] {
     if let c = p as? NSCompoundPredicate {
       return (c.subpredicates as? [NSPredicate] ?? []).flatMap(vergleiche)
     }
     guard let v = p as? NSComparisonPredicate, v.leftExpression.expressionType == .keyPath else { return [] }
-    let wert = v.rightExpression.expressionType == .constantValue ? v.rightExpression.constantValue : nil
-    return [Vergleich(pfad: v.leftExpression.keyPath, wert: wert)]
+    return [Vergleich(pfad: v.leftExpression.keyPath)]
   }
 
   /// Prädikat ohne die Vergleiche mit diesem Schlüssel (durch «wahr» ersetzt).
