@@ -23,6 +23,11 @@ enum HLMediathekUI {
   /// Mediathek bedienbar: angemeldet und nicht im Kinder-Modus.
   static var aktiv: Bool { HLAPI.shared.account != nil && !HLBibliothek.shared.istKinderModus }
 
+  /// Beschriftung für Wünschen (Vorschau, Shazam, Entdecken): wohin der Song nach der Lieferung kommt.
+  static var wunschText: String {
+    HLBibliothek.shared.istKinderModus ? "Zu «Kinder» hinzufügen" : "Zur Mediathek hinzufügen"
+  }
+
   private static var appDelegate: AppDelegate { UIApplication.shared.delegate as! AppDelegate }
 
   // MARK: Menü

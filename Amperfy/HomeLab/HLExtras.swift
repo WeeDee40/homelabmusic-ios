@@ -123,7 +123,7 @@ enum HLMenue {
     var aktionen = [UIMenuElement]()
     switch HLPlayer.shared.status(s) {
     case "neu":
-      aktionen.append(UIAction(title: "Zur Bibliothek hinzufügen", image: UIImage(systemName: "plus.circle")) { _ in
+      aktionen.append(UIAction(title: HLMediathekUI.wunschText, image: UIImage(systemName: "plus.circle")) { _ in
         HLPlayer.shared.wuenschen(s)
       })
     case "angefragt":

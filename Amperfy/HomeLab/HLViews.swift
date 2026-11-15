@@ -509,7 +509,7 @@ struct HLRadioZeile: View {
           Button("Abspielen", systemImage: "play") { player.spielen([song], ab: 0) }
         }
         if player.status(song) == "neu" {
-          Button("Zur Bibliothek hinzufügen", systemImage: "plus") {
+          Button(HLMediathekUI.wunschText, systemImage: "plus") {
             if song.deezerId != nil { player.wuenschen(song) } else { player.wuenschenOhneDeezer(song) }
           }
         }

@@ -213,7 +213,7 @@ struct HLTrefferKnoepfe: View {
           Text("Keine Vorschau verfügbar.").font(.footnote).foregroundStyle(.secondary)
         }
         if status == "neu" {
-          knopf(kompakt ? "Hinzufügen" : "Zur Bibliothek hinzufügen", "plus") {
+          knopf(kompakt ? "Hinzufügen" : HLMediathekUI.wunschText, "plus") {
             if song.deezerId != nil { player.wuenschen(song) } else { player.wuenschenOhneDeezer(song) }
           }
         }

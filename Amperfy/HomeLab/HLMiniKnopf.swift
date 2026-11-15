@@ -41,7 +41,7 @@ final class HLMiniKnopf: UIButton {
 
   override init(frame: CGRect) {
     super.init(frame: frame)
-    accessibilityLabel = "Zur Bibliothek hinzufügen"
+    accessibilityLabel = HLMediathekUI.wunschText
     addAction(UIAction { [weak self] _ in
       guard let self else { return }
       _ = HLPlayer.shared.vorschauWuenschen(player.currentlyPlaying)

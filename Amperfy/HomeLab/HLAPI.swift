@@ -459,13 +459,20 @@ final class HLAPI {
     try await anfrage("entdecken/sender", abfrage: [art: id, "anzahl": "30"])
   }
 
+  /// Im Kinder-Modus: Wunsch mit Ziel «Kinder» (Medienwunsch legt ihn nach der Lieferung gleich dorthin
+  /// und nie in die Mediathek).
+  private func mitZiel(_ inhalt: [String: any Encodable & Sendable]) -> [String: any Encodable & Sendable] {
+    guard HLBibliothek.shared.istKinderModus else { return inhalt }
+    return inhalt.merging(["ziel": "kinder"]) { $1 }
+  }
+
   func wunsch(song deezerId: Int) async throws -> HLWunschAntwort {
-    try await anfrage("entdecken/wunsch", methode: "POST", inhalt: ["deezer_id": deezerId])
+    try await anfrage("entdecken/wunsch", methode: "POST", inhalt: mitZiel(["deezer_id": deezerId]))
   }
 
   /// Wunsch nach Titel und Künstler (Shazam), wie der Kurzbefehl: Bibliothek prüfen, sonst SoulSync.
   func wunsch(titel: String, kuenstler: String) async throws -> HLWunschAntwort {
-    try await anfrage("wunsch", methode: "POST", inhalt: ["titel": titel, "kuenstler": kuenstler])
+    try await anfrage("wunsch", methode: "POST", inhalt: mitZiel(["titel": titel, "kuenstler": kuenstler]))
   }
 
   func ablehnen(titel: String, kuenstler: String, navidromeId: String?, rueckgaengig: Bool = false) async throws -> HLAntwort {
@@ -502,7 +509,7 @@ final class HLAPI {
   }
 
   func wunsch(album albumId: Int) async throws -> HLWunschAntwort {
-    try await anfrage("entdecken/wunsch", methode: "POST", inhalt: ["album_id": albumId])
+    try await anfrage("entdecken/wunsch", methode: "POST", inhalt: mitZiel(["album_id": albumId]))
   }
 }
 

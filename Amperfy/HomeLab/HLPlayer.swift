@@ -363,7 +363,7 @@ final class HLPlayer: ObservableObject {
           statusNeu[song.schluessel] = "bibliothek"
           zeigeHinweis("Hast du schon.")
         case "angefragt":
-          zeigeHinweis("Gewünscht: kommt in ein paar Minuten in die Bibliothek.")
+          zeigeHinweis(HLBibliothek.shared.istKinderModus ? "Gewünscht: kommt in ein paar Minuten zu «Kinder»." : "Gewünscht: kommt in ein paar Minuten in deine Mediathek.")
         default:
           statusNeu[song.schluessel] = nil
           zeigeHinweis(r.meldung ?? "Nicht gefunden.")

@@ -196,6 +196,9 @@ final class HLMediathek {
     do { try await uebernahmeWennNoetig(account) } catch {
       print("HLMediathek: Erstübernahme noch nicht möglich: \(error)")
     }
+    do { try await wuenscheUebernehmen(account) } catch {
+      print("HLMediathek: Wünsche nicht übernommen: \(error)")
+    }
     var s = stand(account)
     guard let playlist = try await playlistFinden() else {
       // (noch) keine Mediathek: nichts markieren; Anlegen übernimmt die Erstübernahme
@@ -596,6 +599,13 @@ extension HLMediathek {
 
   /// Songs aus der Kinder-Bibliothek und unbekannte IDs (z. B. ersetzter Wunsch) weglassen.
   func ohneKinder(_ ids: [String], album: [String: String], account: Account) async throws -> [String] {
+    try await pruefen(ids, album: album, account: account).behalten
+  }
+
+  /// Wie ohneKinder, meldet aber zusätzlich die IDs, die es auf dem Server nicht (mehr) gibt.
+  func pruefen(_ ids: [String], album: [String: String], account: Account) async throws
+    -> (behalten: [String], unbekannt: Set<String>) {
+    var unbekannt = Set<String>()
     let kinder = Set(HLBibliothek.shared.bibliotheken.filter(\.istKinder).flatMap(\.alben))
     var albumVon = album
     let bibliothek = storage.main.library
@@ -608,13 +618,32 @@ extension HLMediathek {
         } else if let s = await HLAPI.shared.subsonic("getSong", ["id": id])?["song"] as? [String: Any] {
           albumVon[id] = s["albumId"] as? String ?? ""
         } else {
-          continue                                       // gibt es auf dem Server nicht (mehr)
+          unbekannt.insert(id)                           // gibt es auf dem Server nicht (mehr)
+          continue
         }
       }
       if let a = albumVon[id], kinder.contains(a) { continue }
       ergebnis.append(id)
     }
-    return ergebnis
+    return (ergebnis, unbekannt)
+  }
+
+  /// Seit der Erstübernahme gelieferte Wünsche (Medienwunsch) in die Mediathek; danach quittiert, damit kein
+  /// anderes Gerät sie nochmals hinzufügt. Wünsche aus dem Kinder-Modus liefert Medienwunsch gar nicht erst.
+  /// Unbekannte Song-IDs bleiben einen Tag offen (Navidrome liest neue Dateien evtl. noch ein), dann quittiert.
+  func wuenscheUebernehmen(_ account: Account) async throws {
+    #if DEBUG
+      guard UserDefaults.standard.bool(forKey: "HLMediathekUebernahme") else { return }
+    #endif
+    guard let p = try await playlistFinden(), let id = p["id"] as? String,
+          (p["comment"] as? String)?.contains(Self.uebernahmeMarke) ?? false else { return }
+    let offen = try await HLAPI.shared.mediathekOffen().offen
+    guard !offen.isEmpty else { return }
+    let (ids, unbekannt) = try await pruefen(offen.map(\.songId), album: [:], account: account)
+    let neu = try await zufuegen(ids, playlistId: id)
+    let fertig = offen.filter { !unbekannt.contains($0.songId) || Date().timeIntervalSince1970 - ($0.erstellt ?? 0) > 86400 }
+    if !fertig.isEmpty { _ = try await HLAPI.shared.mediathekQuittieren(fertig.map(\.id)) }
+    print("HLMediathek: \(neu.count) gelieferte Wünsche übernommen, \(fertig.count) quittiert")
   }
 }
 
