@@ -1,3 +1,15 @@
+## 2026-11-15
+### Neu
+- Deine Mediathek: Die Bibliothek zeigt jetzt nur noch deine Musik, also Alben, Künstler und Songs, die du selbst hinzugefügt oder gewünscht hast. Alles andere aus der Familie findest du weiterhin über die Suche.
+- Beim ersten Start übernimmt die App, was schon dir gehört: deine Favoriten, die Songs aus deinen eigenen Playlists, alles, was du je gewünscht hast, und die Songs, die auf diesem Gerät gespeichert sind.
+- Mit «+» am Ende einer Zeile oder im Menü mit «Zur Mediathek hinzufügen» holst du Songs und ganze Alben in deine Mediathek. «Aus Mediathek entfernen» nimmt sie wieder heraus; die Musik bleibt für alle anderen da.
+- Was du dir wünschst, kommt nach dem Download von selbst in deine Mediathek und steht dann zuoberst unter «Newest Albums».
+- Was du im Modus «Kinder» wünschst, kommt gleich zu den Kindern und nicht in deine Mediathek.
+### Anders
+- Der Umschalter oben heisst jetzt «Mediathek» statt «Meine Musik».
+- Das Herz ist unabhängig von der Mediathek: Ein Herz setzen oder entfernen ändert deine Mediathek nicht.
+- «Directories» ist im Modus «Mediathek» ausgeblendet.
+
 ## 2026-11-12
 ### Behoben
 - Ohne Verbindung zum Server (zum Beispiel wenn Tailscale hängt) zeigte die App bei den Playlists nur ein Mosaik und bei den Radiosendern nur das Funk-Symbol, und das blieb so bis zum nächsten Neustart der App. Jetzt merkt sie sich diese Bilder auf dem Gerät und holt fehlende von selbst nach, sobald der Server wieder erreichbar ist.
