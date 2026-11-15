@@ -21,6 +21,8 @@ enum HLTab {
   /// Einmal pro App-Start: Konto, Player-Haken, Cover, Benachrichtigungen.
   static func einrichten(account: Account) {
     HLAPI.shared.account = account
+    HLBibliothek.shared.kontoPruefen()   // Kontowechsel: Wahl, Bibliotheken und Mediathek des Kontos
+    HLMediathek.shared.kontoPruefen()
     guard !eingerichtet else { return }
     eingerichtet = true
     HLPlayer.shared.aufraeumenBeimStart()

@@ -159,7 +159,7 @@ class LibraryNavigatorConfigurator: NSObject {
       action: #selector(editingPressed)
     )
     navigationItem.rightBarButtonItems = [editButton]
-    libraryInUse = librarySettings.inUse.map { LibraryNavigatorItem(
+    libraryInUse = HLListenFilter.sichtbar(librarySettings.inUse).map { LibraryNavigatorItem( // HomeLabMusic
       title: $0.displayName,
       library: $0
     ) }
@@ -259,7 +259,7 @@ class LibraryNavigatorConfigurator: NSObject {
     var snapshot = dataSource.snapshot(for: 0)
     snapshot.deleteAll()
 
-    libraryInUse = librarySettings.inUse.map { LibraryNavigatorItem(
+    libraryInUse = HLListenFilter.sichtbar(librarySettings.inUse).map { LibraryNavigatorItem( // HomeLabMusic
       title: $0.displayName,
       library: $0,
       isSelected: true
@@ -404,7 +404,7 @@ class LibraryNavigatorConfigurator: NSObject {
     dataSource.apply(snapshot, animatingDifferences: false)
 
     data.append(contentsOf: offsetData)
-    let libraryItems = librarySettings.inUse.map { LibraryNavigatorItem(
+    let libraryItems = HLListenFilter.sichtbar(librarySettings.inUse).map { LibraryNavigatorItem( // HomeLabMusic
       title: $0.displayName,
       library: $0,
       isSelected: true

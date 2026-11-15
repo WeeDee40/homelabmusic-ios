@@ -22,37 +22,55 @@
 import CoreData
 import Foundation
 
-// MARK: - HomeLabMusic: Bibliotheksfilter
+// MARK: - HomeLabMusic: Listenfilter
 
-/// Filter je Entität («Album», «Artist», «Song»), gesetzt von HLBibliothek in der App (Musik / Kinder).
-nonisolated(unsafe) public var hlBibliotheksFilter: ((String) -> NSPredicate?)?
+/// Passt jede Listenanfrage an (Bibliothek Musik/Kinder, Mediathek), gesetzt von HLListenFilter in der App.
+/// Bekommt Entität («Album», «Song», …), Amperfys unverändertes Prädikat und ob die Anfrage aus der Suche kommt;
+/// gibt das zu verwendende Prädikat zurück (nil = unverändert).
+nonisolated(unsafe) public var hlListenFilter: ((_ entitaet: String, _ basis: NSPredicate?, _ suche: Bool) -> NSPredicate?)?
+/// Sortierung einer Liste anpassen (nil = Amperfys Sortierung).
+nonisolated(unsafe) public var hlListenSortierung: ((_ entitaet: String, _ basis: [NSSortDescriptor]) -> [NSSortDescriptor]?)?
+/// Stand der Filter; erhöhen, sobald sich etwas ändert (Bibliothek gewählt, Mediathek abgeglichen).
+nonisolated(unsafe) public var hlFilterStand = 0
 nonisolated(unsafe) private var hlBasisSchluessel: UInt8 = 0
-nonisolated(unsafe) private var hlFilterSchluessel: UInt8 = 0
+nonisolated(unsafe) private var hlStandSchluessel: UInt8 = 0
+nonisolated(unsafe) private var hlSortSchluessel: UInt8 = 0
 
-/// Ergänzt ein Prädikat um den Bibliotheksfilter; ein schon ergänztes Prädikat wird neu aufgebaut.
-public func hlBibliotheksPraedikat(_ praedikat: NSPredicate?, entitaet: String?) -> NSPredicate? {
+/// Ergänzt ein Prädikat um die Listenfilter; ein schon angepasstes wird bei neuem Stand aus Amperfys Prädikat neu gebaut.
+public func hlBibliotheksPraedikat(_ praedikat: NSPredicate?, entitaet: String?, suche: Bool = false) -> NSPredicate? {
   let basis = praedikat.flatMap { objc_getAssociatedObject($0, &hlBasisSchluessel) as? NSPredicate } ?? praedikat
-  guard let entitaet, let filter = hlBibliotheksFilter?(entitaet) else { return basis }
-  if let praedikat, objc_getAssociatedObject(praedikat, &hlFilterSchluessel) as? NSPredicate === filter {
-    return praedikat
-  }
-  let neu = basis.map { NSCompoundPredicate(andPredicateWithSubpredicates: [$0, filter]) } ?? NSCompoundPredicate(andPredicateWithSubpredicates: [filter])
-  objc_setAssociatedObject(neu, &hlBasisSchluessel, basis, .OBJC_ASSOCIATION_RETAIN)
-  objc_setAssociatedObject(neu, &hlFilterSchluessel, filter, .OBJC_ASSOCIATION_RETAIN)
-  return neu
+  let stand = "\(hlFilterStand)-\(suche)"
+  if let praedikat, objc_getAssociatedObject(praedikat, &hlStandSchluessel) as? String == stand { return praedikat }
+  guard let entitaet, let neu = hlListenFilter?(entitaet, basis, suche) else { return basis }
+  let markiert = NSCompoundPredicate(andPredicateWithSubpredicates: [neu])
+  objc_setAssociatedObject(markiert, &hlBasisSchluessel, basis, .OBJC_ASSOCIATION_RETAIN)
+  objc_setAssociatedObject(markiert, &hlStandSchluessel, stand, .OBJC_ASSOCIATION_RETAIN)
+  return markiert
 }
 
-public func hlBibliothekFiltern(_ anfrage: NSFetchRequest<some NSFetchRequestResult>) {
-  anfrage.predicate = hlBibliotheksPraedikat(anfrage.predicate, entitaet: anfrage.entityName ?? anfrage.entity?.name)
+public func hlBibliothekFiltern(_ anfrage: NSFetchRequest<some NSFetchRequestResult>, suche: Bool = false) {
+  anfrage.predicate = hlBibliotheksPraedikat(
+    anfrage.predicate, entitaet: anfrage.entityName ?? anfrage.entity?.name, suche: suche
+  )
 }
 
-/// Vor jedem Laden einer Liste den Bibliotheksfilter setzen (Cache verwerfen, wenn er sich ändert).
+/// Vor jedem Laden einer Liste Filter und Sortierung setzen (Cache verwerfen, wenn sich etwas ändert).
 private func hlVorDemLaden(_ objekt: AnyObject) {
   guard let controller = objekt as? NSFetchedResultsController<NSFetchRequestResult> else { return }
   let anfrage = controller.fetchRequest
+  let entitaet = anfrage.entityName ?? anfrage.entity?.name
   let vorher = anfrage.predicate
-  anfrage.predicate = hlBibliotheksPraedikat(vorher, entitaet: anfrage.entityName ?? anfrage.entity?.name)
-  if anfrage.predicate !== vorher, let cacheName = controller.cacheName {
+  anfrage.predicate = hlBibliotheksPraedikat(vorher, entitaet: entitaet)
+  var geaendert = anfrage.predicate !== vorher
+  let basisSortierung = objc_getAssociatedObject(anfrage, &hlSortSchluessel) as? [NSSortDescriptor]
+    ?? anfrage.sortDescriptors ?? []
+  let sortierung = entitaet.flatMap { hlListenSortierung?($0, basisSortierung) } ?? basisSortierung
+  if sortierung != anfrage.sortDescriptors ?? [] {
+    objc_setAssociatedObject(anfrage, &hlSortSchluessel, basisSortierung, .OBJC_ASSOCIATION_RETAIN)
+    anfrage.sortDescriptors = sortierung
+    geaendert = true
+  }
+  if geaendert, let cacheName = controller.cacheName {
     NSFetchedResultsController<NSFetchRequestResult>.deleteCache(withName: cacheName)
   }
 }

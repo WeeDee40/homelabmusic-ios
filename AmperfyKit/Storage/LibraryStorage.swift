@@ -2199,7 +2199,7 @@ public class LibraryStorage: PlayableFileCachable {
       onlyCached: onlyCached,
       displayFilter: displayFilter
     )
-    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
+    hlBibliothekFiltern(fetchRequest, suche: true) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Artist(managedObject: $0) }
     return wrapped ?? [Artist]()
@@ -2239,7 +2239,7 @@ public class LibraryStorage: PlayableFileCachable {
       onlyCached: onlyCached,
       displayFilter: displayFilter
     )
-    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
+    hlBibliothekFiltern(fetchRequest, suche: true) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Album(managedObject: $0) }
     return wrapped ?? [Album]()
@@ -2272,7 +2272,7 @@ public class LibraryStorage: PlayableFileCachable {
       searchText: searchText,
       playlistSearchCategory: playlistSearchCategory
     )
-    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
+    hlBibliothekFiltern(fetchRequest, suche: true) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Playlist(library: self, managedObject: $0) }
     return wrapped ?? [Playlist]()
@@ -2322,7 +2322,7 @@ public class LibraryStorage: PlayableFileCachable {
       onlyCached: onlyCached,
       displayFilter: displayFilter
     )
-    hlBibliothekFiltern(fetchRequest) // HomeLabMusic
+    hlBibliothekFiltern(fetchRequest, suche: true) // HomeLabMusic
     let found = try? context.fetch(fetchRequest)
     let wrapped = found?.compactMap { Song(managedObject: $0) }
     return wrapped ?? [Song]()

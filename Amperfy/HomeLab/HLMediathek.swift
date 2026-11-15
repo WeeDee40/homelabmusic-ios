@@ -102,6 +102,18 @@ final class HLMediathek {
 
   // MARK: Start
 
+  private var kontoIdent: String?
+
+  /// Kontowechsel (HLTab.einrichten): Stand des neuen Kontos, sofort abgleichen.
+  func kontoPruefen() {
+    let ident = account?.info.ident
+    guard ident != kontoIdent else { return }
+    let ersterStart = kontoIdent == nil
+    kontoIdent = ident
+    HLListenFilter.eigeneKuenstler = []
+    if !ersterStart { abgleichen(erzwingen: true) }
+  }
+
   func einrichten() {
     NotificationCenter.default.addObserver(
       forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
@@ -170,9 +182,11 @@ final class HLMediathek {
     var s = stand(account)
     guard let playlist = try await playlistFinden() else {
       // (noch) keine Mediathek: nichts markieren; Anlegen übernimmt die Erstübernahme
-      if s.playlistId != nil || erzwingen { try await flagsSetzen([], account: account) }
+      let hatte = s.playlistId != nil
+      if hatte || erzwingen { try await flagsSetzen([], account: account) }
+      HLListenFilter.eigeneKuenstler = []
       speichern(Stand(), account)
-      HLBibliothek.shared.playlistFilterNeu()
+      if hatte { HLBibliothek.shared.playlistFilterNeu() }
       return
     }
     let id = playlist["id"] as? String
@@ -183,16 +197,32 @@ final class HLMediathek {
     if neueId { HLBibliothek.shared.playlistFilterNeu() }
     guard erzwingen || neueId || geaendert != s.geaendert || !flagsGesetzt(account) else {
       speichern(s, account)
+      if HLListenFilter.eigeneKuenstler.isEmpty { await kuenstlerLaden(account) }
       return
     }
     let eintraege = try await eintraegeLaden(id!)
     try await songsSicherstellen(eintraege.map(\.id), playlistId: id!, account: account)
     try await flagsSetzen(eintraege, account: account)
+    await kuenstlerLaden(account)
+    HLListenFilter.neuBerechnet()
     s.geaendert = geaendert
     speichern(s, account)
     schattenSpeichern(eintraege, account)
     UserDefaults.standard.set(true, forKey: standSchluessel(account) + ".flags")
     NotificationCenter.default.post(name: Self.geaendertNotification, object: nil)
+  }
+
+  /// Künstler mit eigenen Songs (für die Künstler-Detailseite im Modus Mediathek).
+  private func kuenstlerLaden(_ account: Account) async {
+    let accountId = account.managedObject.objectID
+    let ids: Set<NSManagedObjectID> = (try? await storage.async.performAndGet { c -> Set<NSManagedObjectID> in
+      let konto = c.context.object(with: accountId) as! AccountMO
+      let r = NSFetchRequest<NSManagedObjectID>(entityName: "Artist")
+      r.resultType = .managedObjectIDResultType
+      r.predicate = NSPredicate(format: "account == %@ AND hlInMediathek == YES", konto)
+      return Set((try? c.context.fetch(r)) ?? [])
+    }) ?? []
+    HLListenFilter.eigeneKuenstler = ids
   }
 
   private func flagsGesetzt(_ account: Account) -> Bool {
@@ -361,6 +391,7 @@ final class HLMediathek {
       try await mehrfach("updatePlaylist", ["playlistId": id], teil.map { ("songIdToAdd", $0) })
     }
     await sofortMarkieren(neu, drin: true, account: account)
+    HLListenFilter.neuBerechnet()
     zuletzt = Date()
     try await abgleichJetzt(erzwingen: true)
   }
@@ -380,6 +411,7 @@ final class HLMediathek {
       try await mehrfach("updatePlaylist", ["playlistId": id], indizes.map { ("songIndexToRemove", String($0)) })
     }
     await sofortMarkieren(songIds, drin: false, account: account)
+    HLListenFilter.neuBerechnet()
     zuletzt = Date()
     try await abgleichJetzt(erzwingen: true)
   }

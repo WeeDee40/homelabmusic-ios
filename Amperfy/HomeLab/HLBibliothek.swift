@@ -2,10 +2,11 @@
 //  HLBibliothek.swift
 //  HomeLabMusic
 //
-//  Navidrome-Bibliotheken unterscheiden («Meine Musik» / «Kinder»), wie in NaviBeat.
+//  Navidrome-Bibliotheken unterscheiden («Mediathek» / «Kinder»), wie in NaviBeat. Im Modus «Mediathek»
+//  zeigt die Bibliothek nur, was der Person gehört (HLMediathek, HLListenFilter).
 //  Amperfy kennt nur eine gemeinsame Bibliothek. Wir holen pro Navidrome-Bibliothek die Album- und
 //  Künstler-IDs (Subsonic getAlbumList2 / getArtists mit musicFolderId) und filtern damit Amperfys
-//  Listen (Haken `hlBibliotheksFilter` in AmperfyKit). Umschalten baut die Oberfläche neu auf,
+//  Listen (über HLListenFilter, Haken `hlListenFilter` in AmperfyKit). Umschalten baut die Oberfläche neu auf,
 //  genau wie Amperfys eigener Kontowechsel. Im Kinder-Modus ist die App orange eingefärbt.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -43,24 +44,46 @@ final class HLBibliothek {
 
   private var datei: URL {
     FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("hl-bibliotheken.json")
+      .appendingPathComponent(kontoSchluessel("hl-bibliotheken") + ".json") // Zugriff auf Bibliotheken je Person
   }
 
-  /// Die grösste Bibliothek ist «Meine Musik».
+  /// Die grösste Bibliothek ist die Musik (Anzeige «Mediathek»).
   private var haupt: Bib? { bibliotheken.max { $0.alben.count < $1.alben.count } }
 
-  /// Gewählte Bibliothek; ohne Wahl «Meine Musik». Nil, wenn es nur eine Bibliothek gibt.
+  /// Gewählte Bibliothek (pro Konto); ohne Wahl die Musik. Nil, wenn es nur eine Bibliothek gibt.
   var gewaehlt: Bib? {
     guard bibliotheken.count > 1 else { return nil }
-    let id = UserDefaults.standard.string(forKey: Self.auswahlSchluessel)
+    let id = UserDefaults.standard.string(forKey: kontoSchluessel(Self.auswahlSchluessel))
+      ?? UserDefaults.standard.string(forKey: Self.auswahlSchluessel) // Wahl von vor Build 38 (für alle Konten)
     return bibliotheken.first { $0.id == id } ?? haupt
+  }
+
+  /// Schlüssel pro Konto (mehrere Konten auf einem Gerät).
+  private func kontoSchluessel(_ basis: String) -> String {
+    guard let ident = HLAPI.shared.account?.info.ident else { return basis }
+    return "\(basis).\(ident)"
+  }
+
+  private var kontoIdent: String?
+
+  /// Bei jedem Aufbau der Oberfläche (auch nach einem Kontowechsel): Stand des Kontos laden.
+  func kontoPruefen() {
+    let ident = HLAPI.shared.account?.info.ident
+    guard ident != kontoIdent else { return }
+    let ersterStart = kontoIdent == nil
+    kontoIdent = ident
+    guard !ersterStart else { return }
+    bibliotheken = gespeicherteBibliotheken()
+    themaGesetzt = false
+    filterBerechnen()
+    Task { await aktualisieren() }
   }
 
   var istKinderModus: Bool { gewaehlt?.istKinder ?? false }
 
   func anzeigename(_ bib: Bib) -> String {
     if bib.istKinder { return "Kinder" }
-    if bib.id == haupt?.id { return "Meine Musik" }
+    if bib.id == haupt?.id { return "Mediathek" }
     return bib.name
   }
 
@@ -73,15 +96,19 @@ final class HLBibliothek {
   // MARK: Start und Laden
 
   func einrichten() {
-    if let daten = try? Data(contentsOf: datei),
-       let gespeichert = try? JSONDecoder().decode([Bib].self, from: daten) {
-      bibliotheken = gespeichert
-    }
-    hlBibliotheksFilter = { entitaet in HLBibliothek.filter[entitaet] }
+    kontoIdent = HLAPI.shared.account?.info.ident
+    bibliotheken = gespeicherteBibliotheken()
+    HLListenFilter.einrichten()
     filterBerechnen()
     guard !aktualisiert else { return }
     aktualisiert = true
     Task { await aktualisieren() }
+  }
+
+  private func gespeicherteBibliotheken() -> [Bib] {
+    guard let daten = try? Data(contentsOf: datei),
+          let gespeichert = try? JSONDecoder().decode([Bib].self, from: daten) else { return [] }
+    return gespeichert
   }
 
   /// Album- und Künstler-IDs je Bibliothek von Navidrome holen.
@@ -137,8 +164,8 @@ final class HLBibliothek {
   /// sieht jede Person nur ihre eigenen. Ausblenden statt Einschliessen, damit neue eigene
   /// Playlists sofort erscheinen.
   private var fremdePlaylists: [String] {
-    get { UserDefaults.standard.stringArray(forKey: "homelabmusic.fremdePlaylists") ?? [] }
-    set { UserDefaults.standard.set(newValue, forKey: "homelabmusic.fremdePlaylists") }
+    get { UserDefaults.standard.stringArray(forKey: kontoSchluessel("homelabmusic.fremdePlaylists")) ?? [] }
+    set { UserDefaults.standard.set(newValue, forKey: kontoSchluessel("homelabmusic.fremdePlaylists")) }
   }
 
   private func fremdePlaylistsLaden() async {
@@ -158,12 +185,17 @@ final class HLBibliothek {
 
   // MARK: Filter
 
-  /// Mediathek-Playlist neu bekannt oder weg: Playlist-Filter neu rechnen (Listen laden beim nächsten Abruf neu).
+  /// Mediathek-Playlist neu bekannt oder weg: Filter neu rechnen. Schaltet der Mediathek-Filter dabei ein oder
+  /// aus (erste Mediathek des Kontos), die Oberfläche neu aufbauen wie beim Umschalten.
   func playlistFilterNeu() {
+    let vorher = HLListenFilter.mediathekAktiv
     filterBerechnen()
+    if vorher != HLListenFilter.mediathekAktiv, let info = appDelegate.storage.settings.accounts.active {
+      appDelegate.switchAccount(accountInfo: info)
+    }
   }
 
-  /// Fertige Prädikate je Entität; wird von AmperfyKit beim Laden jeder Liste gelesen.
+  /// Fertige Prädikate je Entität; liest HLListenFilter beim Laden jeder Liste.
   nonisolated(unsafe) static var filter = [String: NSPredicate]()
 
   private func filterBerechnen() {
@@ -172,7 +204,11 @@ final class HLBibliothek {
     if !versteckt.isEmpty {
       filter["Playlist"] = NSPredicate(format: "NOT (id IN %@)", versteckt)
     }
-    defer { Self.filter = filter }
+    defer {
+      Self.filter = filter
+      HLListenFilter.mediathekAktiv = !istKinderModus && HLMediathek.shared.playlistId != nil
+      HLListenFilter.neuBerechnet()
+    }
     guard let wahl = gewaehlt else { return }
     let andere = bibliotheken.filter { $0.id != wahl.id }
     let album = praedikat(
@@ -203,7 +239,7 @@ final class HLBibliothek {
 
   func waehlen(_ bib: Bib) {
     guard bib.id != gewaehlt?.id else { return }
-    UserDefaults.standard.set(bib.id, forKey: Self.auswahlSchluessel)
+    UserDefaults.standard.set(bib.id, forKey: kontoSchluessel(Self.auswahlSchluessel))
     filterBerechnen()
     guard let info = appDelegate.storage.settings.accounts.active else { return }
     // Amperfys eigener Kontowechsel: lädt alle Listen, die Startseite und CarPlay neu.
@@ -270,7 +306,7 @@ final class HLBibliothek {
     }.map { bib in
       UIAction(
         title: anzeigename(bib),
-        subtitle: bib.istKinder ? "Hörspiele und Kinderlieder" : (bib.id == haupt?.id ? "Musik für dich, ohne Kinder" : nil),
+        subtitle: bib.istKinder ? "Hörspiele und Kinderlieder" : (bib.id == haupt?.id ? "Deine Musik, ohne Kinder" : nil),
         image: UIImage(systemName: symbol(bib)),
         state: bib.id == gewaehlt?.id ? .on : .off
       ) { [weak self] _ in self?.waehlen(bib) }
