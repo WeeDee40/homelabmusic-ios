@@ -158,13 +158,19 @@ final class HLBibliothek {
 
   // MARK: Filter
 
+  /// Mediathek-Playlist neu bekannt oder weg: Playlist-Filter neu rechnen (Listen laden beim nächsten Abruf neu).
+  func playlistFilterNeu() {
+    filterBerechnen()
+  }
+
   /// Fertige Prädikate je Entität; wird von AmperfyKit beim Laden jeder Liste gelesen.
   nonisolated(unsafe) static var filter = [String: NSPredicate]()
 
   private func filterBerechnen() {
     var filter = [String: NSPredicate]()
-    if !fremdePlaylists.isEmpty {
-      filter["Playlist"] = NSPredicate(format: "NOT (id IN %@)", fremdePlaylists)
+    let versteckt = fremdePlaylists + [HLMediathek.shared.playlistId].compactMap { $0 } // Mediathek: eigene Ansicht
+    if !versteckt.isEmpty {
+      filter["Playlist"] = NSPredicate(format: "NOT (id IN %@)", versteckt)
     }
     defer { Self.filter = filter }
     guard let wahl = gewaehlt else { return }

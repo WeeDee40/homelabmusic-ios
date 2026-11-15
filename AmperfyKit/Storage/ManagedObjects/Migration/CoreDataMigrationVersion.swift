@@ -60,6 +60,9 @@ enum CoreDataMigrationVersion: String, CaseIterable {
   case v48 = "Amperfy v48" // Account support: add account (url + user)
   case v49 =
     "Amperfy v49" // Remove PlayableFile and Artwork data (they were already deprecated); Account: add apiType
+  // HomeLabMusic: eigene Modellversion (Mediathek: Song/Artist.hlInMediathek, Album.hlMediathekSeit).
+  // Beim Einspielen eines Amperfy-Release mit neuer Version: neue «HomeLabMusic n» = Upstream-Modell + diese Felder.
+  case hl1 = "HomeLabMusic 1"
 
   // MARK: - Current
 
@@ -172,6 +175,8 @@ enum CoreDataMigrationVersion: String, CaseIterable {
     case .v48:
       return .v49
     case .v49:
+      return .hl1 // HomeLabMusic
+    case .hl1:
       return nil
     }
   }

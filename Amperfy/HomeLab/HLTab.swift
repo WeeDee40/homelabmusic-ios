@@ -28,6 +28,7 @@ enum HLTab {
     HLBenachrichtigung.starten()
     HLPlayer.hakenEinrichten()
     HLBibliothek.shared.einrichten()
+    HLMediathek.shared.einrichten()
     HLSpeicher.einrichten()
     HLPocketID.einrichten()
   }

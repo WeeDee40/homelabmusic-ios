@@ -555,6 +555,7 @@
 		D86070DC277DB9F1FAEAA274 /* HLMiniKnopf.swift in Sources */ = {isa = PBXBuildFile; fileRef = E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */; };
 		290546E1324D823ECB67F744 /* HLSpeicher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */; };
 		6E905B743E4935605810A429 /* HLPocketID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8AEF79D3608861F01DEBCF /* HLPocketID.swift */; };
+		2B21EB6B6786329A17D61CC3 /* HLMediathek.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0111FEAA555A807B40E27A3E /* HLMediathek.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -786,6 +787,7 @@
 		5068D37F26A85C2D0006710D /* DownloadError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadError.swift; sourceTree = "<group>"; };
 		506B3A3823B4539D00E31F21 /* Amperfy v2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v2.xcdatamodel"; sourceTree = "<group>"; };
 		506C314D2EE6D2100011A2C3 /* Amperfy v49.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v49.xcdatamodel"; sourceTree = "<group>"; };
+		4C0FFEE0A1B2C3D4E5F60001 /* HomeLabMusic 1.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "HomeLabMusic 1.xcdatamodel"; sourceTree = "<group>"; };
 		5070ED2C2D46979A00EB2972 /* Amperfy v42.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v42.xcdatamodel"; sourceTree = "<group>"; };
 		507148AB2B767FE200557904 /* ContextQueuePrevSectionHeader.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ContextQueuePrevSectionHeader.xib; sourceTree = "<group>"; };
 		507148AC2B767FE200557904 /* ContextQueuePrevSectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextQueuePrevSectionHeader.swift; sourceTree = "<group>"; };
@@ -1196,6 +1198,7 @@
 		E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLMiniKnopf.swift; sourceTree = "<group>"; };
 		1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSpeicher.swift; sourceTree = "<group>"; };
 		9A8AEF79D3608861F01DEBCF /* HLPocketID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLPocketID.swift; sourceTree = "<group>"; };
+		0111FEAA555A807B40E27A3E /* HLMediathek.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLMediathek.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2215,6 +2218,7 @@
 		08DDD6DE514A52B923C9F555 /* HomeLab */ = {
 			isa = PBXGroup;
 			children = (
+				0111FEAA555A807B40E27A3E /* HLMediathek.swift */,
 				9A8AEF79D3608861F01DEBCF /* HLPocketID.swift */,
 				1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */,
 				E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */,
@@ -2513,6 +2517,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B21EB6B6786329A17D61CC3 /* HLMediathek.swift in Sources */,
 				6E905B743E4935605810A429 /* HLPocketID.swift in Sources */,
 				290546E1324D823ECB67F744 /* HLSpeicher.swift in Sources */,
 				D86070DC277DB9F1FAEAA274 /* HLMiniKnopf.swift in Sources */,
@@ -3608,6 +3613,7 @@
 		500BB49521CAAA2700D367CF /* Amperfy.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				4C0FFEE0A1B2C3D4E5F60001 /* HomeLabMusic 1.xcdatamodel */,
 				506C314D2EE6D2100011A2C3 /* Amperfy v49.xcdatamodel */,
 				5084F70C2ED9D87500D8D3DA /* Amperfy v48.xcdatamodel */,
 				507C9AD82E29905D001589F8 /* Amperfy v47.xcdatamodel */,
@@ -3658,7 +3664,7 @@
 				506B3A3823B4539D00E31F21 /* Amperfy v2.xcdatamodel */,
 				500BB49621CAAA2700D367CF /* Amperfy.xcdatamodel */,
 			);
-			currentVersion = 506C314D2EE6D2100011A2C3 /* Amperfy v49.xcdatamodel */;
+			currentVersion = 4C0FFEE0A1B2C3D4E5F60001 /* HomeLabMusic 1.xcdatamodel */;
 			path = Amperfy.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

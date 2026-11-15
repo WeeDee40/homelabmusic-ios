@@ -25,7 +25,7 @@ for name in sorted(os.listdir("Amperfy/HomeLab")):
     if not name.endswith(".swift"):
         continue
     ref, build = uid("ref:" + name), uid("build:" + name)
-    if ref in s:
+    if ref in s or f"path = {name};" in s:  # auch von Hand (mit anderer ID) eingetragene Dateien
         continue
     section_add("PBXFileReference", f'\t\t{ref} /* {name} */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {name}; sourceTree = "<group>"; }};\n')
     section_add("PBXBuildFile", f'\t\t{build} /* {name} in Sources */ = {{isa = PBXBuildFile; fileRef = {ref} /* {name} */; }};\n')
