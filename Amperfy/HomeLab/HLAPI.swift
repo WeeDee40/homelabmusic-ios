@@ -189,6 +189,19 @@ struct HLMixAntwort: Codable, Sendable {
   var klang: Bool?
 }
 
+/// Gelieferter Wunsch, noch nicht in der Mediathek (GET /entdecken/mediathek).
+struct HLMediathekWunsch: Codable, Sendable {
+  var id: Int
+  var songId: String
+  var titel: String?
+  var kuenstler: String?
+  var erstellt: Double?
+}
+
+struct HLMediathekOffen: Codable, Sendable {
+  var offen: [HLMediathekWunsch]
+}
+
 struct HLWunschListe: Codable, Sendable {
   var wuensche: [HLWunsch]
 }
@@ -481,6 +494,12 @@ final class HLAPI {
                       inhalt: ["seed": seed, "neu": neu, "anzahl": 15, "gespielt": gespielt, "signale": signale])
   }
 
+
+  func mediathekOffen() async throws -> HLMediathekOffen { try await anfrage("entdecken/mediathek") }
+
+  func mediathekQuittieren(_ ids: [Int]) async throws -> HLAntwort {
+    try await anfrage("entdecken/mediathek/quittieren", methode: "POST", inhalt: ["ids": ids])
+  }
 
   func wunsch(album albumId: Int) async throws -> HLWunschAntwort {
     try await anfrage("entdecken/wunsch", methode: "POST", inhalt: ["album_id": albumId])

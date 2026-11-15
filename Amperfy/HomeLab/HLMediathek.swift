@@ -75,6 +75,7 @@ final class HLMediathek {
   static let geaendertNotification = Notification.Name("HLMediathekGeaendert")
 
   private var laeuft: Task<Void, Never>?
+  fileprivate var uebernahmeFehlschlag = Date.distantPast
   private var zuletzt = Date.distantPast
 
   private var account: Account? { HLAPI.shared.account }
@@ -120,7 +121,8 @@ final class HLMediathek {
       MainActor.assumeIsolated { HLMediathek.shared.abgleichen() }
     }
     #if DEBUG
-      // Test ohne Oberfläche: xcrun simctl launch … -HLMediathekTest "add:id1,id2" | "remove:id1" | "delete"
+      // Test ohne Oberfläche: xcrun simctl launch … -HLMediathekTest "add:id1,id2" | "remove:id1" | "delete" | "probe"
+      // (Probe: Erstübernahme sammeln, nichts schreiben; Ergebnis in tmp/hl-probe.json)
       if let test = UserDefaults.standard.string(forKey: "HLMediathekTest") {
         let teile = test.split(separator: ":", maxSplits: 1).map(String.init)
         let ids = (teile.count > 1 ? teile[1] : "").split(separator: ",").map(String.init)
@@ -128,9 +130,22 @@ final class HLMediathek {
           do {
             if teile.first == "add" { try await hinzufuegen(songIds: ids) }
             if teile.first == "remove" { try await entfernen(songIds: ids) }
+            if teile.first == "probe", let account {
+              let q = try await quellenSammeln(account, server: true, geraet: true, wuenscheNoetig: false)
+              let ids = try await ohneKinder(q.alle, album: q.album, account: account)
+              print("HLMediathekTest Probe: Favoriten \(q.favoriten.count), Favoriten-Alben \(q.favoritenAlben.count), " +
+                "Playlists \(q.playlists.count), Wünsche \(q.wuensche.count), Downloads \(q.downloads.count) → " +
+                "\(ids.count) Songs ohne Doppelte und Kinder")
+              let d = try JSONSerialization.data(withJSONObject: [
+                "favoriten": q.favoriten, "favoritenAlben": q.favoritenAlben, "playlists": q.playlists,
+                "wuensche": q.wuensche, "downloads": q.downloads, "ergebnis": ids,
+              ])
+              try d.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("hl-probe.json"))
+            }
             let gefunden = try await playlistFinden()?["id"] as? String
             if teile.first == "delete", let id = gefunden {
               _ = await HLAPI.shared.subsonic("deletePlaylist", ["id": id])
+              if let k = geraetSchluessel { UserDefaults.standard.removeObject(forKey: k) }
               try await abgleichenUndWarten()
             }
             print("HLMediathekTest fertig: \(test), Playlist \(playlistId ?? "-")")
@@ -178,6 +193,9 @@ final class HLMediathek {
 
   private func abgleichJetzt(erzwingen: Bool = false) async throws {
     guard let account else { throw Fehler.keinKonto }
+    do { try await uebernahmeWennNoetig(account) } catch {
+      print("HLMediathek: Erstübernahme noch nicht möglich: \(error)")
+    }
     var s = stand(account)
     guard let playlist = try await playlistFinden() else {
       // (noch) keine Mediathek: nichts markieren; Anlegen übernimmt die Erstübernahme
@@ -338,41 +356,55 @@ final class HLMediathek {
   /// Gehört der Song zur Mediathek? (laut letztem Abgleich bzw. eigener Änderung)
   func enthaelt(_ song: Song) -> Bool { song.managedObject.hlInMediathek }
 
+  /// Kommentar der Playlist; `uebernahmeMarke` zeigt, dass die Erstübernahme für diese Person erledigt ist.
+  static let uebernahmeMarke = "uebernahme=1"
+  private static func kommentarText(uebernahme: Bool) -> String {
+    "\(kennung) – von HomeLabMusic verwaltet, bitte nicht umbenennen oder löschen."
+      + (uebernahme ? " \(uebernahmeMarke)" : "")
+  }
+
   /// Legt die Playlist an (leer), falls es sie noch nicht gibt. Gibt die ID zurück.
+  /// Haben zwei Geräte gleichzeitig angelegt, gilt die ältere; die eigene neue wird wieder gelöscht.
   @discardableResult
-  func anlegen(kommentar: String? = nil) async throws -> String {
+  func anlegen() async throws -> String {
     if let p = try await playlistFinden(), let id = p["id"] as? String { return id }
     guard let antwort = await HLAPI.shared.subsonic("createPlaylist", ["name": Self.playlistName]),
           let id = (antwort["playlist"] as? [String: Any])?["id"] as? String
     else { throw Fehler.server("Mediathek konnte nicht angelegt werden.") }
-    let text = kommentar ?? "\(Self.kennung) – von HomeLabMusic verwaltet, bitte nicht umbenennen oder löschen."
+    let text = Self.kommentarText(uebernahme: false)
     guard await HLAPI.shared.subsonic("updatePlaylist", ["playlistId": id, "comment": text, "public": "false"]) != nil
     else { throw Fehler.server("Mediathek konnte nicht beschriftet werden.") }
+    if let aelter = try await playlistFinden()?["id"] as? String, aelter != id {
+      _ = await HLAPI.shared.subsonic("deletePlaylist", ["id": id])
+      return aelter
+    }
     return id
   }
 
-  /// Kommentar ersetzen (die Kennung bleibt immer drin).
-  func kommentarSetzen(_ text: String) async throws {
-    guard let id = playlistId else { throw Fehler.keinePlaylist }
-    let mitKennung = text.contains(Self.kennung) ? text : "\(Self.kennung) \(text)"
-    guard await HLAPI.shared.subsonic("updatePlaylist", ["playlistId": id, "comment": mitKennung]) != nil
-    else { throw Fehler.server("Mediathek konnte nicht beschriftet werden.") }
-  }
-
-  /// Songs hinzufügen; schon enthaltene werden übersprungen. Legt die Playlist bei Bedarf an.
-  func hinzufuegen(songIds: [String]) async throws {
-    try await exklusiv { try await self.hinzufuegenJetzt(songIds) }
-  }
-
-  private func hinzufuegenJetzt(_ songIds: [String]) async throws {
-    guard let account else { throw Fehler.keinKonto }
-    let id = try await anlegen()
+  /// Songs ohne Abgleich an die Playlist anhängen; schon enthaltene und doppelte werden übersprungen.
+  /// Gibt die tatsächlich neuen zurück.
+  @discardableResult
+  private func zufuegen(_ songIds: [String], playlistId id: String) async throws -> [String] {
     let schon = Set(try await eintraegeLaden(id).map(\.id))
     var gesehen = Set<String>()
     let neu = songIds.filter { !schon.contains($0) && gesehen.insert($0).inserted }
     for teil in neu.hlTeile(100) {
       try await mehrfach("updatePlaylist", ["playlistId": id], teil.map { ("songIdToAdd", $0) })
     }
+    return neu
+  }
+
+  /// Songs hinzufügen; schon enthaltene werden übersprungen. Vor dem ersten Hinzufügen läuft die
+  /// Erstübernahme, damit die Bibliothek nicht plötzlich nur diesen einen Song zeigt.
+  func hinzufuegen(songIds: [String]) async throws {
+    try await exklusiv { try await self.hinzufuegenJetzt(songIds) }
+  }
+
+  private func hinzufuegenJetzt(_ songIds: [String]) async throws {
+    guard let account else { throw Fehler.keinKonto }
+    try await uebernahmeWennNoetig(account, erzwingen: true)
+    let id = try await anlegen()
+    let neu = try await zufuegen(songIds, playlistId: id)
     await sofortMarkieren(neu, drin: true, account: account)
     HLListenFilter.neuBerechnet()
     zuletzt = Date()
@@ -388,10 +420,24 @@ final class HLMediathek {
     guard let account else { throw Fehler.keinKonto }
     guard let p = try await playlistFinden(), let id = p["id"] as? String else { return }
     let weg = Set(songIds)
-    let indizes = try await eintraegeLaden(id).enumerated().filter { weg.contains($0.element.id) }.map(\.offset)
-    if !indizes.isEmpty {
-      // in einem Aufruf: Navidrome entfernt alle Indizes auf einmal (keine Verschiebung zwischen den Schritten)
-      try await mehrfach("updatePlaylist", ["playlistId": id], indizes.map { ("songIndexToRemove", String($0)) })
+    let eintraege = try await eintraegeLaden(id)
+    let anzahl = p["songCount"] as? Int ?? eintraege.count
+    if anzahl == eintraege.count {
+      let indizes = eintraege.enumerated().filter { weg.contains($0.element.id) }.map(\.offset)
+      if !indizes.isEmpty {
+        // ein Aufruf: Navidrome entfernt alle Indizes auf einmal (keine Verschiebung zwischen den Schritten)
+        try await mehrfach("updatePlaylist", ["playlistId": id], indizes.map { ("songIndexToRemove", String($0)) })
+      }
+    } else if eintraege.contains(where: { weg.contains($0.id) }) {
+      // getPlaylist verschweigt Einträge mit fehlender Datei, die Indizes stimmen dann nicht: Liste neu
+      // schreiben (fehlende Dateien fallen dabei weg; Titel, Künstler, Dauer stehen in der Schattenliste).
+      try await mehrfach("updatePlaylist", ["playlistId": id], (0 ..< anzahl).map { ("songIndexToRemove", String($0)) })
+      let bleiben = eintraege.map(\.id).filter { !weg.contains($0) }
+      var fehler: Error?
+      for _ in 0 ..< 3 {
+        do { try await zufuegen(bleiben, playlistId: id); fehler = nil; break } catch { fehler = error }
+      }
+      if let fehler { throw fehler }
     }
     await sofortMarkieren(songIds, drin: false, account: account)
     HLListenFilter.neuBerechnet()
@@ -426,6 +472,149 @@ final class HLMediathek {
         as? [String: Any])?["error"] as? [String: Any]
       throw Fehler.server(text?["message"] as? String ?? "Mediathek: Server hat abgelehnt.")
     }
+  }
+}
+
+// MARK: - Erstübernahme
+
+/// Einmal pro Person (auf dem Server vermerkt im Playlist-Kommentar): alles, was schon «ihr» ist, kommt in die
+/// Mediathek – Favoriten (Songs und ganze Favoriten-Alben), Songs eigener Playlists (ohne Wochenmix und die
+/// Mediathek selbst) und alle gelieferten Wünsche (Medienwunsch). Einmal pro Gerät dazu die heruntergeladenen
+/// Songs. Nur hinzufügen, nie entfernen; nichts aus der Kinder-Bibliothek.
+extension HLMediathek {
+  struct Quellen: Sendable {
+    var favoriten = [String]()
+    var favoritenAlben = [String]()
+    var playlists = [String]()
+    var wuensche = [String]()
+    var downloads = [String]()
+    var wunschIds = [Int]()
+    var album = [String: String]()          // Song-ID → Album-ID, soweit bekannt
+
+    var alle: [String] { favoriten + favoritenAlben + playlists + downloads + wuensche }  // Wünsche zuletzt = «neu»
+  }
+
+  fileprivate var geraetSchluessel: String? { HLAPI.shared.account.map { "homelabmusic.mediathek.\($0.info.ident).geraet" } }
+
+  /// Prüft, ob Erstübernahme (Server) bzw. Geräte-Übernahme fehlen, und holt sie nach.
+  /// Nach einem Fehler höchstens stündlich neu, ausser `erzwingen` (Hinzufügen braucht sie zwingend).
+  func uebernahmeWennNoetig(_ account: Account, erzwingen: Bool = false) async throws {
+    #if DEBUG
+      // Debug-Builds (Simulator, angemeldet mit echten Konten): nur mit -HLMediathekUebernahme YES, sonst würden
+      // Tests Wünsche auf dem Server als übernommen markieren
+      guard UserDefaults.standard.bool(forKey: "HLMediathekUebernahme") else { return }
+    #endif
+    let p = try await playlistFinden()
+    let serverFertig = (p?["comment"] as? String)?.contains(Self.uebernahmeMarke) ?? false
+    let geraetFertig = geraetSchluessel.map { UserDefaults.standard.bool(forKey: $0) } ?? true
+    guard !serverFertig || !geraetFertig else { return }
+    guard erzwingen || Date().timeIntervalSince(uebernahmeFehlschlag) > 3600 else { return }
+    do {
+      let q = try await quellenSammeln(account, server: !serverFertig, geraet: !geraetFertig)
+      let ids = try await ohneKinder(q.alle, album: q.album, account: account)
+      let id = try await anlegen()
+      let neu = try await zufuegen(ids, playlistId: id)
+      if !q.wunschIds.isEmpty { _ = try await HLAPI.shared.mediathekQuittieren(q.wunschIds) }
+      if !serverFertig {
+        let text = Self.kommentarText(uebernahme: true)
+        guard await HLAPI.shared.subsonic("updatePlaylist", ["playlistId": id, "comment": text]) != nil
+        else { throw Fehler.server("Mediathek konnte nicht beschriftet werden.") }
+      }
+      if let k = geraetSchluessel { UserDefaults.standard.set(true, forKey: k) }
+      print("HLMediathek: Erstübernahme \(neu.count) Songs (Favoriten \(q.favoriten.count), Favoriten-Alben " +
+        "\(q.favoritenAlben.count), Playlists \(q.playlists.count), Wünsche \(q.wuensche.count), Downloads \(q.downloads.count))")
+      if !serverFertig, !neu.isEmpty {
+        (UIApplication.shared.delegate as? AppDelegate)?.eventLogger.info(
+          topic: "Mediathek",
+          message: "Deine Mediathek ist eingerichtet: \(neu.count) Songs aus Favoriten, eigenen Playlists, Wünschen und Downloads. Mit «+» kommt Neues dazu."
+        )
+      }
+    } catch {
+      uebernahmeFehlschlag = Date()
+      throw error
+    }
+  }
+
+  /// Alles sammeln, ohne etwas zu schreiben (auch für den Probelauf).
+  func quellenSammeln(_ account: Account, server: Bool, geraet: Bool, wuenscheNoetig: Bool = true) async throws -> Quellen {
+    var q = Quellen()
+    if server {
+      // Favoriten
+      guard let s = await HLAPI.shared.subsonic("getStarred2")?["starred2"] as? [String: Any]
+      else { throw Fehler.server("Favoriten nicht lesbar.") }
+      for e in s["song"] as? [[String: Any]] ?? [] { merken(e, in: &q.favoriten, &q.album) }
+      for a in s["album"] as? [[String: Any]] ?? [] {
+        guard let id = a["id"] as? String,
+              let alb = await HLAPI.shared.subsonic("getAlbum", ["id": id])?["album"] as? [String: Any]
+        else { throw Fehler.server("Favoriten-Album nicht lesbar.") }
+        for e in alb["song"] as? [[String: Any]] ?? [] { merken(e, in: &q.favoritenAlben, &q.album) }
+      }
+      // eigene Playlists (ohne Wochenmix und Mediathek)
+      guard let ich = HLAPI.shared.benutzername,
+            let pl = (await HLAPI.shared.subsonic("getPlaylists")?["playlists"] as? [String: Any])?["playlist"]
+            as? [[String: Any]] else { throw Fehler.server("Playlists nicht lesbar.") }
+      for p in pl where (p["owner"] as? String) == ich {
+        let kommentar = p["comment"] as? String ?? ""
+        guard !kommentar.contains(Self.kennung), !kommentar.hasPrefix("Wochenmix"), let id = p["id"] as? String
+        else { continue }
+        guard let liste = await HLAPI.shared.subsonic("getPlaylist", ["id": id])?["playlist"] as? [String: Any]
+        else { throw Fehler.server("Playlist nicht lesbar.") }
+        for e in liste["entry"] as? [[String: Any]] ?? [] { merken(e, in: &q.playlists, &q.album) }
+      }
+      // Wünsche (Medienwunsch); ohne sie keine Erstübernahme
+      do {
+        let offen = try await HLAPI.shared.mediathekOffen().offen
+        q.wuensche = offen.map(\.songId)
+        q.wunschIds = offen.map(\.id)
+      } catch {
+        if wuenscheNoetig { throw error }
+        print("HLMediathek: Wünsche nicht lesbar: \(error)")
+      }
+    }
+    if geraet {
+      let accountId = account.managedObject.objectID
+      let geladen: [[String]] = try await storage.async.performAndGet { c in
+        let konto = c.context.object(with: accountId) as! AccountMO
+        let r = NSFetchRequest<SongMO>(entityName: "Song")
+        r.predicate = NSPredicate(format: "account == %@ AND relFilePath != nil", konto)
+        r.relationshipKeyPathsForPrefetching = ["album"]
+        return ((try? c.context.fetch(r)) ?? []).map { [$0.id, $0.album?.id ?? ""] }
+      }
+      for paar in geladen {
+        q.downloads.append(paar[0])
+        if !paar[1].isEmpty { q.album[paar[0]] = paar[1] }
+      }
+    }
+    return q
+  }
+
+  private func merken(_ e: [String: Any], in liste: inout [String], _ album: inout [String: String]) {
+    guard let id = e["id"] as? String else { return }
+    liste.append(id)
+    if let a = e["albumId"] as? String { album[id] = a }
+  }
+
+  /// Songs aus der Kinder-Bibliothek und unbekannte IDs (z. B. ersetzter Wunsch) weglassen.
+  func ohneKinder(_ ids: [String], album: [String: String], account: Account) async throws -> [String] {
+    let kinder = Set(HLBibliothek.shared.bibliotheken.filter(\.istKinder).flatMap(\.alben))
+    var albumVon = album
+    let bibliothek = storage.main.library
+    var ergebnis = [String]()
+    var gesehen = Set<String>()
+    for id in ids where gesehen.insert(id).inserted {
+      if albumVon[id] == nil {
+        if let s = bibliothek.getSong(for: account, id: id), !s.title.isEmpty, let a = s.album?.id {
+          albumVon[id] = a
+        } else if let s = await HLAPI.shared.subsonic("getSong", ["id": id])?["song"] as? [String: Any] {
+          albumVon[id] = s["albumId"] as? String ?? ""
+        } else {
+          continue                                       // gibt es auf dem Server nicht (mehr)
+        }
+      }
+      if let a = albumVon[id], kinder.contains(a) { continue }
+      ergebnis.append(id)
+    }
+    return ergebnis
   }
 }
 
