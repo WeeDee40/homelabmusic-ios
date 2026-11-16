@@ -55,7 +55,7 @@ class PlaylistAddIndexesVC: SingleFetchedResultsTableViewController<DirectoryMO>
     )
     singleFetchedResultsController = fetchedResultsController
 
-    configureSearchController(placeholder: "Search in \"Directories\"")
+    configureSearchController(placeholder: String(localized: "Search in \"\(String(localized: "Directories"))\""))
     tableView.register(nibName: DirectoryTableCell.typeName)
     tableView.rowHeight = DirectoryTableCell.rowHeight
     tableView.estimatedRowHeight = DirectoryTableCell.rowHeight

@@ -56,6 +56,7 @@ class UserQueueSectionHeader: UIView {
 
   func display(name: String, buttonPressAction: @escaping (() -> ())) {
     nameLabel.text = name
+    rightButton.setTitle(String(localized: "Clear"), for: .normal) // HomeLabMusic: übersetzt (Text stand nur im XIB)
     nameLabel.isHidden = false
     nameLabel.applyAmperfyStyle()
     rightButton.isHidden = false

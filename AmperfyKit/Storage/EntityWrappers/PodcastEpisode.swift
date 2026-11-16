@@ -202,9 +202,9 @@ public class PodcastEpisode: AbstractPlayable {
     if details.type == .long {
       infoContent.append("\(publishDate.asShortDayMonthString)")
       if !isAvailableToUser(), !isCached {
-        infoContent.append("Not Available")
+        infoContent.append(String(localized: "Not Available"))
       } else if let remainingTime = remainingTimeInSec {
-        infoContent.append("\(remainingTime.asDurationString) left")
+        infoContent.append(String(localized: "\(remainingTime.asDurationString) left"))
       } else if duration > 0 {
         infoContent.append("\(duration.asDurationString)")
       }

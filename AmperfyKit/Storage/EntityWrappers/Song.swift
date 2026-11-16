@@ -142,9 +142,9 @@ public class Song: AbstractPlayable, Identifyable {
         infoContent.append("\(duration.asDurationString)")
       }
       if year > 0 {
-        infoContent.append("Year \(year)")
+        infoContent.append(String(localized: "Year \(String(year))"))
       } else if let albumYear = album?.year, albumYear > 0 {
-        infoContent.append("Year \(albumYear)")
+        infoContent.append(String(localized: "Year \(String(albumYear))"))
       }
       if let genre = genre {
         infoContent.append("Genre: \(genre.name)")

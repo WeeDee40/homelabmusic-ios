@@ -43,7 +43,7 @@ extension UICellAccessory.CustomViewConfiguration {
   public static func createEdit(target: Any?, action: Selector?) -> UICellAccessory
     .CustomViewConfiguration {
     let label = UILabel()
-    label.text = "Edit"
+    label.text = String(localized: "Edit")
     label.textColor = .secondaryLabel
     label.isUserInteractionEnabled = true
     let gestureRecognizer = UITapGestureRecognizer(target: target, action: action)
@@ -57,7 +57,7 @@ extension UICellAccessory.CustomViewConfiguration {
   public static func createDone(target: Any?, action: Selector?) -> UICellAccessory
     .CustomViewConfiguration {
     let label = UILabel()
-    label.text = "Done"
+    label.text = String(localized: "Done")
     label.textColor = .secondaryLabel
     label.isUserInteractionEnabled = true
     let gestureRecognizer = UITapGestureRecognizer(target: target, action: action)

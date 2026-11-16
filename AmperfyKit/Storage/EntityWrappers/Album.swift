@@ -184,19 +184,19 @@ extension Album: PlayableContainable {
   public func infoDetails(for api: ServerApiType?, details: DetailInfoType) -> [String] {
     var infoContent = [String]()
     if songCount == 1 {
-      infoContent.append("1 Song")
+      infoContent.append(String(localized: "1 Song"))
     } else if songCount > 1 {
-      infoContent.append("\(songCount) Songs")
+      infoContent.append(String(localized: "\(songCount) Songs"))
     }
     if details.type == .short, details.isShowAlbumDuration, duration > 0 {
       infoContent.append("\(duration.asDurationShortString)")
     }
     if details.type == .long {
       if isCached {
-        infoContent.append("Cached")
+        infoContent.append(String(localized: "Cached"))
       }
       if year > 0 {
-        infoContent.append("Year \(year)")
+        infoContent.append(String(localized: "Year \(String(year))"))
       }
       if let genre = genre {
         infoContent.append("Genre: \(genre.name)")

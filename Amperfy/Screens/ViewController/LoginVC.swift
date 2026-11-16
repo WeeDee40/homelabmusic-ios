@@ -527,7 +527,7 @@ class LoginVC: UIViewController {
 
   func showErrorMsg(title: String = "Login failed", message: String, ok: (() -> ())? = nil) {
     let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in ok?() })
+    alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in ok?() })
     present(alert, animated: true, completion: nil)
   }
 

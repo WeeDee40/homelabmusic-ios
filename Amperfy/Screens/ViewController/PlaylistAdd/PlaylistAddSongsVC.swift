@@ -26,8 +26,8 @@ import UIKit
 class PlaylistAddSongsVC: SingleFetchedResultsTableViewController<SongMO>, PlaylistVCAddable {
   override var sceneTitle: String? {
     switch displayFilter {
-    case .all, .newest, .recent: "Songs"
-    case .favorites: "Favorite Songs"
+    case .all, .newest, .recent: String(localized: "Songs")
+    case .favorites: String(localized: "Favorite Songs")
     }
   }
 
@@ -63,8 +63,8 @@ class PlaylistAddSongsVC: SingleFetchedResultsTableViewController<SongMO>, Playl
     tableView.backgroundColor = .backgroundColor
 
     configureSearchController(
-      placeholder: "Search in \"\(sceneTitle ?? "Songs")\"",
-      scopeButtonTitles: ["All", "Cached"]
+      placeholder: String(localized: "Search in \"\(sceneTitle ?? String(localized: "Songs"))\""),
+      scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")]
     )
   }
 
@@ -209,9 +209,9 @@ class PlaylistAddSongsVC: SingleFetchedResultsTableViewController<SongMO>, Playl
     case .rating:
       if let sectionNameInitial = super.tableView(tableView, titleForHeaderInSection: section),
          sectionNameInitial != SectionIndexType.noRatingIndexSymbol {
-        return "\(sectionNameInitial) Star\(sectionNameInitial != "1" ? "s" : "")"
+        return "\(String(localized: "\(sectionNameInitial) Stars"))"
       } else {
-        return "Not rated"
+        return String(localized: "Not rated")
       }
     case .addedDate:
       return nil

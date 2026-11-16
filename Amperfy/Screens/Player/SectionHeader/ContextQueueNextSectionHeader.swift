@@ -63,6 +63,7 @@ class ContextQueueNextSectionHeader: UIView {
 
   func prepare(toWorkOnRootView: PopupPlayerVC?) {
     rootView = toWorkOnRootView
+    queueNameLabel.text = String(localized: "Next from:") // HomeLabMusic: übersetzt (Text stand nur im XIB)
     contextNameLabel.applyAmperfyStyle()
     refresh()
   }

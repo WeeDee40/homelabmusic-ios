@@ -24,7 +24,7 @@ import CoreData
 import UIKit
 
 class GenresVC: SingleFetchedResultsTableViewController<GenreMO> {
-  override var sceneTitle: String? { "Genres" }
+  override var sceneTitle: String? { String(localized: "Genres") }
 
   init(account: Account) {
     super.init(style: .grouped, account: account)
@@ -52,10 +52,10 @@ class GenresVC: SingleFetchedResultsTableViewController<GenreMO> {
     singleFetchedResultsController = fetchedResultsController
 
     configureSearchController(
-      placeholder: "Search in \"Genres\"",
-      scopeButtonTitles: ["All", "Cached"]
+      placeholder: String(localized: "Search in \"\(String(localized: "Genres"))\""),
+      scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")]
     )
-    setNavBarTitle(title: "Genres")
+    setNavBarTitle(title: String(localized: "Genres"))
     tableView.register(nibName: GenericTableCell.typeName)
     tableView.rowHeight = GenericTableCell.rowHeightWithoutImage
     tableView.estimatedRowHeight = GenericTableCell.rowHeightWithoutImage
@@ -113,8 +113,8 @@ class GenresVC: SingleFetchedResultsTableViewController<GenreMO> {
   lazy var emptyContentConfig: UIContentUnavailableConfiguration = {
     var config = UIContentUnavailableConfiguration.empty()
     config.image = .genre
-    config.text = "No Genres"
-    config.secondaryText = "Your genres will appear here."
+    config.text = String(localized: "No Genres")
+    config.secondaryText = String(localized: "Your genres will appear here.")
     return config
   }()
 

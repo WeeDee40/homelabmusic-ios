@@ -91,14 +91,14 @@ extension Podcast: PlayableContainable {
     var infoContent = [String]()
     if details.type != .noCountInfo {
       if episodeCount == 1 {
-        infoContent.append("1 Episode")
+        infoContent.append(String(localized: "1 Episode"))
       } else if episodeCount > 1 {
-        infoContent.append("\(episodeCount) Episodes")
+        infoContent.append(String(localized: "\(episodeCount) Episodes"))
       }
     }
     if details.type == .long || details.type == .noCountInfo {
       if isCached {
-        infoContent.append("Cached")
+        infoContent.append(String(localized: "Cached"))
       }
       if details.isShowDetailedInfo {
         infoContent.append("ID: \(!id.isEmpty ? id : "-")")

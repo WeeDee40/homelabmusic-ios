@@ -25,7 +25,7 @@ import UIKit
 
 class RadiosVC: SingleFetchedResultsTableViewController<RadioMO> {
   override var sceneTitle: String? {
-    "Radios"
+    String(localized: "Radios")
   }
 
   private var fetchedResultsController: RadiosFetchedResultsController!
@@ -56,7 +56,7 @@ class RadiosVC: SingleFetchedResultsTableViewController<RadioMO> {
     tableView.reloadData()
 
     configureSearchController(
-      placeholder: "Search in \"\(sceneTitle ?? "")\""
+      placeholder: String(localized: "Search in \"\(sceneTitle ?? "")\"")
     )
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight

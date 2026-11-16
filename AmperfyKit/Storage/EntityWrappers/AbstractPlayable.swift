@@ -384,7 +384,7 @@ public class AbstractPlayable: AbstractLibraryEntity, Downloadable {
     var infoContent = [String]()
     if details.type == .long {
       if year > 0 {
-        infoContent.append("Year \(year)")
+        infoContent.append(String(localized: "Year \(String(year))"))
       }
       if duration > 0 {
         infoContent.append("\(duration.asDurationString)")

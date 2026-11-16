@@ -53,13 +53,13 @@ class SearchDiffableDataSource: BasicUITableViewDiffableDataSource {
         return "Zuletzt gesucht" // HomeLabMusic
       }
     case .Playlist:
-      return "Playlists"
+      return String(localized: "Playlists")
     case .Artist:
       return "Künstler" // HomeLabMusic
     case .Album:
       return "Alben" // HomeLabMusic
     case .Song:
-      return "Songs"
+      return String(localized: "Songs")
     case .Entdecken: // HomeLabMusic
       return "Entdecken"
     case .Stoebern: // HomeLabMusic: Überschriften stehen in den Kacheln

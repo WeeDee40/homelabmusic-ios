@@ -60,9 +60,9 @@ class ArtistDiffableDataSource: BasicUITableViewDiffableDataSource {
       return artist.name.prefix(1).uppercased()
     case .rating:
       if artist.rating > 0 {
-        return "\(artist.rating) Star\(artist.rating != 1 ? "s" : "")"
+        return "\(String(localized: "\(artist.rating) Stars"))"
       } else {
-        return "Not rated"
+        return String(localized: "Not rated")
       }
     case .duration:
       return artist.duration.description
@@ -111,8 +111,8 @@ class ArtistDiffableDataSource: BasicUITableViewDiffableDataSource {
 class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
   override var sceneTitle: String? {
     switch displayFilter {
-    case .albumArtists, .all: "Artists"
-    case .favorites: "Favorite Artists"
+    case .albumArtists, .all: String(localized: "Artists")
+    case .favorites: String(localized: "Favorite Artists")
     }
   }
 
@@ -120,7 +120,7 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
   private var optionsButton: UIBarButtonItem!
   public var displayFilter: ArtistCategoryFilter = .all
   private var sortType: ArtistElementSortType = .name
-  private var filterTitle = "Artists"
+  private var filterTitle = String(localized: "Artists")
 
   init(account: Account) {
     super.init(style: .grouped, account: account)
@@ -162,8 +162,8 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
     change(sortType: appDelegate.storage.settings.user.artistsSortSetting)
     change(filterType: appDelegate.storage.settings.user.artistsFilterSetting)
     configureSearchController(
-      placeholder: "Search in \"\(filterTitle)\"",
-      scopeButtonTitles: ["All", "Cached"]
+      placeholder: String(localized: "Search in \"\(filterTitle)\""),
+      scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")]
     )
     tableView.register(nibName: GenericTableCell.typeName)
     tableView.rowHeight = GenericTableCell.rowHeight
@@ -228,19 +228,19 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
   lazy var emptyContentConfig: UIContentUnavailableConfiguration = {
     var config = UIContentUnavailableConfiguration.empty()
     config.image = .artist
-    config.text = "No " + filterTitle
-    config.secondaryText = "Your " + filterTitle.lowercased() + " will appear here."
+    config.text = String(localized: "No \(filterTitle)")
+    config.secondaryText = String(localized: "Your \(filterTitle) will appear here.")
     return config
   }()
 
   func applyFilter() {
     switch displayFilter {
     case .all:
-      filterTitle = "Artists"
+      filterTitle = String(localized: "Artists")
     case .favorites:
-      filterTitle = "Favorite Artists"
+      filterTitle = String(localized: "Favorite Artists")
     case .albumArtists:
-      filterTitle = "Album Artists"
+      filterTitle = String(localized: "Album Artists")
     }
     setNavBarTitle(title: filterTitle)
   }
@@ -357,9 +357,9 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
     case .rating:
       if let sectionNameInitial = super.tableView(tableView, titleForHeaderInSection: section),
          sectionNameInitial != SectionIndexType.noRatingIndexSymbol {
-        return "\(sectionNameInitial) Star\(sectionNameInitial != "1" ? "s" : "")"
+        return "\(String(localized: "\(sectionNameInitial) Stars"))"
       } else {
-        return "Not rated"
+        return String(localized: "Not rated")
       }
     case .newest:
       return super.tableView(tableView, titleForHeaderInSection: section)
@@ -397,7 +397,7 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
 
   private func createSortButtonMenu() -> UIMenu {
     let sortByName = UIAction(
-      title: "Name",
+      title: String(localized: "Name"),
       image: sortType == .name ? .check : nil,
       handler: { _ in
         self.change(sortType: .name)
@@ -410,7 +410,7 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
       }
     )
     let sortByRating = UIAction(
-      title: "Rating",
+      title: String(localized: "Rating"),
       image: sortType == .rating ? .check : nil,
       handler: { _ in
         self.change(sortType: .rating)
@@ -423,7 +423,7 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
       }
     )
     let sortByDuration = UIAction(
-      title: "Duration",
+      title: String(localized: "Duration"),
       image: sortType == .duration ? .check : nil,
       handler: { _ in
         self.change(sortType: .duration)
@@ -436,7 +436,7 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
       }
     )
     return UIMenu(
-      title: "Sort",
+      title: String(localized: "Sort"),
       image: .sort,
       options: [],
       children: [sortByName, sortByRating, sortByDuration]
@@ -445,21 +445,21 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
 
   private func createFilterButtonMenu() -> UIMenu {
     let filterAll = UIAction(
-      title: "All",
+      title: String(localized: "All"),
       image: displayFilter == .all ? .check : nil,
       handler: { _ in
         self.change(filterType: .all)
       }
     )
     let filterAlbumArtists = UIAction(
-      title: "Album Artists",
+      title: String(localized: "Album Artists"),
       image: displayFilter == .albumArtists ? .check : nil,
       handler: { _ in
         self.change(filterType: .albumArtists)
       }
     )
     return UIMenu(
-      title: "Filter",
+      title: String(localized: "Filter"),
       image: .filter,
       options: [],
       children: [filterAll, filterAlbumArtists]
@@ -468,7 +468,7 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
 
   private func createActionButtonMenu() -> UIMenu {
     let action = UIAction(
-      title: "Download \(filterTitle)",
+      title: String(localized: "Download \(filterTitle)"),
       image: UIImage.startDownload,
       handler: { _ in
         var artists = [Artist]()
@@ -485,15 +485,15 @@ class ArtistsVC: SingleSnapshotFetchedResultsTableViewController<ArtistMO> {
         let artistSongs = Array(artists.compactMap { $0.playables }.joined())
         if artistSongs.count > AppDelegate.maxPlayablesDownloadsToAddAtOnceWithoutWarning {
           let alert = UIAlertController(
-            title: "Many Songs",
-            message: "Are you sure to add \(artistSongs.count) songs from \"\(self.filterTitle)\" to download queue?",
+            title: String(localized: "Many Songs"),
+            message: String(localized: "Are you sure to add \(artistSongs.count) songs from \"\(self.filterTitle)\" to download queue?"),
             preferredStyle: .alert
           )
-          alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
+          alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default, handler: { _ in
             self.appDelegate.getMeta(self.account.info).playableDownloadManager
               .download(objects: artistSongs)
           }))
-          alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+          alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
           self.present(alert, animated: true, completion: nil)
         } else {
           self.appDelegate.getMeta(self.account.info).playableDownloadManager

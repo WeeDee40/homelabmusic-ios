@@ -24,7 +24,7 @@ import CoreData
 import UIKit
 
 class PodcastsVC: MultiSourceTableViewController {
-  override var sceneTitle: String? { "Podcasts" }
+  override var sceneTitle: String? { String(localized: "Podcasts") }
 
   private var podcastsFetchedResultsController: PodcastFetchedResultsController!
   private var episodesFetchedResultsController: PodcastEpisodesReleaseDateFetchedResultsController!
@@ -55,10 +55,10 @@ class PodcastsVC: MultiSourceTableViewController {
     )
 
     configureSearchController(
-      placeholder: "Search in \"Podcasts\"",
-      scopeButtonTitles: ["All", "Cached"]
+      placeholder: String(localized: "Search in \"\(String(localized: "Podcasts"))\""),
+      scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")]
     )
-    setNavBarTitle(title: "Podcasts")
+    setNavBarTitle(title: String(localized: "Podcasts"))
     tableView.register(nibName: GenericTableCell.typeName)
     tableView.register(nibName: PodcastEpisodeTableCell.typeName)
     tableView.sectionHeaderHeight = 0.0

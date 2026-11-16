@@ -281,7 +281,7 @@ class PlayerControlView: UIView {
       )
     }
     return UIMenu(
-      title: "Playback Rate",
+      title: String(localized: "Playback Rate"),
       subtitle: playerPlaybackRate.description,
       image: .playbackRate,
       children: availablePlaybackRates
@@ -303,7 +303,7 @@ class PlayerControlView: UIView {
         )
       }
     return UIMenu(
-      title: "Visualizer Style",
+      title: String(localized: "Visualizer Style"),
       subtitle: currentType.displayName,
       image: .sparkles,
       children: availableTypes
@@ -314,13 +314,13 @@ class PlayerControlView: UIView {
     var menuActions = [UIMenuElement]()
     if player.currentlyPlaying != nil || player.prevQueueCount > 0 || player
       .userQueueCount > 0 || player.nextQueueCount > 0 {
-      let clearPlayer = UIAction(title: "Clear Player", image: .clear, handler: { _ in
+      let clearPlayer = UIAction(title: String(localized: "Clear Player"), image: .clear, handler: { _ in
         self.player.clearQueues()
       })
       menuActions.append(clearPlayer)
     }
     if player.userQueueCount > 0 {
-      let clearUserQueue = UIAction(title: "Clear User Queue", image: .playlistX, handler: { _ in
+      let clearUserQueue = UIAction(title: String(localized: "Clear User Queue"), image: .playlistX, handler: { _ in
         self.rootView?.clearUserQueue()
       })
       menuActions.append(clearUserQueue)
@@ -332,7 +332,7 @@ class PlayerControlView: UIView {
     if rootView?.largeCurrentlyPlayingView?.isLyricsButtonAllowedToDisplay ?? false {
       if !appDelegate.storage.settings.user.isPlayerLyricsDisplayed ||
         appDelegate.storage.settings.user.playerDisplayStyle != .large {
-        let showLyricsAction = UIAction(title: "Show Lyrics", image: .lyrics, handler: { _ in
+        let showLyricsAction = UIAction(title: String(localized: "Show Lyrics"), image: .lyrics, handler: { _ in
           if !self.appDelegate.storage.settings.user.isPlayerLyricsDisplayed {
             self.appDelegate.storage.settings.user.isPlayerLyricsDisplayed.toggle()
             self.appDelegate.storage.settings.user.isPlayerVisualizerDisplayed = false
@@ -344,7 +344,7 @@ class PlayerControlView: UIView {
         })
         menuActions.append(showLyricsAction)
       } else {
-        let hideLyricsAction = UIAction(title: "Hide Lyrics", image: .lyrics, handler: { _ in
+        let hideLyricsAction = UIAction(title: String(localized: "Hide Lyrics"), image: .lyrics, handler: { _ in
           self.appDelegate.storage.settings.user.isPlayerLyricsDisplayed.toggle()
           self.rootView?.largeCurrentlyPlayingView?.display(element: .artwork)
         })
@@ -355,7 +355,7 @@ class PlayerControlView: UIView {
     if !appDelegate.storage.settings.user.isPlayerVisualizerDisplayed ||
       appDelegate.storage.settings.user.playerDisplayStyle != .large {
       let showVisualizerAction = UIAction(
-        title: "Show Audio Visualizer",
+        title: String(localized: "Show Audio Visualizer"),
         image: .audioVisualizer,
         handler: { _ in
           if !self.appDelegate.storage.settings.user.isPlayerVisualizerDisplayed {
@@ -371,7 +371,7 @@ class PlayerControlView: UIView {
       menuActions.append(showVisualizerAction)
     } else {
       let hideVisualizerAction = UIAction(
-        title: "Hide Audio Visualizer",
+        title: String(localized: "Hide Audio Visualizer"),
         image: .audioVisualizer,
         handler: { _ in
           self.appDelegate.storage.settings.user.isPlayerVisualizerDisplayed = false
@@ -389,7 +389,7 @@ class PlayerControlView: UIView {
       if player.currentlyPlaying != nil || player.prevQueueCount > 0 || player.nextQueueCount > 0,
          appDelegate.storage.settings.user.isOnlineMode {
         let addContextToPlaylist = UIAction(
-          title: "Add Context Queue to Playlist",
+          title: String(localized: "Add Context Queue to Playlist"),
           image: .playlistPlus,
           handler: { _ in
             var itemsToAdd = self.player.getAllPrevQueueItems().filterSongs()
@@ -416,7 +416,7 @@ class PlayerControlView: UIView {
     switch appDelegate.storage.settings.user.playerDisplayStyle {
     case .compact:
       let scrollToCurrentlyPlaying = UIAction(
-        title: "Scroll to currently playing",
+        title: String(localized: "Scroll to currently playing"),
         image: .squareArrow,
         handler: { _ in
           self.rootView?.scrollToCurrentlyPlayingRow()
@@ -426,7 +426,7 @@ class PlayerControlView: UIView {
     case .large: break
     }
 
-    let playerInfo = UIAction(title: "Player Info", image: .info, handler: { _ in
+    let playerInfo = UIAction(title: String(localized: "Player Info"), image: .info, handler: { _ in
       guard let rootView = self.rootView else { return }
       let detailVC = PlainDetailsVC()
       detailVC.display(player: self.player, on: rootView)

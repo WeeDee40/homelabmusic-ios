@@ -58,8 +58,8 @@ class PodcastDetailVC: SingleFetchedResultsTableViewController<PodcastEpisodeMO>
     singleFetchedResultsController = fetchedResultsController
 
     configureSearchController(
-      placeholder: "Search in \"Podcast\"",
-      scopeButtonTitles: ["All", "Cached"]
+      placeholder: String(localized: "Search in \"\(String(localized: "Podcast"))\""),
+      scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")]
     )
     tableView.register(nibName: PodcastEpisodeTableCell.typeName)
     tableView.rowHeight = PodcastEpisodeTableCell.rowHeight

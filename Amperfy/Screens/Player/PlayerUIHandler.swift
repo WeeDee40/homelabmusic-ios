@@ -281,7 +281,7 @@ class PlayerUIHandler: NSObject {
     menuCreateCB: @escaping () -> [UIMenuElement]
   ) {
     optionsButton?.showsMenuAsPrimaryAction = true
-    optionsButton?.menu = UIMenu.lazyMenu(title: "Player Options") {
+    optionsButton?.menu = UIMenu.lazyMenu(title: String(localized: "Player Options")) {
       menuCreateCB()
     }
   }
@@ -325,9 +325,9 @@ class PlayerUIHandler: NSObject {
     } else {
       switch player.playerMode {
       case .music:
-        titleLabel.text = "No music playing"
+        titleLabel.text = String(localized: "No music playing")
       case .podcast:
-        titleLabel.text = "No podcast playing"
+        titleLabel.text = String(localized: "No podcast playing")
       }
       albumLabel?.text = ""
       albumButton?.isEnabled = false

@@ -78,8 +78,8 @@ class PlaylistAddGenreDetailVC: MultiSourceTableViewController, PlaylistVCAddabl
     tableView.backgroundColor = .backgroundColor
 
     configureSearchController(
-      placeholder: "Artists, Albums and Songs",
-      scopeButtonTitles: ["All", "Cached"]
+      placeholder: String(localized: "Artists, Albums and Songs"),
+      scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")]
     )
   }
 
@@ -143,11 +143,11 @@ class PlaylistAddGenreDetailVC: MultiSourceTableViewController, PlaylistVCAddabl
     -> String? {
     switch section + 1 {
     case LibraryElement.Artist.rawValue:
-      return "Artists"
+      return String(localized: "Artists")
     case LibraryElement.Album.rawValue:
-      return "Albums"
+      return String(localized: "Albums")
     case LibraryElement.Song.rawValue:
-      return "Songs"
+      return String(localized: "Songs")
     default:
       return ""
     }

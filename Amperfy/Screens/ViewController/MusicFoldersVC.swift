@@ -24,7 +24,7 @@ import CoreData
 import UIKit
 
 class MusicFoldersVC: SingleFetchedResultsTableViewController<MusicFolderMO> {
-  override var sceneTitle: String? { "Directories" }
+  override var sceneTitle: String? { String(localized: "Directories") }
 
   private var fetchedResultsController: MusicFolderFetchedResultsController!
 
@@ -46,8 +46,8 @@ class MusicFoldersVC: SingleFetchedResultsTableViewController<MusicFolderMO> {
     )
     singleFetchedResultsController = fetchedResultsController
 
-    configureSearchController(placeholder: "Search in \"Directories\"")
-    setNavBarTitle(title: "Directories")
+    configureSearchController(placeholder: String(localized: "Search in \"\(String(localized: "Directories"))\""))
+    setNavBarTitle(title: String(localized: "Directories"))
     tableView.register(nibName: DirectoryTableCell.typeName)
     tableView.rowHeight = DirectoryTableCell.rowHeight
     tableView.estimatedRowHeight = DirectoryTableCell.rowHeight

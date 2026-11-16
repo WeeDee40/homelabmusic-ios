@@ -59,7 +59,7 @@ class SplitVC: UISplitViewController {
     primaryBackgroundStyle = .sidebar
 
     if appDelegate.storage.settings.user.isOfflineMode {
-      appDelegate.eventLogger.info(topic: "Reminder", message: "Offline Mode is active.")
+      appDelegate.eventLogger.info(topic: String(localized: "Reminder"), message: String(localized: "Offline Mode is active."))
     }
 
     miniPlayer = MiniPlayerView(player: appDelegate.player)

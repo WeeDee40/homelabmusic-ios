@@ -492,9 +492,9 @@ extension Playlist: PlayableContainable {
   public func infoDetails(for api: ServerApiType?, details: DetailInfoType) -> [String] {
     var infoContent = [String]()
     if songCount == 1 {
-      infoContent.append("1 Song")
+      infoContent.append(String(localized: "1 Song"))
     } else {
-      infoContent.append("\(songCount) Songs")
+      infoContent.append(String(localized: "\(songCount) Songs"))
     }
     if isSmartPlaylist {
       infoContent.append("Smart Playlist")
@@ -504,7 +504,7 @@ extension Playlist: PlayableContainable {
     }
     if details.type == .long {
       if isCached {
-        infoContent.append("Cached")
+        infoContent.append(String(localized: "Cached"))
       }
       if duration > 0 {
         infoContent.append("\(duration.asDurationShortString)")

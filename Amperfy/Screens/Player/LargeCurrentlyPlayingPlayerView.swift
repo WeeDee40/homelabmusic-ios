@@ -404,7 +404,7 @@ class LargeCurrentlyPlayingPlayerView: UIView, UIGestureRecognizerDelegate {
     var notAvailableLyrics = StructuredLyrics()
     notAvailableLyrics.synced = false
     var line = LyricsLine()
-    line.value = "No Lyrics"
+    line.value = String(localized: "No Lyrics")
     notAvailableLyrics.line.append(line)
     showLyrics(structuredLyrics: notAvailableLyrics)
     lyricsView?.highlightAllLyrics()

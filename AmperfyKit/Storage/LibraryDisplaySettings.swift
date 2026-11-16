@@ -50,7 +50,8 @@ public enum LibraryDisplayType: Int, CaseIterable, Sendable {
     }
   }
 
-  public var displayName: String {
+  /// Englischer Name: Kennung für Tabs (UIKit speichert deren Reihenfolge) und Schlüssel der Übersetzung.
+  public var englishName: String {
     switch self {
     case .artists:
       return "Artists"
@@ -82,6 +83,11 @@ public enum LibraryDisplayType: Int, CaseIterable, Sendable {
       return "Radios"
     }
   }
+  /// Angezeigter Name (HomeLabMusic: übersetzt).
+  public var displayName: String {
+    String(localized: String.LocalizationValue(englishName))
+  }
+
 
   public var image: UIImage {
     switch self {

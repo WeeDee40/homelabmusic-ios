@@ -360,68 +360,68 @@ extension AppDelegate {
 
   func createSleepTimerMenu(refreshCB: VoidFunctionCallback?) -> UIMenuElement {
     if let timer = sleepTimer {
-      let actionTitle = "Turn Off (Pause at: \(timer.fireDate.asShortHrMinString))"
+      let actionTitle = String(localized: "Turn Off (Pause at: \(timer.fireDate.asShortHrMinString))")
       let deactivate = UIAction(title: actionTitle, image: nil, handler: { _ in
         self.sleepTimer?.invalidate()
         self.sleepTimer = nil
         refreshCB?()
       })
       return UIMenu(
-        title: "Sleep Timer",
-        subtitle: "Pause at: \(timer.fireDate.asShortHrMinString)",
+        title: String(localized: "Sleep Timer"),
+        subtitle: String(localized: "Pause at: \(timer.fireDate.asShortHrMinString)"),
         image: .sleep,
         children: [deactivate]
       )
     } else if player.isShouldPauseAfterFinishedPlaying {
-      let actionTitle = "Turn Off (Pause at end of \(player.playerMode.playableName))"
+      let actionTitle = String(localized: "Turn Off (Pause at end of \(player.playerMode.playableName))")
       let deactivate = UIAction(title: actionTitle, image: nil, handler: { _ in
         self.player.isShouldPauseAfterFinishedPlaying = false
         refreshCB?()
       })
       return UIMenu(
-        title: "Sleep Timer",
-        subtitle: "Pause at end of \(player.playerMode.playableName)",
+        title: String(localized: "Sleep Timer"),
+        subtitle: String(localized: "Pause at end of \(player.playerMode.playableName)"),
         children: [deactivate]
       )
     } else {
-      let endOfTrack = UIAction(title: "End of Song or Podcast Episode", image: nil, handler: { _ in
+      let endOfTrack = UIAction(title: String(localized: "End of Song or Podcast Episode"), image: nil, handler: { _ in
         self.player.isShouldPauseAfterFinishedPlaying = true
         refreshCB?()
       })
-      let sleep5 = UIAction(title: "5 Minutes", image: nil, handler: { _ in
+      let sleep5 = UIAction(title: String(localized: "5 Minutes"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(5 * 60))
         refreshCB?()
       })
-      let sleep10 = UIAction(title: "10 Minutes", image: nil, handler: { _ in
+      let sleep10 = UIAction(title: String(localized: "10 Minutes"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(10 * 60))
         refreshCB?()
       })
-      let sleep15 = UIAction(title: "15 Minutes", image: nil, handler: { _ in
+      let sleep15 = UIAction(title: String(localized: "15 Minutes"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(15 * 60))
         refreshCB?()
       })
-      let sleep30 = UIAction(title: "30 Minutes", image: nil, handler: { _ in
+      let sleep30 = UIAction(title: String(localized: "30 Minutes"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(30 * 60))
         refreshCB?()
       })
-      let sleep45 = UIAction(title: "45 Minutes", image: nil, handler: { _ in
+      let sleep45 = UIAction(title: String(localized: "45 Minutes"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(45 * 60))
         refreshCB?()
       })
-      let sleep60 = UIAction(title: "1 Hour", image: nil, handler: { _ in
+      let sleep60 = UIAction(title: String(localized: "1 Hour"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(60 * 60))
         refreshCB?()
       })
-      let sleep120 = UIAction(title: "2 Hours", image: nil, handler: { _ in
+      let sleep120 = UIAction(title: String(localized: "2 Hours"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(2 * 60 * 60))
         refreshCB?()
       })
-      let sleep240 = UIAction(title: "4 Hours", image: nil, handler: { _ in
+      let sleep240 = UIAction(title: String(localized: "4 Hours"), image: nil, handler: { _ in
         self.activateSleepTimer(timeInterval: TimeInterval(4 * 60 * 60))
         refreshCB?()
       })
       return UIMenu(
-        title: "Sleep Timer",
+        title: String(localized: "Sleep Timer"),
         image: .sleep,
         children: [
           endOfTrack,

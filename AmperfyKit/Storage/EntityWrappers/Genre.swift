@@ -91,20 +91,20 @@ extension Genre: PlayableContainable {
     var infoContent = [String]()
     if api == .ampache {
       if artistCount == 1 {
-        infoContent.append("1 Artist")
+        infoContent.append(String(localized: "1 Artist"))
       } else if artistCount > 1 {
-        infoContent.append("\(artistCount) Artists")
+        infoContent.append(String(localized: "\(artistCount) Artists"))
       }
     }
     if albumCount == 1 {
-      infoContent.append("1 Album")
+      infoContent.append(String(localized: "1 Album"))
     } else if albumCount > 1 {
-      infoContent.append("\(albumCount) Albums")
+      infoContent.append(String(localized: "\(albumCount) Albums"))
     }
     if songCount == 1 {
-      infoContent.append("1 Song")
+      infoContent.append(String(localized: "1 Song"))
     } else if songCount > 1 {
-      infoContent.append("\(songCount) Songs")
+      infoContent.append(String(localized: "\(songCount) Songs"))
     }
     if details.type == .long {
       if details.isShowDetailedInfo {

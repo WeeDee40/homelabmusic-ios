@@ -91,10 +91,10 @@ class SliderMenuView: UIView {
 class AlbumsCommonVCInteractions {
   var sceneTitle: String? {
     switch displayFilter {
-    case .all: "Albums"
-    case .newest: "Newest Albums"
-    case .recent: "Recently Played Albums"
-    case .favorites: "Favorite Albums"
+    case .all: String(localized: "Albums")
+    case .newest: String(localized: "Newest Albums")
+    case .recent: String(localized: "Recently Played Albums")
+    case .favorites: String(localized: "Favorite Albums")
     }
   }
 
@@ -112,7 +112,7 @@ class AlbumsCommonVCInteractions {
   public var optionsButton: UIBarButtonItem = .createOptionsBarButton()
   public var displayFilter: DisplayCategoryFilter = .all
   public var sortType: AlbumElementSortType = .name
-  public var filterTitle = "Albums"
+  public var filterTitle = String(localized: "Albums")
   public var newestElementsOffsetsSynced = Set<Int>()
   public var isIndexTitelsHidden = false {
     didSet {
@@ -146,27 +146,27 @@ class AlbumsCommonVCInteractions {
   lazy var emptyContentConfig: UIContentUnavailableConfiguration = {
     var config = UIContentUnavailableConfiguration.empty()
     config.image = .album
-    config.text = "No " + filterTitle
-    config.secondaryText = "Your " + filterTitle.lowercased() + " will appear here."
+    config.text = String(localized: "No \(filterTitle)")
+    config.secondaryText = String(localized: "Your \(filterTitle) will appear here.")
     return config
   }()
 
   func applyFilter() {
     switch displayFilter {
     case .all:
-      filterTitle = "Albums"
+      filterTitle = String(localized: "Albums")
       isIndexTitelsHidden = false
       change(sortType: appDelegate.storage.settings.user.albumsSortSetting)
     case .newest:
-      filterTitle = "Newest Albums"
+      filterTitle = String(localized: "Newest Albums")
       isIndexTitelsHidden = true
       change(sortType: .newest)
     case .recent:
-      filterTitle = "Recently Played Albums"
+      filterTitle = String(localized: "Recently Played Albums")
       isIndexTitelsHidden = true
       change(sortType: .recent)
     case .favorites:
-      filterTitle = "Favorite Albums"
+      filterTitle = String(localized: "Favorite Albums")
       isIndexTitelsHidden = false
       change(sortType: appDelegate.storage.settings.user.albumsSortSetting)
     }
@@ -285,7 +285,7 @@ class AlbumsCommonVCInteractions {
 
   private func createSortButtonMenu() -> UIMenu {
     let sortByName = UIAction(
-      title: "Name",
+      title: String(localized: "Name"),
       image: sortType == .name ? .check : nil,
       handler: { _ in
         self.change(sortType: .name)
@@ -299,7 +299,7 @@ class AlbumsCommonVCInteractions {
       }
     )
     let sortByRating = UIAction(
-      title: "Rating",
+      title: String(localized: "Rating"),
       image: sortType == .rating ? .check : nil,
       handler: { _ in
         self.change(sortType: .rating)
@@ -313,7 +313,7 @@ class AlbumsCommonVCInteractions {
       }
     )
     let sortByArtist = UIAction(
-      title: "Artist",
+      title: String(localized: "Artist"),
       image: sortType == .artist ? .check : nil,
       handler: { _ in
         self.change(sortType: .artist)
@@ -327,7 +327,7 @@ class AlbumsCommonVCInteractions {
       }
     )
     let sortByDuration = UIAction(
-      title: "Duration",
+      title: String(localized: "Duration"),
       image: sortType == .duration ? .check : nil,
       handler: { _ in
         self.change(sortType: .duration)
@@ -341,7 +341,7 @@ class AlbumsCommonVCInteractions {
       }
     )
     let sortByYear = UIAction(
-      title: "Year",
+      title: String(localized: "Year"),
       image: sortType == .year ? .check : nil,
       handler: { _ in
         self.change(sortType: .year)
@@ -355,7 +355,7 @@ class AlbumsCommonVCInteractions {
       }
     )
     return UIMenu(
-      title: "Sort",
+      title: String(localized: "Sort"),
       image: .sort,
       options: [],
       children: [sortByName, sortByRating, sortByArtist, sortByDuration, sortByYear]
@@ -410,7 +410,7 @@ class AlbumsCommonVCInteractions {
 
   private func createStyleButtonMenu() -> UIMenu {
     let tableStyle = UIAction(
-      title: "Table",
+      title: String(localized: "Table"),
       image: appDelegate.storage.settings.user.albumsStyleSetting == .table ? .check : nil,
       handler: { _ in
         self.appDelegate.storage.settings.user.albumsStyleSetting = .table
@@ -426,7 +426,7 @@ class AlbumsCommonVCInteractions {
       }
     )
     let gridStyle = UIAction(
-      title: "Grid",
+      title: String(localized: "Grid"),
       image: appDelegate.storage.settings.user.albumsStyleSetting == .grid ? .check : nil,
       handler: { _ in
         self.appDelegate.storage.settings.user.albumsStyleSetting = .grid
@@ -441,14 +441,14 @@ class AlbumsCommonVCInteractions {
         )
       }
     )
-    let changeGridSize = UIAction(title: "Change Grid Size", image: .resize, handler: { _ in
+    let changeGridSize = UIAction(title: String(localized: "Change Grid Size"), image: .resize, handler: { _ in
       self.showSliderMenu()
     })
     changeGridSize
       .attributes = (appDelegate.storage.settings.user.albumsStyleSetting != .grid) ? .disabled : []
 
     return UIMenu(
-      title: "Style",
+      title: String(localized: "Style"),
       image: .grid,
       options: [],
       children: [tableStyle, gridStyle, changeGridSize]
@@ -457,7 +457,7 @@ class AlbumsCommonVCInteractions {
 
   private func createActionButtonMenu() -> UIMenu {
     let action = UIAction(
-      title: "Download \(filterTitle)",
+      title: String(localized: "Download \(filterTitle)"),
       image: UIImage.startDownload,
       handler: { _ in
         var albums = [Album]()
@@ -477,15 +477,15 @@ class AlbumsCommonVCInteractions {
         let albumSongs = Array(albums.compactMap { $0.playables }.joined())
         if albumSongs.count > AppDelegate.maxPlayablesDownloadsToAddAtOnceWithoutWarning {
           let alert = UIAlertController(
-            title: "Many Songs",
-            message: "Are you sure to add \(albumSongs.count) songs from \"\(self.filterTitle)\" to download queue?",
+            title: String(localized: "Many Songs"),
+            message: String(localized: "Are you sure to add \(albumSongs.count) songs from \"\(self.filterTitle)\" to download queue?"),
             preferredStyle: .alert
           )
-          alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
+          alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default, handler: { _ in
             self.appDelegate.getMeta(self.account.info).playableDownloadManager
               .download(objects: albumSongs)
           }))
-          alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+          alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
           self.rootVC?.present(alert, animated: true, completion: nil)
         } else {
           self.appDelegate.getMeta(self.account.info).playableDownloadManager
@@ -553,7 +553,7 @@ class AlbumsCommonVCInteractions {
   func createPlayShuffleInfoConfig() -> PlayShuffleInfoConfiguration {
     PlayShuffleInfoConfiguration(
       infoCB: {
-        "\(self.fetchedResultsController.fetchedObjects?.count ?? 0) Album\((self.fetchedResultsController.fetchedObjects?.count ?? 0) == 1 ? "" : "s")"
+        "\(String(localized: "\(self.fetchedResultsController.fetchedObjects?.count ?? 0) Albums"))"
       },
       playContextCb: handleHeaderPlay,
       player: appDelegate.player,

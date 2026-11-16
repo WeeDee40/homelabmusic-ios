@@ -54,9 +54,9 @@ class AlbumsDiffableDataSource: BasicUITableViewDiffableDataSource {
     case .rating:
       guard let album = getFirstAlbum(in: section) else { return nil }
       if album.rating > 0 {
-        return "\(album.rating) Star\(album.rating != 1 ? "s" : "")"
+        return "\(String(localized: "\(album.rating) Stars"))"
       } else {
-        return "Not rated"
+        return String(localized: "Not rated")
       }
     case .newest, .recent:
       return nil
@@ -188,8 +188,8 @@ class AlbumsVC: SingleSnapshotFetchedResultsTableViewController<AlbumMO> {
 
     common.applyFilter()
     configureSearchController(
-      placeholder: "Search in \"\(common.filterTitle)\"",
-      scopeButtonTitles: ["All", "Cached"]
+      placeholder: String(localized: "Search in \"\(common.filterTitle)\""),
+      scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")]
     )
     tableView.register(nibName: GenericTableCell.typeName)
     tableView.rowHeight = GenericTableCell.rowHeight

@@ -128,14 +128,14 @@ extension Artist: PlayableContainable {
       let relatedAlbumCount = library.getAlbums(for: account, whichContainsSongsWithArtist: self)
         .count
       if relatedAlbumCount == 1 {
-        infoContent.append("1 Album")
+        infoContent.append(String(localized: "1 Album"))
       } else if relatedAlbumCount > 1 {
-        infoContent.append("\(relatedAlbumCount) Albums")
+        infoContent.append(String(localized: "\(relatedAlbumCount) Albums"))
       }
     } else if albumCount == 1 {
-      infoContent.append("1 Album")
+      infoContent.append(String(localized: "1 Album"))
     } else if albumCount > 1 {
-      infoContent.append("\(albumCount) Albums")
+      infoContent.append(String(localized: "\(albumCount) Albums"))
     }
 
     if details.artistFilterSetting == .albumArtists,
@@ -144,14 +144,14 @@ extension Artist: PlayableContainable {
       let relatedSongsCount = library.getSongs(for: account, whichContainsSongsWithArtist: self)
         .count
       if relatedSongsCount == 1 {
-        infoContent.append("1 Song")
+        infoContent.append(String(localized: "1 Song"))
       } else if relatedSongsCount > 1 {
-        infoContent.append("\(relatedSongsCount) Songs")
+        infoContent.append(String(localized: "\(relatedSongsCount) Songs"))
       }
     } else if songCount == 1 {
-      infoContent.append("1 Song")
+      infoContent.append(String(localized: "1 Song"))
     } else if songCount > 1 {
-      infoContent.append("\(songCount) Songs")
+      infoContent.append(String(localized: "\(songCount) Songs"))
     }
     if details.type == .short, details.isShowArtistDuration, duration > 0 {
       infoContent.append("\(duration.asDurationShortString)")

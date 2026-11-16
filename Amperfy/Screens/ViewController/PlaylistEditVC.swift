@@ -123,7 +123,7 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
       action: nil
     )
     selectBarButton = UIBarButtonItem(
-      title: "Select",
+      title: String(localized: "Select"),
       style: .plain,
       target: self,
       action: #selector(selectBarButtonPressed)
@@ -174,7 +174,7 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
   @IBAction
   func selectBarButtonPressed(_ sender: Any) {
     changeEditMode((editMode == .reorder) ? .delete : .reorder)
-    selectBarButton.title = (editMode == .reorder) ? "Select" : "Reorder"
+    selectBarButton.title = (editMode == .reorder) ? String(localized: "Select") : "Reorder"
     refreshDeleteButton()
   }
 
@@ -225,7 +225,7 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
 
   func refreshBarButtons() {
     doneButton = UIBarButtonItem(
-      title: "Done",
+      title: String(localized: "Done"),
       style: .plain,
       target: self,
       action: #selector(doneBarButtonPressed)

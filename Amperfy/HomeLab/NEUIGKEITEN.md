@@ -1,6 +1,8 @@
 ## 2026-11-16
 ### Neu
 - Im Menü eines Albums gibt es «Zu «Kinder» verschieben» und, bei Kinderalben, «In die Musik verschieben». Das Album wandert für die ganze Familie; was du in die Musik holst, kommt auch in deine Mediathek.
+### Anders
+- Die App spricht jetzt weitgehend Deutsch: Bibliothek, Startseite, Menüs, Player und Warteschlange. «Newest Albums» heisst jetzt «Zuletzt hinzugefügt», «Recently Played» «Zuletzt gespielt». Die Einstellungen sind noch englisch.
 ### Behoben
 - Ersetzt der Server einen Song durch eine bessere Datei, bleibt er jetzt in deiner Mediathek, am gleichen Platz. Vorher verschwand er still daraus.
 - Kinderalben bieten «Zur Mediathek hinzufügen» und das «+» nicht mehr an; sie gehören nie in die Mediathek.

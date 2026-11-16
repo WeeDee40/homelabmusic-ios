@@ -110,7 +110,7 @@ class PlainDetailsVC: UIViewController {
         self.detailsTextView.text = "Lyrics are not available anymore."
       }}
     } else if let player = player {
-      headerLabel.text = "Player Info"
+      headerLabel.text = String(localized: "Player Info")
       var details = ""
       details += "Play Time\n"
       details += "Remaining: \(player.remainingPlayDuration.asDurationString)\n"

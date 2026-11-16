@@ -103,6 +103,7 @@
 		507414A32F013C94007AEC5D /* PlayPausePlaybackAppEnum.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507414A22F013C93007AEC5D /* PlayPausePlaybackAppEnum.swift */; };
 		5077F936221E6D0E0099CA91 /* DownloadsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5077F935221E6D0E0099CA91 /* DownloadsVC.swift */; };
 		5078AFB22B40CA5E0038FD17 /* DisplaySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5078AFB12B40CA5E0038FD17 /* DisplaySettingsView.swift */; };
+		4C0DE0000000000000000002 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4C0DE0000000000000000001 /* Localizable.xcstrings */; };
 		5078AFB42B44AE260038FD17 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5078AFB32B44AE260038FD17 /* AppIntentVocabulary.plist */; };
 		50791E7828D25845006CE6E5 /* AccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50791E7728D25845006CE6E5 /* AccountSettingsView.swift */; };
 		50791E7A28D31090006CE6E5 /* ServerURLsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50791E7928D31090006CE6E5 /* ServerURLsSettingsView.swift */; };
@@ -809,6 +810,7 @@
 		5077F95222283FED0099CA91 /* RoundedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundedImage.swift; sourceTree = "<group>"; };
 		5077F954222C58A10099CA91 /* GenericXmlParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericXmlParser.swift; sourceTree = "<group>"; };
 		5078AFB12B40CA5E0038FD17 /* DisplaySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplaySettingsView.swift; sourceTree = "<group>"; };
+		4C0DE0000000000000000001 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		5078AFB32B44AE260038FD17 /* AppIntentVocabulary.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		50791E7728D25845006CE6E5 /* AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsView.swift; sourceTree = "<group>"; };
 		50791E7928D31090006CE6E5 /* ServerURLsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLsSettingsView.swift; sourceTree = "<group>"; };
@@ -1531,6 +1533,7 @@
 				508EBB522850CB070053D9F0 /* Intents */,
 				508385F321C5965E00C4BB32 /* Info.plist */,
 				5078AFB32B44AE260038FD17 /* AppIntentVocabulary.plist */,
+				4C0DE0000000000000000001 /* Localizable.xcstrings */,
 				50ACAF1327B277B50039913C /* Amperfy.entitlements */,
 				641708582C13BF5100BA2619 /* Haptics.swift */,
 			);
@@ -2382,6 +2385,7 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
 			);
 			mainGroup = 508385DB21C5965B00C4BB32;
 			packageReferences = (
@@ -2416,6 +2420,7 @@
 				502E56BD27561C2700638BD2 /* UserQueueSectionHeader.xib in Resources */,
 				50A30E502B73DFE500722894 /* PlayerControlView.xib in Resources */,
 				5078AFB42B44AE260038FD17 /* AppIntentVocabulary.plist in Resources */,
+				4C0DE0000000000000000002 /* Localizable.xcstrings in Resources */,
 				501944192B78F9B800082D2E /* LargeCurrentlyPlayingPlayerView.xib in Resources */,
 				5055AA5826835AB000096B8D /* PodcastEpisodeTableCell.xib in Resources */,
 				50C16C0C21E52BBB00F086F0 /* PlayableTableCell.xib in Resources */,

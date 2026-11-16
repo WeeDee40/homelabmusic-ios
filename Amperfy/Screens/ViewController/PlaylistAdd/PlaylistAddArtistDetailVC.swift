@@ -70,7 +70,7 @@ class PlaylistAddArtistDetailVC: MultiSourceTableViewController, PlaylistVCAddab
     tableView.estimatedSectionFooterHeight = 0.0
     tableView.backgroundColor = .backgroundColor
 
-    configureSearchController(placeholder: "Albums and Songs", scopeButtonTitles: ["All", "Cached"])
+    configureSearchController(placeholder: String(localized: "Albums and Songs"), scopeButtonTitles: [String(localized: "All"), String(localized: "Cached")])
   }
 
   override func viewIsAppearing(_ animated: Bool) {
@@ -131,9 +131,9 @@ class PlaylistAddArtistDetailVC: MultiSourceTableViewController, PlaylistVCAddab
     -> String? {
     switch section + 2 {
     case LibraryElement.Album.rawValue:
-      return "Albums"
+      return String(localized: "Albums")
     case LibraryElement.Song.rawValue:
-      return "Songs"
+      return String(localized: "Songs")
     default:
       return ""
     }

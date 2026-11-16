@@ -85,7 +85,7 @@ class SyncVC: UIViewController {
     guard !syncFinished else { return }
 
     syncFinished = true
-    progressInfo.text = "Done"
+    progressInfo.text = String(localized: "Done")
     activitySpinner.stopAnimating()
     activitySpinner.isHidden = true
     progressLabel.isHidden = true
@@ -123,14 +123,14 @@ class SyncVC: UIViewController {
       message: "Skipping initial sync results in an incomplete library. Missing library elements can later be synced via various search/update functionalities.",
       preferredStyle: .alert
     )
-    let skip = UIAlertAction(title: "Skip", style: .destructive, handler: { action in
+    let skip = UIAlertAction(title: String(localized: "Skip"), style: .destructive, handler: { action in
       self.appDelegate.storage.settings.accounts
         .updateSetting(self.account.info) { accountSettings in
           accountSettings.initialSyncCompletionStatus = .skipped
         }
       self.finishSync()
     })
-    let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+    let cancel = UIAlertAction(title: String(localized: "Cancel"), style: .cancel, handler: nil)
     alert.addAction(skip)
     alert.addAction(cancel)
     present(alert, animated: true, completion: nil)

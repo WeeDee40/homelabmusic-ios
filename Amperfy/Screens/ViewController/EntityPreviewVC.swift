@@ -426,7 +426,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createPlayAction() -> UIAction {
-    UIAction(title: "Play", image: .play) { action in
+    UIAction(title: String(localized: "Play"), image: .play) { action in
       guard !self.entityPlayables.isEmpty else { return }
       if let playerIndex = self.playerIndexCb?() {
         self.appDelegate.player.play(playerIndex: playerIndex)
@@ -442,7 +442,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createPlayShuffledAction() -> UIAction {
-    UIAction(title: "Shuffle", image: .shuffle) { action in
+    UIAction(title: String(localized: "Shuffle"), image: .shuffle) { action in
       guard !self.entityPlayables.isEmpty else { return }
       if let context = self.playContextCb?() {
         self.appDelegate.player.playShuffled(context: context)
@@ -456,7 +456,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createInstantMixAction() -> UIAction {
-    UIAction(title: "Instant Mix", image: .instantMix) { [weak self] action in
+    UIAction(title: String(localized: "Instant Mix"), image: .instantMix) { [weak self] action in
       guard let self = self,
             let song = (entityContainer as? AbstractPlayable)?.asSong
       else { return }
@@ -472,7 +472,7 @@ class EntityPreviewActionBuilder {
       // Get the library syncer for the song's account
       guard let account = song.account else {
         appDelegate.eventLogger.error(
-          topic: "Instant Mix",
+          topic: String(localized: "Instant Mix"),
           statusCode: .commonError,
           message: "Song has no account",
           displayPopup: true
@@ -487,8 +487,8 @@ class EntityPreviewActionBuilder {
 
       if similarSongs.isEmpty {
         appDelegate.eventLogger.info(
-          topic: "Instant Mix",
-          message: "No similar songs found",
+          topic: String(localized: "Instant Mix"),
+          message: String(localized: "No similar songs found"),
           displayPopup: true
         )
         return
@@ -502,7 +502,7 @@ class EntityPreviewActionBuilder {
       appDelegate.player.play(context: context)
 
       appDelegate.eventLogger.info(
-        topic: "Instant Mix",
+        topic: String(localized: "Instant Mix"),
         message: "Playing instant mix with \(allSongs.count) songs",
         displayPopup: true
       )
@@ -513,20 +513,20 @@ class EntityPreviewActionBuilder {
   }
 
   private func createMusicQueueAction() -> UIMenuElement {
-    UIMenu(title: "Music Queue", image: .listBullet, children: [
-      UIAction(title: "Insert Context Queue", image: .contextQueueInsert) { action in
+    UIMenu(title: String(localized: "Music Queue"), image: .listBullet, children: [
+      UIAction(title: String(localized: "Insert Context Queue"), image: .contextQueueInsert) { action in
         guard !self.entityPlayables.isEmpty else { return }
         self.appDelegate.player.insertContextQueue(playables: self.entityPlayables)
       },
-      UIAction(title: "Append Context Queue", image: .contextQueueAppend) { action in
+      UIAction(title: String(localized: "Append Context Queue"), image: .contextQueueAppend) { action in
         guard !self.entityPlayables.isEmpty else { return }
         self.appDelegate.player.appendContextQueue(playables: self.entityPlayables)
       },
-      UIAction(title: "Insert User Queue", image: .userQueueInsert) { action in
+      UIAction(title: String(localized: "Insert User Queue"), image: .userQueueInsert) { action in
         guard !self.entityPlayables.isEmpty else { return }
         self.appDelegate.player.insertUserQueue(playables: self.entityPlayables)
       },
-      UIAction(title: "Append User Queue", image: .userQueueAppend) { action in
+      UIAction(title: String(localized: "Append User Queue"), image: .userQueueAppend) { action in
         guard !self.entityPlayables.isEmpty else { return }
         self.appDelegate.player.appendUserQueue(playables: self.entityPlayables)
       },
@@ -535,11 +535,11 @@ class EntityPreviewActionBuilder {
 
   private func createPodcastQueueAction() -> UIMenuElement {
     UIMenu(image: .listBullet, options: .displayInline, children: [
-      UIAction(title: "Insert Podcast Queue", image: .podcastQueueInsert) { action in
+      UIAction(title: String(localized: "Insert Podcast Queue"), image: .podcastQueueInsert) { action in
         guard !self.entityPlayables.isEmpty else { return }
         self.appDelegate.player.insertPodcastQueue(playables: self.entityPlayables)
       },
-      UIAction(title: "Append Podcast Queue", image: .podcastQueueAppend) { action in
+      UIAction(title: String(localized: "Append Podcast Queue"), image: .podcastQueueAppend) { action in
         guard !self.entityPlayables.isEmpty else { return }
         self.appDelegate.player.appendPodcastQueue(playables: self.entityPlayables)
       },
@@ -548,8 +548,8 @@ class EntityPreviewActionBuilder {
 
   private func createFavoriteMenu(libraryEntity: AbstractLibraryEntity) -> UIAction {
     libraryEntity.isFavorite ?
-      UIAction(title: "Unmark favorite", image: .heartSlash) { action in self.toggleFavorite() } :
-      UIAction(title: "Favorite", image: .heartEmpty) { action in self.toggleFavorite() }
+      UIAction(title: String(localized: "Unmark favorite"), image: .heartSlash) { action in self.toggleFavorite() } :
+      UIAction(title: String(localized: "Favorite"), image: .heartEmpty) { action in self.toggleFavorite() }
   }
 
   private func toggleFavorite() {
@@ -571,12 +571,12 @@ class EntityPreviewActionBuilder {
 
   private func createRatingMenu(libraryEntity: AbstractLibraryEntity) -> UIMenu {
     let rating = libraryEntity
-      .rating == 0 ? "Not rated" :
-      "\(libraryEntity.rating) Star\(libraryEntity.rating > 1 ? "s" : "")"
+      .rating == 0 ? String(localized: "Not rated") :
+      "\(String(localized: "\(libraryEntity.rating) Stars"))"
     let menuIcon = libraryEntity
       .rating == 0 ? UIImage.starEmpty : UIImage.starFill
     let children = [
-      UIAction(title: "No Rating", image: .ban) { action in self.setRating(rating: 0) },
+      UIAction(title: String(localized: "No Rating"), image: .ban) { action in self.setRating(rating: 0) },
       UIAction(
         title: "1 Star",
         image: libraryEntity.rating >= 1 ? .starFill : .starEmpty
@@ -610,7 +610,7 @@ class EntityPreviewActionBuilder {
     ]
 
     return UIMenu(
-      title: "Rating: \(rating)",
+      title: String(localized: "Rating: \(rating)"),
       image: menuIcon,
       options: .displayAsPalette,
       children: children
@@ -657,7 +657,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createAddToPlaylistAction() -> UIAction {
-    UIAction(title: "Add to Playlist", image: .playlistPlus) { action in
+    UIAction(title: String(localized: "Add to Playlist"), image: .playlistPlus) { action in
       guard !self.entityPlayables.isEmpty,
             let account = self.entityContainer.account else { return }
       let selectPlaylistVC = AppStoryboard.Main
@@ -668,7 +668,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createShowAlbumAction() -> UIAction {
-    UIAction(title: "Show Album", image: .album) { action in
+    UIAction(title: String(localized: "Show Album"), image: .album) { action in
       self.showAlbum()
     }
   }
@@ -695,7 +695,7 @@ class EntityPreviewActionBuilder {
 
   private func createShowArtistAction() -> UIAction {
     let title = ((entityContainer as? AbstractPlayable)?.isPodcastEpisode ?? false) ?
-      "Show Podcast" : "Show Artist"
+      String(localized: "Show Podcast") : String(localized: "Show Artist")
     let image = ((entityContainer as? AbstractPlayable)?.isPodcastEpisode ?? false) ? UIImage
       .squareArrow : UIImage.artist
     return UIAction(title: title, image: image) { action in
@@ -740,7 +740,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createDownloadAction() -> UIAction {
-    UIAction(title: "Download", image: .download) { action in
+    UIAction(title: String(localized: "Download"), image: .download) { action in
       if !self.entityPlayables.isEmpty,
          let accountInfo = self.entityPlayables.first?.account?.info {
         self.appDelegate.getMeta(accountInfo).playableDownloadManager
@@ -750,7 +750,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createDeleteCacheAction() -> UIAction {
-    UIAction(title: "Delete Cache", image: .trash) { action in
+    UIAction(title: String(localized: "Delete Cache"), image: .trash) { action in
       guard self.entityPlayables.hasCachedItems,
             let account = self.entityContainer.account else { return }
 
@@ -759,14 +759,14 @@ class EntityPreviewActionBuilder {
         message: "Are you sure to delete the cached file\(self.entityPlayables.count > 1 ? "s" : "")?",
         preferredStyle: .alert
       )
-      alert.addAction(UIAlertAction(title: "Delete", style: .destructive, handler: { _ in
+      alert.addAction(UIAlertAction(title: String(localized: "Delete"), style: .destructive, handler: { _ in
         self.appDelegate.getMeta(account.info).playableDownloadManager
           .removeFinishedDownload(for: self.entityPlayables)
         self.appDelegate.storage.main.library.deleteCache(of: self.entityPlayables)
         self.appDelegate.storage.main.saveContext()
         self.reloadRootView()
       }))
-      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+      alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel, handler: { _ in
         // do nothing
       }))
       self.rootView.present(alert, animated: true, completion: nil)
@@ -774,7 +774,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createDeleteOnServerAction() -> UIAction {
-    UIAction(title: "Delete on Server", image: .cloudX) { action in
+    UIAction(title: String(localized: "Delete on Server"), image: .cloudX) { action in
       guard let playable = self.entityContainer as? AbstractPlayable,
             let podcastEpisode = playable.asPodcastEpisode,
             let account = podcastEpisode.account
@@ -782,10 +782,10 @@ class EntityPreviewActionBuilder {
 
       let alert = UIAlertController(
         title: nil,
-        message: "Are you sure to delete the podcast episode on the server?",
+        message: String(localized: "Are you sure to delete the podcast episode on the server?"),
         preferredStyle: .alert
       )
-      alert.addAction(UIAlertAction(title: "Delete", style: .destructive, handler: { _ in
+      alert.addAction(UIAlertAction(title: String(localized: "Delete"), style: .destructive, handler: { _ in
         Task { @MainActor in do {
           try await self.appDelegate.getMeta(account.info).librarySyncer
             .requestPodcastEpisodeDelete(podcastEpisode: podcastEpisode)
@@ -796,7 +796,7 @@ class EntityPreviewActionBuilder {
           self.appDelegate.eventLogger.report(topic: "Podcast Episode Delete Sync", error: error)
         }}
       }))
-      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+      alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel, handler: { _ in
         // do nothing
       }))
       self.rootView.present(alert, animated: true, completion: nil)
@@ -805,7 +805,7 @@ class EntityPreviewActionBuilder {
 
   private func createShareAction(playable: AbstractPlayable) -> UIAction {
     UIAction(
-      title: "Share",
+      title: String(localized: "Share"),
       image: UIImage(systemName: "square.and.arrow.up")
     ) { _ in
       // Used if the song is not cached, otherwise never called
@@ -829,13 +829,13 @@ class EntityPreviewActionBuilder {
   }
 
   private func createGoToSiteUrl(url: URL) -> UIAction {
-    UIAction(title: "Go to Site", image: .followLink) { action in
+    UIAction(title: String(localized: "Go to Site"), image: .followLink) { action in
       UIApplication.shared.open(url)
     }
   }
 
   private func createShowPodcastDetailsAction(podcast: Podcast) -> UIAction {
-    UIAction(title: "Show Podcast Description", image: .info) { action in
+    UIAction(title: String(localized: "Show Podcast Description"), image: .info) { action in
       self.showPodcastDetails()
     }
   }
@@ -869,7 +869,7 @@ class EntityPreviewActionBuilder {
           let lyricsAccount = song.account
     else { return nil }
 
-    return UIAction(title: "Show Lyrics", image: .lyrics) { action in
+    return UIAction(title: String(localized: "Show Lyrics"), image: .lyrics) { action in
       self.showLyrics(lyricsRelFilePath: lyricsRelFilePath, lyricsAccount: lyricsAccount)
     }
   }

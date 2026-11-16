@@ -25,7 +25,7 @@ import UIKit
 
 class PlaylistAddMusicFoldersVC: SingleFetchedResultsTableViewController<MusicFolderMO>,
   PlaylistVCAddable {
-  override var sceneTitle: String? { "Directories" }
+  override var sceneTitle: String? { String(localized: "Directories") }
 
   public var addToPlaylistManager = AddToPlaylistManager()
 
@@ -52,7 +52,7 @@ class PlaylistAddMusicFoldersVC: SingleFetchedResultsTableViewController<MusicFo
     )
     singleFetchedResultsController = fetchedResultsController
 
-    configureSearchController(placeholder: "Search in \"Directories\"")
+    configureSearchController(placeholder: String(localized: "Search in \"\(String(localized: "Directories"))\""))
     tableView.register(nibName: DirectoryTableCell.typeName)
     tableView.rowHeight = DirectoryTableCell.rowHeight
     tableView.estimatedRowHeight = DirectoryTableCell.rowHeight
