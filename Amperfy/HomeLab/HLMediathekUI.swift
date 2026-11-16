@@ -7,7 +7,8 @@
 //    (über HLMenue in jedem Amperfy-Menü: Listen, Albumseite, Player, Mini-Player)
 //  - «+» am Ende jeder Song-Zeile, die nicht in der Mediathek ist (Album- und Künstlerseite, Suche,
 //    Favoriten, Playlists); eigene Songs haben keinen Knopf (wie bei Apple Music).
-//  Im Kinder-Modus gibt es beides nicht. Entfernen löscht nur den Eintrag, nie die Datei.
+//  - «Zu «Kinder» verschieben» / «In die Musik verschieben» für Alben (Ordner auf dem NAS, Medienwunsch)
+//  Im Kinder-Modus gibt es Hinzufügen und Entfernen nicht. Entfernen löscht nur den Eintrag, nie die Datei.
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -34,14 +35,20 @@ enum HLMediathekUI {
 
   /// Einträge für das Menü eines Songs oder Albums.
   static func menue(fuer container: PlayableContainable) -> [UIMenuElement] {
+    if let album = container as? Album {
+      let mediathek = aktiv && !istKinder(album.id) ? albumAktionen(album) : []
+      return mediathek + [verschiebenAktion(album)].compactMap { $0 }
+    }
     guard aktiv else { return [] }
-    if let song = (container as? AbstractPlayable)?.asSong, !song.isRadio {
+    if let song = (container as? AbstractPlayable)?.asSong, !song.isRadio, !istKinder(song.album?.id) {
       return [songAktion(song)]
     }
-    if let album = container as? Album {
-      return albumAktionen(album)
-    }
     return []
+  }
+
+  /// Liegt das Album in «Kinder»? (Auch in der Suche und unter «Zuletzt gehört» sichtbar, aber nie in der Mediathek.)
+  private static func istKinder(_ albumId: String?) -> Bool {
+    albumId.map { HLBibliothek.shared.kinderAlben.contains($0) } ?? false
   }
 
   private static func songAktion(_ song: Song) -> UIAction {
@@ -85,6 +92,53 @@ enum HLMediathekUI {
     return aktionen
   }
 
+  // MARK: Verschieben zwischen Musik und «Kinder»
+
+  /// «Zu «Kinder» verschieben» bzw. «In die Musik verschieben», je nachdem, wo das Album liegt.
+  /// Verschiebt den Albumordner auf dem NAS (Medienwunsch) und gilt für die ganze Familie, darum mit Rückfrage.
+  private static func verschiebenAktion(_ album: Album) -> UIAction? {
+    guard HLAPI.shared.account != nil,
+          let bib = HLBibliothek.shared.bibliotheken.first(where: { $0.alben.contains(album.id) }),
+          HLBibliothek.shared.bibliotheken.contains(where: { $0.istKinder != bib.istKinder }) else { return nil }
+    let nachKinder = !bib.istKinder
+    let titel = nachKinder ? "Zu «Kinder» verschieben" : "In die Musik verschieben"
+    let bild = nachKinder ? "figure.and.child.holdinghands" : "music.note.house"
+    return UIAction(title: titel, image: UIImage(systemName: bild)) { _ in
+      let text = nachKinder
+        ? "Das Album verschwindet für alle aus der Musik und aus allen Mediatheken und erscheint unter «Kinder»."
+        : "Das Album erscheint für alle in der Musik und kommt in deine Mediathek."
+      let alert = UIAlertController(title: "«\(album.name)» verschieben?", message: text, preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: "Abbrechen", style: .cancel))
+      alert.addAction(UIAlertAction(title: "Verschieben", style: .default) { _ in
+        Task { await verschieben(album, nachKinder: nachKinder) }
+      })
+      zeigen(alert)
+    }
+  }
+
+  private static func verschieben(_ album: Album, nachKinder: Bool) async {
+    let logger = appDelegate.eventLogger
+    do {
+      let antwort = try await HLAPI.shared.verschieben(album: album.id, nachKinder: nachKinder)
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      logger.info(topic: "Verschoben", message: antwort.meldung ?? "«\(album.name)» ist verschoben.")
+    } catch {
+      logger.info(topic: "Nicht verschoben", message: error.localizedDescription)
+      return
+    }
+    // Navidrome liest den Ordner in Sekunden neu ein (neue Album-ID); danach Bibliotheken und Mediathek neu.
+    try? await Task.sleep(for: .seconds(10))
+    await HLBibliothek.shared.aktualisieren()
+    try? await Task.sleep(for: .seconds(50))           // Medienwunsch trägt das Album nach 45 s in die Mediathek ein
+    try? await HLMediathek.shared.abgleichenUndWarten()
+  }
+
+  private static func zeigen(_ vc: UIViewController) {
+    var oben = AppDelegate.mainSceneDelegate?.window?.rootViewController
+    while let weiter = oben?.presentedViewController, !weiter.isBeingDismissed { oben = weiter }
+    oben?.present(vc, animated: true)
+  }
+
   /// Alle Song-IDs eines Albums vom Server (auf dem Gerät sind oft nicht alle Songs geladen).
   private static func albumSongIds(_ album: Album) async throws -> [String] {
     guard let antwort = await HLAPI.shared.subsonic("getAlbum", ["id": album.id]) else {
@@ -99,7 +153,8 @@ enum HLMediathekUI {
   /// Für Songs aus Entdecken (Mini-Player-Menü): Eintrag nach Navidrome-ID.
   static func menue(navidromeId id: String) -> [UIMenuElement] {
     guard aktiv, let account = HLAPI.shared.account,
-          let song = appDelegate.storage.main.library.getSong(for: account, id: id) else { return [] }
+          let song = appDelegate.storage.main.library.getSong(for: account, id: id),
+          !istKinder(song.album?.id) else { return [] }
     return [songAktion(song)]
   }
 
@@ -107,7 +162,8 @@ enum HLMediathekUI {
 
   /// Knopf am Zeilenende für Songs, die nicht in der Mediathek sind; nil sonst.
   static func zubehoer(fuer playable: AbstractPlayable, nachher: @escaping () -> ()) -> UIView? {
-    guard aktiv, let song = playable.asSong, !playable.isRadio, !song.managedObject.hlInMediathek else { return nil }
+    guard aktiv, let song = playable.asSong, !playable.isRadio, !song.managedObject.hlInMediathek,
+          !istKinder(song.album?.id) else { return nil }
     let knopf = UIButton(type: .system)
     knopf.setImage(UIImage(systemName: "plus.circle"), for: .normal)
     knopf.tintColor = appDelegate.storage.settings.accounts.getSetting(playable.account?.info).read

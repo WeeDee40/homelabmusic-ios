@@ -508,6 +508,17 @@ final class HLAPI {
     try await anfrage("entdecken/mediathek/quittieren", methode: "POST", inhalt: ["ids": ids])
   }
 
+  /// Eigene Mediathek auf dem Server pflegen: Einträge mit ersetzter Datei gegen die neue ID tauschen.
+  func mediathekPflegen() async throws -> HLAntwort {
+    try await anfrage("entdecken/mediathek/pflegen", methode: "POST", inhalt: [:])
+  }
+
+  /// Ganzes Album (Navidrome-ID) zwischen Musik und «Kinder» verschieben (Ordner auf dem NAS).
+  func verschieben(album albumId: String, nachKinder: Bool) async throws -> HLAntwort {
+    try await anfrage("entdecken/verschieben", methode: "POST",
+                      inhalt: ["album_id": albumId, "ziel": nachKinder ? "kinder" : "musik"])
+  }
+
   func wunsch(album albumId: Int) async throws -> HLWunschAntwort {
     try await anfrage("entdecken/wunsch", methode: "POST", inhalt: mitZiel(["album_id": albumId]))
   }

@@ -35,7 +35,12 @@ final class HLBibliothek {
   static let kinderFarbe = UIColor.systemOrange
   private static let auswahlSchluessel = "homelabmusic.bibliothek"
 
-  private(set) var bibliotheken: [Bib] = []
+  private(set) var bibliotheken: [Bib] = [] {
+    didSet { kinderAlben = Set(bibliotheken.filter(\.istKinder).flatMap(\.alben)) }
+  }
+
+  /// Album-IDs der Bibliothek «Kinder» (für Mediathek-Aktionen: Kinder-Inhalte kommen nie in die Mediathek).
+  private(set) var kinderAlben = Set<String>()
   private var aktualisiert = false
   private var themaGesetzt = false
   private var knoepfe = [WeakNavItem]()

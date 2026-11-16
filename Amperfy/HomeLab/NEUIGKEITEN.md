@@ -1,3 +1,10 @@
+## 2026-11-16
+### Neu
+- Im Menü eines Albums gibt es «Zu «Kinder» verschieben» und, bei Kinderalben, «In die Musik verschieben». Das Album wandert für die ganze Familie; was du in die Musik holst, kommt auch in deine Mediathek.
+### Behoben
+- Ersetzt der Server einen Song durch eine bessere Datei, bleibt er jetzt in deiner Mediathek, am gleichen Platz. Vorher verschwand er still daraus.
+- Kinderalben bieten «Zur Mediathek hinzufügen» und das «+» nicht mehr an; sie gehören nie in die Mediathek.
+
 ## 2026-11-15b
 ### Behoben
 - Nach dem Einrichten der Mediathek zeigte die Bibliothek bis zum nächsten Neustart der App noch die ganze Musik der Familie. Jetzt zeigt sie sofort nur deine Mediathek.

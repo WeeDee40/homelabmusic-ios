@@ -9,6 +9,8 @@
 //    Song.hlInMediathek, Artist.hlInMediathek, Album.hlMediathekSeit (Modellversion «HomeLabMusic 1»).
 //  hlMediathekSeit ist kein echtes Datum, sondern die Reihenfolge in der Playlist (spätester eigener Song
 //  des Albums): so ist «Neu in meiner Mediathek» auf allen Geräten gleich sortiert.
+//  Ersetzt Navidrome eine Datei (neue Song-ID), tauscht Medienwunsch den Eintrag auf dem Server aus
+//  (mediathek.py, halbstündlich); die App sieht danach beim Abgleich einfach die neue ID.
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -44,7 +46,7 @@ final class HLMediathek {
   static let kennung = "homelabmusic-mediathek"
   static let playlistName = "Mediathek"
 
-  /// Eintrag der Playlist, wie Navidrome ihn liefert (für Abgleich und späteres Wiederfinden nach ID-Wechsel).
+  /// Eintrag der Playlist, wie Navidrome ihn liefert.
   struct Eintrag: Codable, Equatable, Sendable {
     var id: String
     var titel: String
@@ -222,7 +224,6 @@ final class HLMediathek {
     HLListenFilter.neuBerechnet()
     s.geaendert = geaendert
     speichern(s, account)
-    schattenSpeichern(eintraege, account)
     UserDefaults.standard.set(true, forKey: standSchluessel(account) + ".flags")
     NotificationCenter.default.post(name: Self.geaendertNotification, object: nil)
     // Erst jetzt (ID gespeichert, Markierungen gesetzt) den Filter einschalten und die Oberfläche neu aufbauen.
@@ -337,24 +338,6 @@ final class HLMediathek {
     }
   }
 
-  // MARK: Schatten (für den ID-Abgleich nach einem Re-Import)
-
-  private func schattenDatei(_ account: Account) -> URL {
-    FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("hl-mediathek-\(account.info.ident).json")
-  }
-
-  private func schattenSpeichern(_ eintraege: [Eintrag], _ account: Account) {
-    let datei = schattenDatei(account)
-    try? FileManager.default.createDirectory(at: datei.deletingLastPathComponent(), withIntermediateDirectories: true)
-    if let d = try? JSONEncoder().encode(eintraege) { try? d.write(to: datei, options: .atomic) }
-  }
-
-  func schatten() -> [Eintrag] {
-    guard let account, let d = try? Data(contentsOf: schattenDatei(account)) else { return [] }
-    return (try? JSONDecoder().decode([Eintrag].self, from: d)) ?? []
-  }
-
   // MARK: Ändern
 
   /// Gehört der Song zur Mediathek? (laut letztem Abgleich bzw. eigener Änderung)
@@ -424,8 +407,14 @@ final class HLMediathek {
     guard let account else { throw Fehler.keinKonto }
     guard let p = try await playlistFinden(), let id = p["id"] as? String else { return }
     let weg = Set(songIds)
-    let eintraege = try await eintraegeLaden(id)
-    let anzahl = p["songCount"] as? Int ?? eintraege.count
+    var eintraege = try await eintraegeLaden(id)
+    var anzahl = p["songCount"] as? Int ?? eintraege.count
+    if anzahl != eintraege.count, (try? await HLAPI.shared.mediathekPflegen()) != nil,
+       let neu = try await playlistFinden() {
+      // Navidrome verschweigt Einträge mit ersetzter Datei; Medienwunsch tauscht sie gegen die neue ID
+      eintraege = try await eintraegeLaden(id)
+      anzahl = neu["songCount"] as? Int ?? eintraege.count
+    }
     if anzahl == eintraege.count {
       let indizes = eintraege.enumerated().filter { weg.contains($0.element.id) }.map(\.offset)
       if !indizes.isEmpty {
@@ -434,7 +423,7 @@ final class HLMediathek {
       }
     } else if eintraege.contains(where: { weg.contains($0.id) }) {
       // getPlaylist verschweigt Einträge mit fehlender Datei, die Indizes stimmen dann nicht: Liste neu
-      // schreiben (fehlende Dateien fallen dabei weg; Titel, Künstler, Dauer stehen in der Schattenliste).
+      // schreiben. Es fallen nur Einträge weg, für die Medienwunsch eben keinen Ersatz fand.
       try await mehrfach("updatePlaylist", ["playlistId": id], (0 ..< anzahl).map { ("songIndexToRemove", String($0)) })
       let bleiben = eintraege.map(\.id).filter { !weg.contains($0) }
       var fehler: Error?

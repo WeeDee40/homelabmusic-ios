@@ -153,7 +153,7 @@ enum HLMenue {
     if let vorschau = HLPlayer.shared.vorschau(container as? AbstractPlayable) { return vorschauAktionen(vorschau) }
     let mediathek = HLMediathekUI.menue(fuer: container)
     guard let song = (container as? AbstractPlayable)?.asSong, HLAPI.shared.account != nil else {
-      return mediathek.isEmpty ? [] : [UIMenu(title: "Mediathek", options: .displayInline, children: mediathek)]
+      return mediathek.isEmpty ? [] : [UIMenu(title: "HomeLabMusic", options: .displayInline, children: mediathek)]
     }
     let id = song.id, titel = song.title, kuenstler = song.creatorName
     let mix = UIMenu(title: "Mix ab diesem Song", image: UIImage(systemName: "dot.radiowaves.left.and.right"),
