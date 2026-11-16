@@ -2,7 +2,7 @@
 ### Neu
 - Die Suche versteht Themen und Anlässe: «Weihnachtslieder», «80er», «Oktoberfest», «Hochzeit» oder «Halloween» zeigen jetzt die bekanntesten Songs dazu, also «Last Christmas» statt Karaoke und Unbekanntem. Was schon in der Bibliothek ist, spielt ganz.
 - Zuoberst steht der Top-Treffer: der Künstler, Song oder die Playlist, die am besten passt.
-- Neue Reihe «Playlists» mit passenden Playlists. Eine Playlist lässt sich öffnen, reinhören und mit «Fehlende wünschen» auf einmal in die Bibliothek holen (höchstens 50 Songs aufs Mal).
+- Neue Reihe «Playlists» mit passenden Playlists. Eine Playlist lässt sich öffnen und reinhören; ein Knopf wünscht alle Songs, die noch fehlen (höchstens 50 aufs Mal).
 - Schon beim Tippen erscheinen Vorschläge für Themen, Künstler und Songs; Antippen sucht direkt.
 - «Zuletzt gesucht» steht oben auf der leeren Suche. Lange drücken entfernt einen Eintrag, «Löschen» alle.
 - Im Modus «Kinder» zeigt ein Thema zuerst die passenden Kinderlieder, bei «Weihnachtslieder» etwa Rolf Zuckowski.

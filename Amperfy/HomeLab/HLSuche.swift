@@ -308,7 +308,7 @@ struct HLPlaylistView: View {
               .buttonStyle(HLKapsel(haupt: true))
             if anzahl > 0 {
               Button { rueckfrage = true } label: {
-                Label(gewuenscht ? "Gewünscht" : "Fehlende wünschen (\(anzahl))",
+                Label(gewuenscht ? "Gewünscht" : "\(anzahl) wünschen",
                       systemImage: gewuenscht ? "hourglass" : "plus")
               }
               .buttonStyle(HLKapsel())
