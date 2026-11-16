@@ -1,3 +1,16 @@
+## 2026-11-16b
+### Neu
+- Die Suche versteht Themen und Anlässe: «Weihnachtslieder», «80er», «Oktoberfest», «Hochzeit» oder «Halloween» zeigen jetzt die bekanntesten Songs dazu, also «Last Christmas» statt Karaoke und Unbekanntem. Was schon in der Bibliothek ist, spielt ganz.
+- Zuoberst steht der Top-Treffer: der Künstler, Song oder die Playlist, die am besten passt.
+- Neue Reihe «Playlists» mit passenden Playlists. Eine Playlist lässt sich öffnen, reinhören und mit «Fehlende wünschen» auf einmal in die Bibliothek holen (höchstens 50 Songs aufs Mal).
+- Schon beim Tippen erscheinen Vorschläge für Themen, Künstler und Songs; Antippen sucht direkt.
+- «Zuletzt gesucht» steht oben auf der leeren Suche. Lange drücken entfernt einen Eintrag, «Löschen» alle.
+- Im Modus «Kinder» zeigt ein Thema zuerst die passenden Kinderlieder, bei «Weihnachtslieder» etwa Rolf Zuckowski.
+### Anders
+- Karaoke, Playback-Fassungen und Nachgespieltes fallen aus den Suchtreffern weg, ebenso derselbe Song in mehreren Fassungen.
+### Behoben
+- Wer in die Suche etwas einfügte oder schnell tippte, sah unter «Entdecken» manchmal nur die Kacheln statt der Treffer.
+
 ## 2026-11-16
 ### Neu
 - Im Menü eines Albums gibt es «Zu «Kinder» verschieben» und, bei Kinderalben, «In die Musik verschieben». Das Album wandert für die ganze Familie; was du in die Musik holst, kommt auch in deine Mediathek.
