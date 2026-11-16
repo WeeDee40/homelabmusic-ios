@@ -87,11 +87,44 @@ struct HLAbschnitt: Codable, Hashable, Sendable {
 }
 
 struct HLSuche: Codable, Sendable {
-  var abschnitte: [HLAbschnitt]?                        // Genre oder Stimmung erkannt
-  var schwerpunkt: String?                              // "genre", "stimmung" oder nil
+  var abschnitte: [HLAbschnitt]?                        // Genre, Stimmung oder Thema erkannt
+  var schwerpunkt: String?                              // "genre", "stimmung", "ki", "thema" oder nil
   var kuenstler: [HLKuenstler]
   var songs: [HLSong]
   var alben: [HLAlbum]
+  var playlists: [HLPlaylistKurz]?                      // öffentliche Deezer-Playlists zur Suche
+  var top: HLTopTreffer?                                // wie Apple Musics «Top-Treffer»
+}
+
+/// Öffentliche Deezer-Playlist (Suche, Playlist-Seite).
+struct HLPlaylistKurz: Codable, Hashable, Sendable {
+  var id: Int
+  var titel: String?
+  var bild: String?
+  var bildGross: String?
+  var anzahl: Int?
+  var von: String?
+  var inBibliothek: Int?
+  var beschreibung: String?
+
+  /// «Yannick - Deezer Deutschland Editor» -> «Deezer-Redaktion»
+  var vonText: String? {
+    guard let von, !von.isEmpty else { return nil }
+    return von.localizedCaseInsensitiveContains("deezer") ? "Deezer-Redaktion" : von
+  }
+}
+
+struct HLTopTreffer: Codable, Hashable, Sendable {
+  var art: String                                       // "kuenstler", "song", "album" oder "playlist"
+  var kuenstler: HLKuenstler?
+  var song: HLSong?
+  var album: HLAlbum?
+  var playlist: HLPlaylistKurz?
+}
+
+struct HLPlaylistSeite: Codable, Sendable {
+  var playlist: HLPlaylistKurz
+  var songs: [HLSong]
 }
 
 struct HLKuenstlerSeite: Codable, Sendable {
@@ -453,6 +486,7 @@ final class HLAPI {
   func suche(_ q: String) async throws -> HLSuche { try await anfrage("entdecken/suche", abfrage: ["q": q]) }
   func kuenstler(_ id: Int) async throws -> HLKuenstlerSeite { try await anfrage("entdecken/kuenstler/\(id)") }
   func album(_ id: Int) async throws -> HLAlbumSeite { try await anfrage("entdecken/album/\(id)") }
+  func playlist(_ id: Int) async throws -> HLPlaylistSeite { try await anfrage("entdecken/playlist/\(id)") }
   func wuensche() async throws -> HLWunschListe { try await anfrage("entdecken/wuensche") }
 
   func sender(art: String, id: String) async throws -> HLSender {
@@ -517,6 +551,11 @@ final class HLAPI {
   func verschieben(album albumId: String, nachKinder: Bool) async throws -> HLAntwort {
     try await anfrage("entdecken/verschieben", methode: "POST",
                       inhalt: ["album_id": albumId, "ziel": nachKinder ? "kinder" : "musik"])
+  }
+
+  /// Mehrere Songs auf einmal (höchstens 50, z. B. die fehlenden einer Playlist).
+  func wunsch(songs deezerIds: [Int]) async throws -> HLWunschAntwort {
+    try await anfrage("entdecken/wunsch", methode: "POST", inhalt: mitZiel(["deezer_ids": deezerIds]))
   }
 
   func wunsch(album albumId: Int) async throws -> HLWunschAntwort {

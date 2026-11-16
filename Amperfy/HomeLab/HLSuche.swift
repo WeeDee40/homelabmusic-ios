@@ -20,7 +20,8 @@ extension HLSuche {
   var neueSongs: [HLSong] { songs.filter { $0.status != "bibliothek" } }
 
   var hatInhalt: Bool {
-    abschnitte?.isEmpty == false || !kuenstler.isEmpty || !neueSongs.isEmpty || !alben.isEmpty
+    top != nil || abschnitte?.isEmpty == false || !kuenstler.isEmpty || !neueSongs.isEmpty || !alben.isEmpty
+      || playlists?.isEmpty == false
   }
 }
 
@@ -94,7 +95,8 @@ struct HLSuchTreffer: View {
   }
 
   @ViewBuilder private func inhalt(_ d: HLSuche) -> some View {
-    // Genre/Stimmung erkannt: diese Abschnitte zuerst, die Titelsuche danach
+    if let top = d.top { HLTopKarte(top: top) }
+    // Genre/Stimmung/Thema erkannt: diese Abschnitte zuerst, die Titelsuche danach
     ForEach(d.abschnitte ?? [], id: \.self) { a in
       VStack(alignment: .leading, spacing: 10) {
         HStack(alignment: .bottom) {
@@ -124,10 +126,190 @@ struct HLSuchTreffer: View {
         ForEach(songs.indices, id: \.self) { HLSongZeile(songs: songs, i: $0) }
       }
     }
+    if let listen = d.playlists, !listen.isEmpty {
+      VStack(alignment: .leading, spacing: 6) {
+        Text("Playlists").font(.headline)
+        HLPlaylistBand(liste: listen)
+      }
+    }
     if !d.alben.isEmpty {
       VStack(alignment: .leading, spacing: 6) {
         Text("Alben").font(.headline)
         HLAlbumBand(alben: d.alben)
+      }
+    }
+  }
+}
+
+/// «Top-Treffer» wie bei Apple Music: der eine Künstler, Song, das Album oder die Playlist, die am besten passt.
+struct HLTopKarte: View {
+  let top: HLTopTreffer
+  @Environment(\.hlOeffnen) private var oeffnen
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Top-Treffer").font(.headline)
+      HStack(spacing: 14) {
+        HLBild(pfad: bild, groesse: 76, rund: top.art == "kuenstler")
+        VStack(alignment: .leading, spacing: 3) {
+          Text(titel).font(.title3.weight(.semibold)).lineLimit(2)
+          Text(untertitel).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        if top.art == "song", let s = top.song {
+          HLStatusKnopf(song: s, kurz: true)
+        } else {
+          Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+        }
+      }
+      .padding(12)
+      .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+      .contentShape(RoundedRectangle(cornerRadius: 14))
+      .onTapGesture { antippen() }
+    }
+  }
+
+  private var bild: String? {
+    switch top.art {
+    case "kuenstler": return top.kuenstler?.bild
+    case "song": return top.song?.bild
+    case "album": return top.album?.bild
+    default: return top.playlist?.bild
+    }
+  }
+
+  private var titel: String {
+    switch top.art {
+    case "kuenstler": return top.kuenstler?.name ?? ""
+    case "song": return top.song?.titel ?? ""
+    case "album": return top.album?.titel ?? ""
+    default: return top.playlist?.titel ?? ""
+    }
+  }
+
+  private var untertitel: String {
+    switch top.art {
+    case "kuenstler":
+      let n = top.kuenstler?.inBibliothek ?? 0
+      return n > 0 ? "Künstler · \(n) bei dir" : "Künstler"
+    case "song":
+      return ["Song", top.song?.kuenstler, top.song?.status == "bibliothek" ? "bei dir" : nil]
+        .compactMap { $0 }.joined(separator: " · ")
+    case "album":
+      return ["Album", top.album?.kuenstler].compactMap { $0 }.joined(separator: " · ")
+    default:
+      let p = top.playlist
+      return ["Playlist", p?.anzahl.map { "\($0) Songs" }, p?.vonText].compactMap { $0 }.joined(separator: " · ")
+    }
+  }
+
+  private func antippen() {
+    switch top.art {
+    case "kuenstler": if let k = top.kuenstler { oeffnen(.kuenstler(k.id)) }
+    case "song": if let s = top.song { HLPlayer.shared.spielen([s], ab: 0) }
+    case "album": if let a = top.album { oeffnen(.album(a.id)) }
+    default: if let p = top.playlist { oeffnen(.playlist(p.id)) }
+    }
+  }
+}
+
+/// Waagrechte Reihe öffentlicher Playlists.
+struct HLPlaylistBand: View {
+  let liste: [HLPlaylistKurz]
+  @Environment(\.hlOeffnen) private var oeffnen
+
+  var body: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(alignment: .top, spacing: 14) {
+        ForEach(liste, id: \.id) { p in
+          VStack(alignment: .leading, spacing: 3) {
+            HLBild(pfad: p.bild, groesse: 130)
+            Text(p.titel ?? "").font(.subheadline.weight(.semibold)).lineLimit(2)
+            Text([p.anzahl.map { "\($0) Songs" }, p.vonText].compactMap { $0 }.joined(separator: " · "))
+              .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+          }
+          .frame(width: 130)
+          .contentShape(Rectangle())
+          .onTapGesture { oeffnen(.playlist(p.id)) }
+        }
+      }
+      .padding(.vertical, 4)
+    }
+  }
+}
+
+/// Öffentliche Playlist: reinhören (Bibliothek ganz, Rest als Vorschau) und die fehlenden Songs wünschen.
+struct HLPlaylistView: View {
+  let id: Int
+  @State private var gewuenscht = false
+  @State private var rueckfrage = false
+  @ObservedObject private var player = HLPlayer.shared
+
+  /// Höchstens so viele auf einmal (wie Medienwunsch): SoulSync lädt für die ganze Familie der Reihe nach.
+  static let hoechstens = 50
+
+  var body: some View {
+    HLLaden(laden: { try await HLAPI.shared.playlist(id) }) { d in
+      let p = d.playlist
+      let fehlend = d.songs.filter { player.status($0) == "neu" && $0.deezerId != nil }
+      let anzahl = min(fehlend.count, Self.hoechstens)
+      List {
+        Section {
+          HStack(alignment: .bottom, spacing: 16) {
+            HLBild(pfad: p.bildGross ?? p.bild, groesse: 130)
+            VStack(alignment: .leading, spacing: 4) {
+              Text(p.titel ?? "").font(.title3.bold()).lineLimit(3)
+              if let von = p.vonText { Text(von).font(.subheadline).foregroundStyle(.secondary) }
+              Text(["\(d.songs.count) Songs", (p.inBibliothek ?? 0) > 0 ? "\(p.inBibliothek!) bei dir" : nil]
+                .compactMap { $0 }.joined(separator: " · "))
+                .font(.subheadline).foregroundStyle(.secondary)
+            }
+          }
+          HStack {
+            Button { player.spielen(d.songs, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
+              .buttonStyle(HLKapsel(haupt: true))
+            if anzahl > 0 {
+              Button { rueckfrage = true } label: {
+                Label(gewuenscht ? "Gewünscht" : "Fehlende wünschen (\(anzahl))",
+                      systemImage: gewuenscht ? "hourglass" : "plus")
+              }
+              .buttonStyle(HLKapsel())
+              .disabled(gewuenscht)
+            } else if !d.songs.isEmpty {
+              Label("Alles bei dir", systemImage: "checkmark").foregroundStyle(.green).font(.subheadline)
+            }
+          }
+          .listRowSeparator(.hidden)
+        }
+        Section("Songs") {
+          ForEach(d.songs.indices, id: \.self) { HLSongZeile(songs: d.songs, i: $0) }
+        }
+      }
+      .navigationTitle(p.titel ?? "Playlist")
+      .confirmationDialog(
+        "\(anzahl) Songs wünschen?", isPresented: $rueckfrage, titleVisibility: .visible
+      ) {
+        Button("\(anzahl) Songs wünschen") { wuenschen(Array(fehlend.prefix(anzahl))) }
+        Button("Abbrechen", role: .cancel) {}
+      } message: {
+        Text(fehlend.count > anzahl
+          ? "Die ersten \(anzahl) von \(fehlend.count) fehlenden Songs gehen an SoulSync und kommen nach und nach in die Bibliothek."
+          : "Sie gehen an SoulSync und kommen nach und nach in die Bibliothek.")
+      }
+    }
+    .navigationBarTitleDisplayMode(.inline)
+  }
+
+  private func wuenschen(_ songs: [HLSong]) {
+    gewuenscht = true
+    Task {
+      do {
+        let r = try await HLAPI.shared.wunsch(songs: songs.compactMap(\.deezerId))
+        player.alsAngefragtMarkieren(songs)
+        player.zeigeHinweis(r.meldung ?? "Gewünscht.")
+      } catch {
+        gewuenscht = false
+        player.zeigeHinweis(error.localizedDescription)
       }
     }
   }

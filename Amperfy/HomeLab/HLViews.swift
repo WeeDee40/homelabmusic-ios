@@ -19,6 +19,7 @@ import UIKit
 enum HLZiel: Hashable {
   case kuenstler(Int)
   case album(Int)
+  case playlist(Int)                                   // öffentliche Deezer-Playlist (Suche)
   case sender(art: String, id: String)
   case bibliothek(kuenstler: String)                   // Amperfys Künstlerseite der Bibliothek
   case stoebern(titel: String, suche: String)          // Kachel der leeren Suche
@@ -74,6 +75,7 @@ struct HLZielView: View {
     switch ziel {
     case let .kuenstler(id): HLKuenstlerView(id: id)
     case let .album(id): HLAlbumView(id: id)
+    case let .playlist(id): HLPlaylistView(id: id)
     case let .sender(art, id): HLMixView(art: art, id: id)
     case .bibliothek: EmptyView()                      // läuft über HLTab.bibliothekOeffnen
     case let .stoebern(titel, suche): HLStoebernSeite(titel: titel, suche: suche)
