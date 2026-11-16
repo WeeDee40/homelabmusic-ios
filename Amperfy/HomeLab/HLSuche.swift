@@ -30,12 +30,44 @@ final class HLSuchModell: ObservableObject {
   @Published private(set) var ergebnis: HLSuche?
   @Published private(set) var laedt = false
   @Published private(set) var fehler: String?
+  @Published private(set) var vorschlaege = [HLVorschlag]()
   /// Der Abschnitt kommt oder geht: SearchVC baut die Tabelle neu auf.
   var geaendert: (() -> ())?
+  /// Text ins Suchfeld setzen und suchen (Vorschlag, «Zuletzt gesucht»); setzt SearchVC.
+  var uebernehmen: ((String) -> ())?
   private(set) var text = ""
   private var aufgabe: Task<(), Never>?
+  private var vorschlagAufgabe: Task<(), Never>?
+  private var merkAufgabe: Task<(), Never>?
 
-  var sichtbar: Bool { laedt || fehler != nil || ergebnis?.hatInhalt == true }
+  var sichtbar: Bool { laedt || fehler != nil || ergebnis?.hatInhalt == true || !vorschlaege.isEmpty }
+
+  /// Vorschläge kommen schneller als die Treffer; ab drei Wörtern keine (dann ist es ein Satz).
+  private func vorschlaegeHolen(_ q: String) {
+    vorschlagAufgabe?.cancel()
+    guard q.count >= 2, q.split(separator: " ").count < 3 else {
+      if !vorschlaege.isEmpty { vorschlaege = []; geaendert?() }
+      return
+    }
+    vorschlagAufgabe = Task {
+      try? await Task.sleep(for: .milliseconds(200))
+      guard !Task.isCancelled, let neu = try? await HLAPI.shared.vorschlaege(q), !Task.isCancelled,
+            q == text else { return }
+      let warLeer = vorschlaege.isEmpty
+      vorschlaege = neu
+      if warLeer != neu.isEmpty { geaendert?() }
+    }
+  }
+
+  /// Eine Suche, deren Treffer 2,5 s stehen bleiben, kommt in «Zuletzt gesucht» (Zwischenstände beim Tippen nicht).
+  private func merken(_ q: String) {
+    merkAufgabe?.cancel()
+    merkAufgabe = Task {
+      try? await Task.sleep(for: .milliseconds(2500))
+      guard !Task.isCancelled, q == text else { return }
+      HLSuchVerlauf.shared.merken(q)
+    }
+  }
 
   /// Mit Pause, weil die Suche bei jedem Tastendruck kommt. Kurz für Namen, lang ab drei Wörtern:
   /// dann fragt der Dienst Claude (kostet etwas), also erst, wenn die Eingabe steht.
@@ -47,8 +79,10 @@ final class HLSuchModell: ObservableObject {
     let q = eingabe.trimmingCharacters(in: .whitespaces)
     guard q != text else { return }                  // auch beim Zurückkehren von einer Künstlerseite
     aufgabe?.cancel()
+    merkAufgabe?.cancel()
     text = q
     fehler = nil
+    vorschlaegeHolen(q)
     guard q.count >= 2 else {
       ergebnis = nil
       laedt = false
@@ -64,6 +98,7 @@ final class HLSuchModell: ObservableObject {
         let r = try await HLAPI.shared.suche(q)
         guard !Task.isCancelled else { return }
         ergebnis = r
+        if r.hatInhalt { merken(q) }
       } catch {
         guard !Task.isCancelled else { return }
         ergebnis = nil
@@ -81,6 +116,9 @@ struct HLSuchTreffer: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
+      if !modell.vorschlaege.isEmpty {
+        HLVorschlagBand(liste: modell.vorschlaege) { modell.uebernehmen?($0.suche) }
+      }
       if modell.laedt {
         HStack(spacing: 10) {
           ProgressView()
@@ -340,7 +378,9 @@ final class HLSuchEinbau {
     if genres == nil { genres = HLKachel.genres(account: account) }
     let liste = genres ?? []
     return hostZelle {
-      HLStoebernView(genres: liste) { [weak self] k in self?.oeffnen(.stoebern(titel: k.titel, suche: k.suche)) }
+      HLStoebernView(genres: liste, suchen: { [weak self] text in self?.modell.uebernehmen?(text) }) { [weak self] k in
+        self?.oeffnen(.stoebern(titel: k.titel, suche: k.suche))
+      }
     }
   }
 
@@ -445,11 +485,35 @@ final class HLKachelBilder: ObservableObject {
 
 struct HLStoebernView: View {
   let genres: [HLKachel]
+  let suchen: (String) -> ()
   let waehlen: (HLKachel) -> ()
   @ObservedObject private var bilder = HLKachelBilder.shared
+  @ObservedObject private var verlauf = HLSuchVerlauf.shared
 
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
+      if !verlauf.liste.isEmpty {
+        VStack(alignment: .leading, spacing: 4) {
+          HStack {
+            Text("Zuletzt gesucht").font(.title3.bold())
+            Spacer()
+            Button("Löschen") { verlauf.leeren() }.font(.subheadline)
+          }
+          ForEach(verlauf.liste, id: \.self) { q in
+            HStack(spacing: 10) {
+              Image(systemName: "clock.arrow.circlepath").foregroundStyle(.secondary)
+              Text(q).frame(maxWidth: .infinity, alignment: .leading)
+              Image(systemName: "arrow.up.left").font(.caption).foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 7)
+            .contentShape(Rectangle())
+            .onTapGesture { suchen(q) }
+            .contextMenu {
+              Button("Aus dem Verlauf entfernen", systemImage: "trash", role: .destructive) { verlauf.entfernen(q) }
+            }
+          }
+        }
+      }
       gruppe("Stimmungen", HLKachel.stimmungen, farbeAb: 0)
       if !genres.isEmpty { gruppe("Genres in deiner Bibliothek", genres, farbeAb: 4) }
     }
@@ -543,5 +607,70 @@ struct HLStoebernSeite: View {
       }
     }
     .navigationTitle(titel)
+  }
+}
+
+// MARK: - Vorschläge und Verlauf
+
+/// Waagrechte Reihe von Vorschlägen beim Tippen (Thema, Künstler, Song).
+struct HLVorschlagBand: View {
+  let liste: [HLVorschlag]
+  let waehlen: (HLVorschlag) -> ()
+
+  var body: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 8) {
+        ForEach(liste, id: \.self) { v in
+          Label(v.text, systemImage: Self.symbol(v.art))
+            .font(.subheadline.weight(.medium))
+            .lineLimit(1)
+            .padding(.horizontal, 12).padding(.vertical, 7)
+            .background(Color.secondary.opacity(0.13), in: Capsule())
+            .contentShape(Capsule())
+            .onTapGesture { waehlen(v) }
+        }
+      }
+      .padding(.vertical, 2)
+    }
+  }
+
+  static func symbol(_ art: String) -> String {
+    switch art {
+    case "thema": return "sparkles"
+    case "kuenstler": return "music.mic"
+    default: return "music.note"
+    }
+  }
+}
+
+/// «Zuletzt gesucht»: die letzten zehn Suchen dieses Geräts (nur der Text, nichts geht an den Server).
+@MainActor
+final class HLSuchVerlauf: ObservableObject {
+  static let shared = HLSuchVerlauf()
+  private static let schluessel = "homelabmusic.suchverlauf"
+  @Published private(set) var liste: [String]
+
+  private init() {
+    liste = UserDefaults.standard.stringArray(forKey: Self.schluessel) ?? []
+  }
+
+  func merken(_ q: String) {
+    let q = q.trimmingCharacters(in: .whitespaces)
+    guard q.count >= 2 else { return }
+    // «Weihnachtslied» und danach «Weihnachtslieder»: nur das Längere behalten
+    var neu = liste.filter { $0.caseInsensitiveCompare(q) != .orderedSame && !q.lowercased().hasPrefix($0.lowercased()) }
+    neu.insert(q, at: 0)
+    liste = Array(neu.prefix(10))
+    UserDefaults.standard.set(liste, forKey: Self.schluessel)
+  }
+
+  func entfernen(_ q: String) {
+    liste.removeAll { $0 == q }
+    UserDefaults.standard.set(liste, forKey: Self.schluessel)
+  }
+
+  func leeren() {
+    liste = []
+    UserDefaults.standard.removeObject(forKey: Self.schluessel)
   }
 }

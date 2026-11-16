@@ -122,6 +122,17 @@ struct HLTopTreffer: Codable, Hashable, Sendable {
   var playlist: HLPlaylistKurz?
 }
 
+/// Vorschlag beim Tippen: Thema, Künstler oder Song; «suche» kommt ins Suchfeld.
+struct HLVorschlag: Codable, Hashable, Sendable {
+  var text: String
+  var suche: String
+  var art: String                                       // "thema", "kuenstler" oder "song"
+}
+
+struct HLVorschlaege: Codable, Sendable {
+  var vorschlaege: [HLVorschlag]
+}
+
 struct HLPlaylistSeite: Codable, Sendable {
   var playlist: HLPlaylistKurz
   var songs: [HLSong]
@@ -483,7 +494,15 @@ final class HLAPI {
     let r: HLErkannt = try await anfrage("entdecken/erkennen", abfrage: ["titel": titel, "kuenstler": kuenstler])
     return r.song
   }
-  func suche(_ q: String) async throws -> HLSuche { try await anfrage("entdecken/suche", abfrage: ["q": q]) }
+  /// Im Kinder-Modus bekommen Themen («Weihnachtslieder») zuerst einen Abschnitt mit Kinderliedern.
+  func suche(_ q: String) async throws -> HLSuche {
+    try await anfrage("entdecken/suche", abfrage: HLBibliothek.shared.istKinderModus ? ["q": q, "kinder": "1"] : ["q": q])
+  }
+
+  func vorschlaege(_ q: String) async throws -> [HLVorschlag] {
+    let r: HLVorschlaege = try await anfrage("entdecken/vorschlaege", abfrage: ["q": q])
+    return r.vorschlaege
+  }
   func kuenstler(_ id: Int) async throws -> HLKuenstlerSeite { try await anfrage("entdecken/kuenstler/\(id)") }
   func album(_ id: Int) async throws -> HLAlbumSeite { try await anfrage("entdecken/album/\(id)") }
   func playlist(_ id: Int) async throws -> HLPlaylistSeite { try await anfrage("entdecken/playlist/\(id)") }

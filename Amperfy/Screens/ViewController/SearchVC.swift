@@ -193,6 +193,13 @@ class SearchVC: BasicTableViewController {
       self?.updateDataSource(animated: false)
       self?.updateContentUnavailable()
     }
+    hlSuche.modell.uebernehmen = { [weak self] text in // Vorschlag oder «Zuletzt gesucht» ins Suchfeld
+      guard let self else { return }
+      searchController.isActive = true
+      searchController.searchBar.selectedScopeButtonIndex = 0
+      searchController.searchBar.text = text
+      updateSearchResults(for: searchController)
+    }
 
     containableAtIndexPathCallback = { indexPath in
       switch SearchSection(rawValue: indexPath.section) {
