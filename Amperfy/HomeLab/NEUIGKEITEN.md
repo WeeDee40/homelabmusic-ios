@@ -3,6 +3,12 @@
 - Im Menü eines Albums gibt es «Zu «Kinder» verschieben» und, bei Kinderalben, «In die Musik verschieben». Das Album wandert für die ganze Familie; was du in die Musik holst, kommt auch in deine Mediathek.
 ### Anders
 - Die App spricht jetzt weitgehend Deutsch: Bibliothek, Startseite, Menüs, Player und Warteschlange. «Newest Albums» heisst jetzt «Zuletzt hinzugefügt», «Recently Played» «Zuletzt gespielt». Die Einstellungen sind noch englisch.
+### CarPlay
+- Die Kacheln zeigen jetzt Cover aus deiner Musik statt grüner Flächen: «Alben» ein Mosaik aus vier Alben, «Zuletzt hinzugefügt» deine neuesten, «Weiterhören» den Song, bei dem du aufgehört hast. Ein kleines Zeichen unten rechts sagt, wofür die Kachel steht.
+- Neuer Tab «Kinder» mit den Kinderalben und Hörspielen: zuoberst, was zuletzt lief, darunter alle Reihen wie Globi oder Kasperli.
+- CarPlay spricht Deutsch.
+- Startet die App direkt im Auto, zeigt sie jetzt auch die Playlist-Bilder, nur deine eigenen Playlists und deine Mediathek. Vorher erschienen die Playlists der ganzen Familie, jede mehrfach.
+- Erlaubt das Auto nur vier Tabs, findest du «Geladen» unter «Bibliothek».
 ### Behoben
 - Ersetzt der Server einen Song durch eine bessere Datei, bleibt er jetzt in deiner Mediathek, am gleichen Platz. Vorher verschwand er still daraus.
 - Kinderalben bieten «Zur Mediathek hinzufügen» und das «+» nicht mehr an; sie gehören nie in die Mediathek.

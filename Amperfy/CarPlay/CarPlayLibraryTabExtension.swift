@@ -41,23 +41,27 @@ extension LibraryDisplayType {
 }
 
 extension CarPlaySceneDelegate {
-  static let switchAccountTitle = "Switch Account"
-  static let continuePlaybackMusicTitle = "Continue Music"
-  static let continuePlaybackPodcastTitle = "Continue Podcasts"
-  static let playRandomAlbumsTitle = "Albums"
-  static let playRandomSongsTitle = "Songs"
+  static let switchAccountTitle = String(localized: "Switch Account")
+  static let continuePlaybackMusicTitle = String(localized: "Continue Music")
+  static let continuePlaybackPodcastTitle = String(localized: "Continue Podcasts")
+  static let playRandomAlbumsTitle = String(localized: "Albums")
+  static let playRandomSongsTitle = String(localized: "Songs")
 
   func createLibrarySections() -> [CPListSection] {
     let librarySections = [
       createQuickActionsSection(),
       createPlayRandomSection(),
       createLibraryNavigationTypeSection(),
+      hlGeladenAbschnitt(), // HomeLabMusic
     ].compactMap { $0 }
 
     return librarySections
   }
 
-  func createLibraryTypeImageRowElement(type: LibraryDisplayType) -> CPListImageRowItemRowElement {
+  func createLibraryTypeImageRowElement(
+    type: LibraryDisplayType,
+    nurGeladen: Bool = false // HomeLabMusic
+  ) -> CPListImageRowItemRowElement {
     let baseImage = type.image
     let element = CPListImageRowItemRowElement(
       image: UIImage.createArtwork(
@@ -69,6 +73,7 @@ extension CarPlaySceneDelegate {
       ).carPlayImage(carTraitCollection: traits),
       title: type.displayName, subtitle: nil
     )
+    HLCarPlayKachel.setzen(element, art: .bibliothek(type), nurGeladen: nurGeladen, traits: traits) // HomeLabMusic
     return element
   }
 
@@ -127,7 +132,7 @@ extension CarPlaySceneDelegate {
     }
     let libDisplaySection = CPListSection(
       items: [libDisplayRow],
-      header: "Library",
+      header: String(localized: "Library"),
       sectionIndexTitle: nil
     )
     return libDisplaySection
@@ -145,6 +150,7 @@ extension CarPlaySceneDelegate {
       ).carPlayImage(carTraitCollection: traits),
       title: Self.playRandomAlbumsTitle, subtitle: nil
     )
+    HLCarPlayKachel.setzen(playRandomAlbumsItem, art: .zufallAlben, nurGeladen: false, traits: traits) // HomeLabMusic
     playRandomItems.append(playRandomAlbumsItem)
     let playRandomSongsItem = CPListImageRowItemRowElement(
       image: UIImage.createArtwork(
@@ -156,6 +162,7 @@ extension CarPlaySceneDelegate {
       ).carPlayImage(carTraitCollection: traits),
       title: Self.playRandomSongsTitle, subtitle: nil
     )
+    HLCarPlayKachel.setzen(playRandomSongsItem, art: .zufallSongs, nurGeladen: false, traits: traits) // HomeLabMusic
     playRandomItems.append(playRandomSongsItem)
 
     let playRandomRow = CPListImageRowItem(
@@ -179,7 +186,7 @@ extension CarPlaySceneDelegate {
     }
     let playRandomSection = CPListSection(
       items: [playRandomRow],
-      header: "Play Random",
+      header: String(localized: "Play Random"),
       sectionIndexTitle: nil
     )
     return playRandomSection
@@ -198,6 +205,7 @@ extension CarPlaySceneDelegate {
         ).carPlayImage(carTraitCollection: traits),
         title: Self.continuePlaybackMusicTitle, subtitle: nil
       )
+      HLCarPlayKachel.setzen(item, art: .weiterhoeren, nurGeladen: false, traits: traits) // HomeLabMusic
       quickActionItems.append(item)
     }
     if appDelegate.player.podcastItemCount > 0 {
@@ -211,6 +219,7 @@ extension CarPlaySceneDelegate {
         ).carPlayImage(carTraitCollection: traits),
         title: Self.continuePlaybackPodcastTitle, subtitle: nil
       )
+      HLCarPlayKachel.setzen(item, art: .weiterhoerenPodcast, nurGeladen: false, traits: traits) // HomeLabMusic
       quickActionItems.append(item)
     }
     if appDelegate.storage.settings.accounts.allAccounts.count > 1 {
@@ -261,7 +270,7 @@ extension CarPlaySceneDelegate {
     }
     let quickActionsSection = CPListSection(
       items: [quickActionsRow],
-      header: "Quick Actions",
+      header: String(localized: "Quick Actions"),
       sectionIndexTitle: nil
     )
     return quickActionsSection

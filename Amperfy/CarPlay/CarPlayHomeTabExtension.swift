@@ -76,7 +76,7 @@ extension CarPlaySceneDelegate {
     if !isDetailTemplate {
       title = section.title
     } else if isRandomSection {
-      title = "Refresh"
+      title = String(localized: "Refresh")
     }
 
     let row = CPListImageRowItem(

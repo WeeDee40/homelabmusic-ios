@@ -102,14 +102,14 @@ extension CarPlaySceneDelegate {
     }
     if !playables.isEmpty {
       items.append(createPlayShuffledListItem(playContext: PlayContext(
-        name: "Favorite Songs",
+        name: String(localized: "Favorite Songs"),
         playables: playables
       )))
     }
     for (index, playable) in playables.enumerated() {
       let detailTemplate = createDetailTemplate(
         for: playable,
-        playContext: PlayContext(name: "Favorite Songs", index: index, playables: playables)
+        playContext: PlayContext(name: String(localized: "Favorite Songs"), index: index, playables: playables)
       )
       items.append(detailTemplate)
     }
@@ -215,7 +215,7 @@ extension CarPlaySceneDelegate {
 
   func createDetailAllSongsTemplate(for artist: Artist, onlyCached: Bool) -> CPListItem {
     let section = CPListItem(
-      text: "All Songs",
+      text: String(localized: "All Songs"),
       detailText: nil,
       image: UIImage.createArtwork(
         with: UIImage.musicalNotes,
@@ -491,7 +491,7 @@ extension CarPlaySceneDelegate {
       .compactMap { Radio(managedObject: $0) }
 
     let playRandomItem = createPlayRandomListItem(playContext: PlayContext(
-      name: "Radios",
+      name: String(localized: "Radios"),
       playables: radios
     ))
     let randomSection = CPListSection(items: [playRandomItem], header: nil, sectionIndexTitle: nil)
@@ -512,7 +512,7 @@ extension CarPlaySceneDelegate {
         let radio = Radio(managedObject: fetchObject)
         let listItem = createDetailTemplate(
           for: radio,
-          playContext: PlayContext(name: "Radios", index: itemCount - 1, playables: Array(radios)),
+          playContext: PlayContext(name: String(localized: "Radios"), index: itemCount - 1, playables: Array(radios)),
           isTrackDisplayed: false
         )
         HLCarPlay.nachladen(radio, traits: traits) { listItem.setImage($0) }   // HomeLabMusic
@@ -529,7 +529,7 @@ extension CarPlaySceneDelegate {
 
   func createPlayRandomListItem(
     playContext: PlayContext,
-    text: String = "Random"
+    text: String = String(localized: "Random")
   )
     -> CPListItem {
     let img = UIImage.createArtwork(
@@ -552,7 +552,7 @@ extension CarPlaySceneDelegate {
 
   func createPlayShuffledListItem(
     playContext: PlayContext,
-    text: String = "Shuffle"
+    text: String = String(localized: "Shuffle")
   )
     -> CPListItem {
     let img = UIImage.createArtwork(

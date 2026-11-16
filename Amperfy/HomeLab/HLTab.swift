@@ -33,6 +33,9 @@ enum HLTab {
     HLMediathek.shared.einrichten()
     HLSpeicher.einrichten()
     HLPocketID.einrichten()
+    #if DEBUG
+      HLCarPlayKachel.testen()
+    #endif
   }
 
   /// iPhone/iPad: Tab in der Tab-Leiste.

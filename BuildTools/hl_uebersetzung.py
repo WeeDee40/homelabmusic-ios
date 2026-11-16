@@ -39,7 +39,7 @@ DE = {
     "Share": "Teilen", "Go to Site": "Webseite öffnen", "Show Podcast Description": "Beschreibung zeigen",
     "Song Info": "Song-Infos",
     # Listen: Filter, Sortierung, Leere
-    "All": "Alle", "Cached": "Auf dem Gerät", "User": "Eigene", "Smart": "Smart",
+    "All": "Alle", "Cached": "Geladen", "User": "Eigene", "Smart": "Smart",
     "Name": "Name", "Rating": "Bewertung", "Artist": "Künstler", "Duration": "Dauer", "Year": "Jahr",
     "Sort": "Sortieren", "Table": "Liste", "Grid": "Raster", "Change Grid Size": "Rastergrösse ändern",
     "Style": "Darstellung", "Filter": "Filter", "Starred date": "Liebling seit", "Date Added": "Hinzugefügt am",
@@ -72,6 +72,15 @@ DE = {
     "Next from:": "Als Nächstes aus:", "Clear": "Leeren", "Sleep Timer": "Einschlaf-Timer", "End of Song or Podcast Episode": "Ende des Songs oder der Folge",
     "5 Minutes": "5 Minuten", "10 Minutes": "10 Minuten", "15 Minutes": "15 Minuten", "30 Minutes": "30 Minuten",
     "45 Minutes": "45 Minuten", "1 Hour": "1 Stunde", "2 Hours": "2 Stunden", "4 Hours": "4 Stunden",
+    # CarPlay
+    "All Songs": "Alle Songs", "Cached Albums": "Geladene Alben", "Cached Artists": "Geladene Künstler",
+    "Cached Genres": "Geladene Genres", "Cached Podcasts": "Geladene Podcasts", "Cached Library": "Geladene Musik",
+    "Favorite Cached Albums": "Geladene Lieblingsalben", "Favorite Cached Artists": "Geladene Lieblingskünstler",
+    "Favorite Cached Songs": "Geladene Lieblingssongs", "Newest Cached Albums": "Zuletzt hinzugefügt, geladen",
+    "Recently Played Cached Albums": "Zuletzt gespielt, geladen", "Continue Music": "Weiterhören",
+    "Continue Podcasts": "Podcast weiterhören", "Disconnected": "Nicht verbunden", "Next in Queue": "Als Nächstes",
+    "Play Random": "Zufällig abspielen", "Play Random Cached": "Zufällig aus Geladenem",
+    "Quick Actions": "Schnellzugriff", "Refresh": "Neu mischen", "Switch Account": "Konto wechseln",
 }
 
 # Mehrzahl und Platzhalter: Schlüssel im Katalog → (en one, en other, de one, de other) bzw. (en, de)
@@ -83,6 +92,7 @@ PLURAL = {
     "%lld Stars": ("%lld Star", "%lld Stars", "%lld Stern", "%lld Sterne"),
 }
 FORMAT = {
+    "Next from: %@": "Als Nächstes aus: %@",
     "Turn Off (Pause at: %@)": "Ausschalten (Pause um %@)",
     "Pause at: %@": "Pause um %@",
     "Turn Off (Pause at end of %@)": "Ausschalten (Pause am Ende: %@)",

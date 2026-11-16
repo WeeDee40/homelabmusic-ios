@@ -52,7 +52,7 @@ extension CarPlaySceneDelegate {
     for libDisplayType in appDelegate.storage.settings.accounts.getSetting(activeAccountInfo).read
       .libraryDisplaySettings.inUse {
       guard libDisplayType.isVisibleInCachedCarPlay else { continue }
-      let element = createLibraryTypeImageRowElement(type: libDisplayType)
+      let element = createLibraryTypeImageRowElement(type: libDisplayType, nurGeladen: true)
       libDisplayItems.append(element)
     }
     let libDisplayRow = CPListImageRowItem(
@@ -102,7 +102,7 @@ extension CarPlaySceneDelegate {
     }
     let libDisplaySection = CPListSection(
       items: [libDisplayRow],
-      header: "Cached Library",
+      header: String(localized: "Cached Library"),
       sectionIndexTitle: nil
     )
     return libDisplaySection
@@ -120,6 +120,7 @@ extension CarPlaySceneDelegate {
       ).carPlayImage(carTraitCollection: traits),
       title: Self.playRandomAlbumsTitle, subtitle: nil
     )
+    HLCarPlayKachel.setzen(playRandomAlbumsItem, art: .zufallAlben, nurGeladen: true, traits: traits) // HomeLabMusic
     playRandomItems.append(playRandomAlbumsItem)
     let playRandomSongsItem = CPListImageRowItemRowElement(
       image: UIImage.createArtwork(
@@ -131,6 +132,7 @@ extension CarPlaySceneDelegate {
       ).carPlayImage(carTraitCollection: traits),
       title: Self.playRandomSongsTitle, subtitle: nil
     )
+    HLCarPlayKachel.setzen(playRandomSongsItem, art: .zufallSongs, nurGeladen: true, traits: traits) // HomeLabMusic
     playRandomItems.append(playRandomSongsItem)
 
     let playRandomRow = CPListImageRowItem(
@@ -153,7 +155,7 @@ extension CarPlaySceneDelegate {
     }
     let playRandomSection = CPListSection(
       items: [playRandomRow],
-      header: "Play Random Cached",
+      header: String(localized: "Play Random Cached"),
       sectionIndexTitle: nil
     )
     return playRandomSection

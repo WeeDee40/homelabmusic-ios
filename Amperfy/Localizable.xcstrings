@@ -451,6 +451,16 @@
         }
       }
     },
+    "All Songs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Songs"
+          }
+        }
+      }
+    },
     "All playlists have been synced.": {
       "localizations": {
         "de": {
@@ -546,7 +556,57 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auf dem Gerät"
+            "value": "Geladen"
+          }
+        }
+      }
+    },
+    "Cached Albums": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Alben"
+          }
+        }
+      }
+    },
+    "Cached Artists": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Künstler"
+          }
+        }
+      }
+    },
+    "Cached Genres": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Genres"
+          }
+        }
+      }
+    },
+    "Cached Library": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Musik"
+          }
+        }
+      }
+    },
+    "Cached Podcasts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Podcasts"
           }
         }
       }
@@ -631,6 +691,26 @@
         }
       }
     },
+    "Continue Music": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiterhören"
+          }
+        }
+      }
+    },
+    "Continue Podcasts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podcast weiterhören"
+          }
+        }
+      }
+    },
     "Date Added": {
       "localizations": {
         "de": {
@@ -687,6 +767,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ordner und Songs"
+          }
+        }
+      }
+    },
+    "Disconnected": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht verbunden"
           }
         }
       }
@@ -787,6 +877,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lieblingskünstler"
+          }
+        }
+      }
+    },
+    "Favorite Cached Albums": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Lieblingsalben"
+          }
+        }
+      }
+    },
+    "Favorite Cached Artists": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Lieblingskünstler"
+          }
+        }
+      }
+    },
+    "Favorite Cached Songs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geladene Lieblingssongs"
           }
         }
       }
@@ -991,6 +1111,16 @@
         }
       }
     },
+    "Newest Cached Albums": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt hinzugefügt, geladen"
+          }
+        }
+      }
+    },
     "Newest Podcast Episodes": {
       "localizations": {
         "de": {
@@ -1017,6 +1147,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Als Nächstes aus:"
+          }
+        }
+      }
+    },
+    "Next from: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Nächstes aus: %@"
+          }
+        }
+      }
+    },
+    "Next in Queue": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Nächstes"
           }
         }
       }
@@ -1191,6 +1341,26 @@
         }
       }
     },
+    "Play Random": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zufällig abspielen"
+          }
+        }
+      }
+    },
+    "Play Random Cached": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zufällig aus Geladenem"
+          }
+        }
+      }
+    },
     "Playback Rate": {
       "localizations": {
         "de": {
@@ -1257,6 +1427,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Warteschlange"
+          }
+        }
+      }
+    },
+    "Quick Actions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellzugriff"
           }
         }
       }
@@ -1351,12 +1531,32 @@
         }
       }
     },
+    "Recently Played Cached Albums": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt gespielt, geladen"
+          }
+        }
+      }
+    },
     "Recently Played Playlists": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Zuletzt gespielte Playlists"
+          }
+        }
+      }
+    },
+    "Refresh": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu mischen"
           }
         }
       }
@@ -1627,6 +1827,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Darstellung"
+          }
+        }
+      }
+    },
+    "Switch Account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto wechseln"
           }
         }
       }

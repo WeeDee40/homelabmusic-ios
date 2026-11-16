@@ -89,7 +89,7 @@ extension CarPlaySceneDelegate {
             }
             return listItem
           }
-        let playbackRateTemplate = CPListTemplate(title: "Playback Rate", sections: [
+        let playbackRateTemplate = CPListTemplate(title: String(localized: "Playback Rate"), sections: [
           CPListSection(items: availablePlaybackRates),
         ])
         interfaceController?.pushTemplate(playbackRateTemplate, animated: true, completion: nil)
@@ -156,7 +156,7 @@ extension CarPlaySceneDelegate: CPNowPlayingTemplateObserver {
       }
       let userQueueSection = CPListSection(
         items: userQueueItems,
-        header: "Next in Queue",
+        header: String(localized: "Next in Queue"),
         sectionIndexTitle: nil
       )
       queueSection.append(userQueueSection)
@@ -178,7 +178,7 @@ extension CarPlaySceneDelegate: CPNowPlayingTemplateObserver {
         }
         let nextQueueSection = CPListSection(
           items: nextQueueItems,
-          header: "Next from: \(appDelegate.player.contextName)",
+          header: String(localized: "Next from: \(appDelegate.player.contextName)"),
           sectionIndexTitle: nil
         )
         queueSection.append(nextQueueSection)
