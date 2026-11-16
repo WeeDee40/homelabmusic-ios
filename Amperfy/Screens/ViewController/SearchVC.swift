@@ -94,6 +94,7 @@ class SearchVC: BasicTableViewController {
   private let account: Account
   private var accountNotificationHandler: AccountNotificationHandler?
   private let hlSuche = HLSuchEinbau() // HomeLabMusic
+  private var hlPlatzhalterIn: SearchSection? // HomeLabMusic: wo der gemeinsame Platzhalter zuletzt stand
 
   init(account: Account) {
     self.account = account
@@ -152,6 +153,14 @@ class SearchVC: BasicTableViewController {
     if !isSearchActive, let accountObjectId {
       snapshot.appendItems([accountObjectId], toSection: SearchSection.Stoebern.rawValue)
     }
+    // HomeLabMusic: Wechselt der Platzhalter direkt von «Stöbern» zu «Entdecken» (Einfügen, schnelles Tippen),
+    // verschiebt die Tabelle nur die alte Zelle; ohne Neuaufbau blieben die Kacheln statt der Treffer stehen.
+    let platzhalterIn: SearchSection? = !isSearchActive ? .Stoebern
+      : (hlSuche.modell.sichtbar ? .Entdecken : nil)
+    if let platzhalterIn, let accountObjectId, platzhalterIn != hlPlatzhalterIn {
+      snapshot.reloadItems([accountObjectId])
+    }
+    hlPlatzhalterIn = accountObjectId == nil ? nil : platzhalterIn
     dataSource.apply(snapshot, animatingDifferences: animated)
   }
 
