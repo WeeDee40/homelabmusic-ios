@@ -7,6 +7,7 @@
 - Die Kacheln für Stimmungen und Anlässe zeigen jetzt ein passendes Zeichen (Geschenk, Feuerwerk, Skifahrer …) statt eines zufälligen Künstlerfotos.
 ### Behoben
 - Auf der Seite «Hits der 80er» stand unter «Künstler» ein falscher Eintrag «80er».
+- Doppelte Alben, Songs und Künstler aus früheren Abgleichen werden einmalig zusammengelegt. Danach fehlt auf Albumseiten keine Song-Zeile mehr.
 
 ## 2026-11-18b
 ### Neu

@@ -12,6 +12,7 @@
 //
 
 import AmperfyKit
+import CoreData
 import SwiftUI
 import UIKit
 import UserNotifications
@@ -169,5 +170,135 @@ enum HLMenue {
                                       bildGross: nil, dauer: nil, vorschau: nil, navidromeId: id, navidromeCover: nil))
     }
     return [UIMenu(title: "HomeLabMusic", options: .displayInline, children: mediathek + [mix, ablehnen])]
+  }
+}
+
+// MARK: - Doppelte Einträge (Etappe K)
+
+/// Amperfy legte bei gleichzeitigen Album-Abgleichen Alben, Songs und Künstler doppelt an (Upstream #809, seit
+/// a3011f7b behoben). Die alten Doppel bleiben in der Datenbank auf dem Gerät: leere Albumkopien, Songs ohne
+/// Album (auf der Albumseite fehlt dann die Zeile). Einmal pro Konto zusammenlegen: Je Navidrome-ID bleibt der
+/// Eintrag mit dem meisten Inhalt; Playlist-Einträge, Download, Scrobbles, Suchverlauf, Songs und Alben wandern
+/// zu ihm, die Kopien werden gelöscht. Bilder werden vorher gelöst (sie gehören oft beiden). Gilt für alle Konten
+/// auf dem Gerät (iPad und Mac haben oft mehrere).
+@MainActor
+enum HLDoppelte {
+  private static let erledigt = "homelabmusic.doppelteZusammengelegt.v2"
+
+  static func zusammenlegen() {
+    guard !UserDefaults.standard.bool(forKey: erledigt) else { return }
+    Task {
+      do {
+        let zahl = try await AmperKit.shared.storage.async.performAndGet { c in
+          let konten = (try? c.context.fetch(NSFetchRequest<NSManagedObject>(entityName: "Account"))) ?? []
+          var summe: [Int] = [0, 0, 0]
+          for konto in konten {
+            let z: [Int] = Self.arbeit(c.context, konto: konto.objectID)
+            for i in 0 ..< 3 { summe[i] += z[i] }
+          }
+          return summe
+        }
+        UserDefaults.standard.set(true, forKey: erledigt)
+        (UIApplication.shared.delegate as! AppDelegate).eventLogger.debug(topic: "Doppelte", message:
+          "Zusammengelegt: \(zahl[0]) Songs, \(zahl[1]) Alben, \(zahl[2]) Künstler")
+        if zahl.contains(where: { $0 > 0 }) { HLMediathek.shared.abgleichen(erzwingen: true) }
+      } catch {
+        (UIApplication.shared.delegate as! AppDelegate).eventLogger.debug(topic: "Doppelte", message: error.localizedDescription)
+      }
+    }
+  }
+
+  /// Anzahl entfernter Kopien: [Songs, Alben, Künstler].
+  nonisolated private static func arbeit(_ ctx: NSManagedObjectContext, konto: NSManagedObjectID) -> [Int] {
+    let account = ctx.object(with: konto)
+    func gruppen(_ entitaet: String) -> [[NSManagedObject]] {
+      let r = NSFetchRequest<NSManagedObject>(entityName: entitaet)
+      r.predicate = NSPredicate(format: "account == %@", account)
+      r.propertiesToFetch = ["id"]
+      var nachId = [String: [NSManagedObject]]()
+      for o in (try? ctx.fetch(r)) ?? [] {
+        guard let id = o.value(forKey: "id") as? String, !id.isEmpty else { continue }
+        nachId[id, default: []].append(o)
+      }
+      return nachId.values.filter { $0.count > 1 }
+    }
+    /// Inhalt einer Zu-vielen-Beziehung; manche sind geordnet (NSOrderedSet), dann liefert «as? Set» nichts.
+    func menge(_ o: NSManagedObject, _ k: String) -> [NSManagedObject] {
+      switch o.value(forKey: k) {
+      case let m as NSOrderedSet: return m.array.compactMap { $0 as? NSManagedObject }
+      case let m as NSSet: return m.allObjects.compactMap { $0 as? NSManagedObject }
+      default: return []
+      }
+    }
+    func umhaengen(_ von: NSManagedObject, _ nach: NSManagedObject, _ beziehung: String, _ rueck: String) {
+      for x in menge(von, beziehung) { x.setValue(nach, forKey: rueck) }
+    }
+    /// Gemeinsames aller Einträge: Suchverlauf mitnehmen, Bild lösen, Kopie löschen. Vor dem Löschen müssen die
+    /// Rückbeziehungen verbucht sein (processPendingChanges): sonst sieht die Löschregel die umgehängten Songs,
+    /// Playlist-Einträge und Downloads noch bei der Kopie und nimmt ihnen das Album bzw. löscht sie mit.
+    func loeschen(_ kopie: NSManagedObject, behalten: NSManagedObject) -> Bool {
+      umhaengen(kopie, behalten, "searchHistory", "searchedLibraryEntity")
+      if behalten.value(forKey: "artwork") == nil { behalten.setValue(kopie.value(forKey: "artwork"), forKey: "artwork") }
+      kopie.setValue(nil, forKey: "artwork")
+      ctx.processPendingChanges()
+      for k in ["songs", "albums", "playlistItems", "scrobbleEntries", "searchHistory"]
+      where kopie.entity.relationshipsByName[k] != nil && !menge(kopie, k).isEmpty {
+        return false                                  // hängt noch etwas daran: lieber stehen lassen
+      }
+      if kopie.entity.relationshipsByName["download"] != nil, let d = kopie.value(forKey: "download") as? NSManagedObject,
+         d.value(forKey: "playable") as? NSManagedObject == behalten {
+        return false
+      }
+      ctx.delete(kopie)
+      return true
+    }
+
+    var zahl = [0, 0, 0]
+    // Songs: der mit Album, Download, Mediathek, Playlist-Einträgen bleibt
+    for g in gruppen("Song") {
+      func wert(_ s: NSManagedObject) -> Int {
+        (s.value(forKey: "album") != nil ? 8 : 0) + (s.value(forKey: "download") != nil ? 4 : 0)
+          + ((s.value(forKey: "hlInMediathek") as? Bool) == true ? 2 : 0) + (menge(s, "playlistItems").isEmpty ? 0 : 1)
+      }
+      let behalten = g.max { wert($0) < wert($1) }!
+      for kopie in g where kopie != behalten {
+        umhaengen(kopie, behalten, "playlistItems", "playable")
+        umhaengen(kopie, behalten, "scrobbleEntries", "playable")
+        if behalten.value(forKey: "download") == nil, let d = kopie.value(forKey: "download") as? NSManagedObject {
+          d.setValue(behalten, forKey: "playable")
+        }
+        if (kopie.value(forKey: "hlInMediathek") as? Bool) == true { behalten.setValue(true, forKey: "hlInMediathek") }
+        for k in ["album", "artist", "genre"] where behalten.value(forKey: k) == nil {
+          behalten.setValue(kopie.value(forKey: k), forKey: k)
+        }
+        if loeschen(kopie, behalten: behalten) { zahl[0] += 1 }
+      }
+    }
+    // Alben: das mit den meisten Songs bleibt
+    for g in gruppen("Album") {
+      let behalten = g.max { menge($0, "songs").count < menge($1, "songs").count }!
+      for kopie in g where kopie != behalten {
+        umhaengen(kopie, behalten, "songs", "album")
+        if behalten.value(forKey: "hlMediathekSeit") == nil {
+          behalten.setValue(kopie.value(forKey: "hlMediathekSeit"), forKey: "hlMediathekSeit")
+        }
+        for k in ["artist", "genre"] where behalten.value(forKey: k) == nil {
+          behalten.setValue(kopie.value(forKey: k), forKey: k)
+        }
+        if loeschen(kopie, behalten: behalten) { zahl[1] += 1 }
+      }
+    }
+    // Künstler: der mit den meisten Alben und Songs bleibt
+    for g in gruppen("Artist") {
+      func wert(_ k: NSManagedObject) -> Int { menge(k, "albums").count + menge(k, "songs").count }
+      let behalten = g.max { wert($0) < wert($1) }!
+      for kopie in g where kopie != behalten {
+        umhaengen(kopie, behalten, "albums", "artist")
+        umhaengen(kopie, behalten, "songs", "artist")
+        if (kopie.value(forKey: "hlInMediathek") as? Bool) == true { behalten.setValue(true, forKey: "hlInMediathek") }
+        if loeschen(kopie, behalten: behalten) { zahl[2] += 1 }
+      }
+    }
+    return zahl
   }
 }

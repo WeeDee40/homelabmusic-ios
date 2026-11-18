@@ -23,6 +23,7 @@ enum HLTab {
     HLAPI.shared.account = account
     HLBibliothek.shared.kontoPruefen()   // Kontowechsel: Wahl, Bibliotheken und Mediathek des Kontos
     HLMediathek.shared.kontoPruefen()
+    HLDoppelte.zusammenlegen()   // Etappe K: alte Doppel (Amperfy #809), einmal für alle Konten
     guard !eingerichtet else { return }
     eingerichtet = true
     HLPlayer.shared.aufraeumenBeimStart()
