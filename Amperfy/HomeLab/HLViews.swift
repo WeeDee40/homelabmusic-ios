@@ -220,14 +220,19 @@ struct HLStatusKnopf: View {
 
   var body: some View {
     let status = player.status(song)
+    let stufe = player.stufe(song)
     Button {
-      player.wuenschen(song)
+      player.wuenschen(song)                            // auf dem Server: sofort in die Mediathek
     } label: {
-      switch status {
-      case "bibliothek":
+      switch stufe {
+      case .mediathek:
         Image(systemName: "checkmark").foregroundStyle(.green)
           .frame(width: 34, height: 30).background(.green.opacity(0.14), in: Capsule())
-      case "angefragt":
+      case .server:
+        Image(systemName: "plus").fontWeight(.semibold).foregroundStyle(Color.accentColor)
+          .frame(width: 34, height: 30).background(Color.accentColor.opacity(0.14), in: Capsule())
+          .accessibilityLabel("Zur Mediathek hinzufügen")
+      case .angefragt:
         Image(systemName: "hourglass").foregroundStyle(.orange)
           .frame(width: 34, height: 30).background(.orange.opacity(0.14), in: Capsule())
       default:
@@ -307,8 +312,8 @@ struct HLKuenstlerBand: View {
             VStack(spacing: 4) {
               HLBild(pfad: a.bild, groesse: 96, rund: true)
               Text(a.name).font(.subheadline.weight(.semibold)).lineLimit(1)
-              if let n = a.inBibliothek, n > 0 {
-                Text("\(n) bei dir").font(.caption).foregroundStyle(.secondary)
+              if let text = HLMediathekUI.kuenstlerText(name: a.name, aufServer: a.inBibliothek ?? 0) {
+                Text(text).font(.caption).foregroundStyle(.secondary).lineLimit(1)
               }
             }
             .frame(width: 104)
@@ -660,7 +665,7 @@ struct HLKuenstlerView: View {
                 Button {
                   oeffnen(.bibliothek(kuenstler: d.kuenstler.name))
                 } label: {
-                  Label(Self.bibliothekText(d.kuenstler.inBibliothek ?? 0), systemImage: "music.note.house")
+                  Label(Self.bibliothekText(d.kuenstler.inBibliothek ?? 0, name: d.kuenstler.name), systemImage: "music.note.house")
                     .font(.subheadline)
                 }
                 .buttonStyle(.plain).foregroundStyle(Color.accentColor)
@@ -717,8 +722,13 @@ struct HLKuenstlerView: View {
     }
   }
 
-  static func bibliothekText(_ n: Int) -> String {
-    n == 0 ? "Noch nichts in deiner Bibliothek" : "\(n) \(n == 1 ? "Song" : "Songs") in deiner Bibliothek"
+  static func bibliothekText(_ n: Int, name: String = "") -> String {
+    guard HLMediathekUI.stufenAktiv else {
+      return n == 0 ? "Noch nichts in deiner Bibliothek" : "\(n) \(n == 1 ? "Song" : "Songs") in deiner Bibliothek"
+    }
+    if n == 0 { return "Noch nichts auf dem Server" }
+    let eigene = HLMediathekUI.mediathekAnzahl(kuenstler: name)
+    return eigene > 0 ? "\(eigene) in deiner Mediathek · \(n) auf dem Server" : "\(n) auf dem Server"
   }
 }
 
@@ -730,7 +740,6 @@ struct HLAlbumView: View {
   var body: some View {
     HLLaden(laden: { try await HLAPI.shared.album(id) }) { d in
       let a = d.album
-      let fehlt = (a.anzahl ?? 0) - (a.inBibliothek ?? 0)
       List {
         Section {
           HStack(alignment: .bottom, spacing: 16) {
@@ -739,38 +748,13 @@ struct HLAlbumView: View {
               Text(a.titel ?? "").font(.title3.bold()).lineLimit(3)
               Button(a.kuenstler ?? "") { if let k = a.kuenstlerId { oeffnen(.kuenstler(k)) } }
                 .buttonStyle(.plain).foregroundStyle(Color.accentColor)
-              Text([a.jahr, "\(a.anzahl ?? 0) Songs", (a.inBibliothek ?? 0) > 0 ? "\(a.inBibliothek!) bei dir" : nil]
+              Text([a.jahr, "\(a.anzahl ?? 0) Songs", HLSammelKnoepfe.standText(d.songs)]
                 .compactMap { $0 }.joined(separator: " · "))
                 .font(.subheadline).foregroundStyle(.secondary)
             }
           }
-          HStack {
-            Button { HLPlayer.shared.spielen(d.songs, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
-              .buttonStyle(HLKapsel(haupt: true))
-            if fehlt > 0 {
-              Button {
-                gewuenscht = true
-                Task {
-                  do {
-                    let r = try await HLAPI.shared.wunsch(album: id)
-                    HLPlayer.shared.alsAngefragtMarkieren(d.songs)
-                    HLPlayer.shared.zeigeHinweis(r.meldung ?? "Gewünscht.")
-                  } catch {
-                    gewuenscht = false
-                    HLPlayer.shared.zeigeHinweis(error.localizedDescription)
-                  }
-                }
-              } label: {
-                Label(gewuenscht ? "Gewünscht" : "Album wünschen (\(fehlt))",
-                      systemImage: gewuenscht ? "hourglass" : "plus")
-              }
-              .buttonStyle(HLKapsel())
-              .disabled(gewuenscht)
-            } else {
-              Label("Komplett bei dir", systemImage: "checkmark").foregroundStyle(.green).font(.subheadline)
-            }
-          }
-          .listRowSeparator(.hidden)
+          HLSammelKnoepfe(songs: d.songs)
+            .listRowSeparator(.hidden)
         }
         Section("Songs") {
           ForEach(d.songs.indices, id: \.self) { HLSongZeile(songs: d.songs, i: $0, mitAlbum: false) }
@@ -779,5 +763,79 @@ struct HLAlbumView: View {
       .navigationTitle(a.titel ?? "Album")
     }
     .navigationBarTitleDisplayMode(.inline)
+  }
+}
+
+/// Knöpfe über einer Song-Liste (Album, Playlist): reinhören, was auf dem Server ist in die Mediathek holen,
+/// was fehlt wünschen (höchstens 50 auf einmal, ab 6 mit Rückfrage).
+struct HLSammelKnoepfe: View {
+  let songs: [HLSong]
+  @ObservedObject private var player = HLPlayer.shared
+  @State private var gewuenscht = false
+  @State private var rueckfrage = false
+
+  static let hoechstens = 50
+
+  /// «7 in deiner Mediathek», «5 auf dem Server» bzw. ohne Mediathek «5 bei dir».
+  @MainActor static func standText(_ songs: [HLSong]) -> String? {
+    let p = HLPlayer.shared
+    let eigene = songs.filter { p.stufe($0) == .mediathek }.count
+    let server = songs.filter { p.stufe($0) == .server }.count
+    guard HLMediathekUI.stufenAktiv else { return eigene > 0 ? "\(eigene) bei dir" : nil }
+    if eigene > 0 { return "\(eigene) in deiner Mediathek" }
+    return server > 0 ? "\(server) auf dem Server" : nil
+  }
+
+  var body: some View {
+    let server = songs.filter { player.stufe($0) == .server }
+    let fehlend = songs.filter { player.stufe($0) == .neu && $0.deezerId != nil }
+    let anzahl = min(fehlend.count, Self.hoechstens)
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        Button { player.spielen(songs, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
+          .buttonStyle(HLKapsel(haupt: true))
+        if !server.isEmpty {
+          Button { player.zurMediathek(server) } label: {
+            Label("\(server.count) zur Mediathek", systemImage: "plus")
+          }
+          .buttonStyle(HLKapsel())
+        } else if fehlend.isEmpty, !songs.isEmpty {
+          Label(HLMediathekUI.stufenAktiv ? "Alles in deiner Mediathek" : "Alles bei dir", systemImage: "checkmark")
+            .foregroundStyle(.green).font(.subheadline)
+        }
+      }
+      if anzahl > 0 {
+        Button {
+          if anzahl > 5 { rueckfrage = true } else { wuenschen(Array(fehlend.prefix(anzahl))) }
+        } label: {
+          Label(gewuenscht ? "Gewünscht" : (fehlend.count < songs.count ? "Rest wünschen (\(anzahl))" : "\(anzahl) wünschen"),
+                systemImage: gewuenscht ? "hourglass" : "arrow.down.circle")
+        }
+        .buttonStyle(HLKapsel())
+        .disabled(gewuenscht)
+      }
+    }
+    .confirmationDialog("\(anzahl) Songs wünschen?", isPresented: $rueckfrage, titleVisibility: .visible) {
+      Button("\(anzahl) Songs wünschen") { wuenschen(Array(fehlend.prefix(anzahl))) }
+      Button("Abbrechen", role: .cancel) {}
+    } message: {
+      Text(fehlend.count > anzahl
+        ? "Die ersten \(anzahl) von \(fehlend.count) fehlenden Songs gehen an SoulSync und kommen nach und nach."
+        : "Sie gehen an SoulSync und kommen nach und nach.")
+    }
+  }
+
+  private func wuenschen(_ liste: [HLSong]) {
+    gewuenscht = true
+    Task {
+      do {
+        let r = try await HLAPI.shared.wunsch(songs: liste.compactMap(\.deezerId))
+        player.alsAngefragtMarkieren(liste)
+        player.zeigeHinweis(r.meldung ?? "Gewünscht.")
+      } catch {
+        gewuenscht = false
+        player.zeigeHinweis(error.localizedDescription)
+      }
+    }
   }
 }

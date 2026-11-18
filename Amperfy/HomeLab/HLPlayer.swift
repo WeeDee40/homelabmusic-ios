@@ -63,6 +63,51 @@ final class HLPlayer: ObservableObject {
 
   func status(_ song: HLSong) -> String { statusNeu[song.schluessel] ?? song.status }
 
+  /// Songs (Navidrome-ID), die in dieser Sitzung in die Mediathek kamen (bis der Abgleich sie kennt).
+  @Published var mediathekNeu = Set<String>()
+
+  /// Stufe eines Songs: in deiner Mediathek, auf dem Server (Familie, ganz spielbar), gewünscht oder neu.
+  func stufe(_ song: HLSong) -> HLStufe {
+    switch status(song) {
+    case "bibliothek":
+      guard HLMediathekUI.stufenAktiv, let id = song.navidromeId else { return .mediathek }
+      return mediathekNeu.contains(id) || HLMediathekUI.inMediathek(navidromeId: id) ? .mediathek : .server
+    case "angefragt": return .angefragt
+    default: return .neu
+    }
+  }
+
+  /// Songs, die auf dem Server sind, sofort in die Mediathek.
+  func zurMediathek(_ songs: [HLSong]) {
+    let ids = songs.compactMap(\.navidromeId).filter { !mediathekNeu.contains($0) }
+    guard !ids.isEmpty else { return }
+    mediathekNeu.formUnion(ids)
+    Task {
+      do {
+        try await HLMediathek.shared.hinzufuegen(songIds: ids)
+        zeigeHinweis(ids.count == 1 ? "Zur Mediathek hinzugefügt." : "\(ids.count) Songs zur Mediathek hinzugefügt.")
+      } catch {
+        mediathekNeu.subtract(ids)
+        zeigeHinweis(error.localizedDescription)
+      }
+    }
+  }
+
+  /// Wunsch «gefunden» (die Familie hat den Song schon): gleich in die Mediathek.
+  private func gefunden(_ songId: String?) {
+    guard HLMediathekUI.aktiv, let songId else { zeigeHinweis("Hast du schon."); return }
+    mediathekNeu.insert(songId)
+    Task {
+      do {
+        try await HLMediathek.shared.hinzufuegen(songIds: [songId])
+        zeigeHinweis("War schon auf dem Server: jetzt in deiner Mediathek.")
+      } catch {
+        mediathekNeu.remove(songId)
+        zeigeHinweis(error.localizedDescription)
+      }
+    }
+  }
+
   // MARK: Wiedergabe
 
   func spielen(_ songs: [HLSong], ab start: Int, kontext: String = HLPlayer.kontext) {
@@ -349,10 +394,13 @@ final class HLPlayer: ObservableObject {
   // MARK: Wünschen
 
   func wuenschen(_ song: HLSong) {
-    guard let id = song.deezerId, status(song) == "neu" else {
-      zeigeHinweis(status(song) == "bibliothek" ? "In deiner Bibliothek." : "Schon gewünscht, kommt bald.")
-      return
+    switch stufe(song) {
+    case .server: zurMediathek([song]); return
+    case .mediathek: zeigeHinweis(HLMediathekUI.stufenAktiv ? "In deiner Mediathek." : "In deiner Bibliothek."); return
+    case .angefragt: zeigeHinweis("Schon gewünscht, kommt bald."); return
+    case .neu: break
     }
+    guard let id = song.deezerId else { return }
     statusNeu[song.schluessel] = "angefragt"
     HLMix.shared.signal(song, art: "stark")
     Task {
@@ -361,7 +409,7 @@ final class HLPlayer: ObservableObject {
         switch r.status {
         case "gefunden":
           statusNeu[song.schluessel] = "bibliothek"
-          zeigeHinweis("Hast du schon.")
+          gefunden(r.songId)
         case "angefragt":
           zeigeHinweis(HLBibliothek.shared.istKinderModus ? "Gewünscht: kommt in ein paar Minuten zu «Kinder»." : "Gewünscht: kommt in ein paar Minuten in deine Mediathek.")
         default:
@@ -384,7 +432,7 @@ final class HLPlayer: ObservableObject {
         let r = try await HLAPI.shared.wunsch(titel: titel, kuenstler: kuenstler)
         if r.status == "gefunden" { statusNeu[song.schluessel] = "bibliothek" }
         if r.status != "angefragt" && r.status != "gefunden" { statusNeu[song.schluessel] = nil }
-        zeigeHinweis(r.meldung ?? "")
+        if r.status == "gefunden" { gefunden(r.songId) } else { zeigeHinweis(r.meldung ?? "") }
       } catch {
         statusNeu[song.schluessel] = nil
         zeigeHinweis(error.localizedDescription)
@@ -435,4 +483,9 @@ enum HLVorschauDateien {
   static func aufraeumen() {
     try? FileManager.default.removeItem(at: ordner)
   }
+}
+
+/// Drei Stufen eines Songs (PLAN-musik-erlebnis.md, Abschnitt 1) und «gewünscht».
+enum HLStufe {
+  case mediathek, server, angefragt, neu
 }

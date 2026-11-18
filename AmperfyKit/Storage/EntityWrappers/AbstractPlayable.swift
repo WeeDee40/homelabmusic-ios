@@ -487,6 +487,7 @@ extension AbstractPlayable: PlayableContainable {
     let library = LibraryStorage(context: context)
     library.saveContext()
     try await syncer.setFavorite(song: song, isFavorite: isFavorite)
+    if isFavorite { hlLieblingGesetzt?(song.id) } // HomeLabMusic: Herz nimmt den Song in die Mediathek auf
   }
 
   public var isDownloadAvailable: Bool {

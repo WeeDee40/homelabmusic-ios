@@ -228,10 +228,13 @@ struct HLTopKarte: View {
   private var untertitel: String {
     switch top.art {
     case "kuenstler":
-      let n = top.kuenstler?.inBibliothek ?? 0
-      return n > 0 ? "Künstler · \(n) bei dir" : "Künstler"
+      guard let k = top.kuenstler else { return "Künstler" }
+      return ["Künstler", HLMediathekUI.kuenstlerText(name: k.name, aufServer: k.inBibliothek ?? 0)]
+        .compactMap { $0 }.joined(separator: " · ")
     case "song":
-      return ["Song", top.song?.kuenstler, top.song?.status == "bibliothek" ? "bei dir" : nil]
+      let stufe = top.song.map { HLPlayer.shared.stufe($0) }
+      return ["Song", top.song?.kuenstler, stufe == .mediathek ? (HLMediathekUI.stufenAktiv ? "in deiner Mediathek" : "bei dir")
+        : stufe == .server ? "auf dem Server" : nil]
         .compactMap { $0 }.joined(separator: " · ")
     case "album":
       return ["Album", top.album?.kuenstler].compactMap { $0 }.joined(separator: " · ")
@@ -276,21 +279,13 @@ struct HLPlaylistBand: View {
   }
 }
 
-/// Öffentliche Playlist: reinhören (Bibliothek ganz, Rest als Vorschau) und die fehlenden Songs wünschen.
+/// Öffentliche Playlist: reinhören (Bibliothek ganz, Rest als Vorschau), in die Mediathek holen, Fehlendes wünschen.
 struct HLPlaylistView: View {
   let id: Int
-  @State private var gewuenscht = false
-  @State private var rueckfrage = false
-  @ObservedObject private var player = HLPlayer.shared
-
-  /// Höchstens so viele auf einmal (wie Medienwunsch): SoulSync lädt für die ganze Familie der Reihe nach.
-  static let hoechstens = 50
 
   var body: some View {
     HLLaden(laden: { try await HLAPI.shared.playlist(id) }) { d in
       let p = d.playlist
-      let fehlend = d.songs.filter { player.status($0) == "neu" && $0.deezerId != nil }
-      let anzahl = min(fehlend.count, Self.hoechstens)
       List {
         Section {
           HStack(alignment: .bottom, spacing: 16) {
@@ -298,58 +293,21 @@ struct HLPlaylistView: View {
             VStack(alignment: .leading, spacing: 4) {
               Text(p.titel ?? "").font(.title3.bold()).lineLimit(3)
               if let von = p.vonText { Text(von).font(.subheadline).foregroundStyle(.secondary) }
-              Text(["\(d.songs.count) Songs", (p.inBibliothek ?? 0) > 0 ? "\(p.inBibliothek!) bei dir" : nil]
-                .compactMap { $0 }.joined(separator: " · "))
+              Text(["\(d.songs.count) Songs", HLSammelKnoepfe.standText(d.songs)].compactMap { $0 }
+                .joined(separator: " · "))
                 .font(.subheadline).foregroundStyle(.secondary)
             }
           }
-          HStack {
-            Button { player.spielen(d.songs, ab: 0) } label: { Label("Reinhören", systemImage: "play.fill") }
-              .buttonStyle(HLKapsel(haupt: true))
-            if anzahl > 0 {
-              Button { rueckfrage = true } label: {
-                Label(gewuenscht ? "Gewünscht" : "\(anzahl) wünschen",
-                      systemImage: gewuenscht ? "hourglass" : "plus")
-              }
-              .buttonStyle(HLKapsel())
-              .disabled(gewuenscht)
-            } else if !d.songs.isEmpty {
-              Label("Alles bei dir", systemImage: "checkmark").foregroundStyle(.green).font(.subheadline)
-            }
-          }
-          .listRowSeparator(.hidden)
+          HLSammelKnoepfe(songs: d.songs)
+            .listRowSeparator(.hidden)
         }
         Section("Songs") {
           ForEach(d.songs.indices, id: \.self) { HLSongZeile(songs: d.songs, i: $0) }
         }
       }
       .navigationTitle(p.titel ?? "Playlist")
-      .confirmationDialog(
-        "\(anzahl) Songs wünschen?", isPresented: $rueckfrage, titleVisibility: .visible
-      ) {
-        Button("\(anzahl) Songs wünschen") { wuenschen(Array(fehlend.prefix(anzahl))) }
-        Button("Abbrechen", role: .cancel) {}
-      } message: {
-        Text(fehlend.count > anzahl
-          ? "Die ersten \(anzahl) von \(fehlend.count) fehlenden Songs gehen an SoulSync und kommen nach und nach in die Bibliothek."
-          : "Sie gehen an SoulSync und kommen nach und nach in die Bibliothek.")
-      }
     }
     .navigationBarTitleDisplayMode(.inline)
-  }
-
-  private func wuenschen(_ songs: [HLSong]) {
-    gewuenscht = true
-    Task {
-      do {
-        let r = try await HLAPI.shared.wunsch(songs: songs.compactMap(\.deezerId))
-        player.alsAngefragtMarkieren(songs)
-        player.zeigeHinweis(r.meldung ?? "Gewünscht.")
-      } catch {
-        gewuenscht = false
-        player.zeigeHinweis(error.localizedDescription)
-      }
-    }
   }
 }
 

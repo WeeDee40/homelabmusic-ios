@@ -104,6 +104,7 @@ final class HLBibliothek {
     kontoIdent = HLAPI.shared.account?.info.ident
     bibliotheken = gespeicherteBibliotheken()
     HLListenFilter.einrichten()
+    hlLieblingGesetzt = { id in Task { @MainActor in HLMediathekUI.lieblingGesetzt(id) } }
     filterBerechnen()
     guard !aktualisiert else { return }
     aktualisiert = true

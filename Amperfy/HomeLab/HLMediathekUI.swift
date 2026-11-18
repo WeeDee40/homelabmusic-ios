@@ -17,12 +17,61 @@
 //
 
 import AmperfyKit
+import CoreData
 import UIKit
 
 @MainActor
 enum HLMediathekUI {
   /// Mediathek bedienbar: angemeldet und nicht im Kinder-Modus.
   static var aktiv: Bool { HLAPI.shared.account != nil && !HLBibliothek.shared.istKinderModus }
+
+  /// Drei Stufen (Mediathek, Server, neu) gelten nur, wenn die Mediathek bedienbar ist und es sie schon gibt;
+  /// sonst heisst «auf dem Server» wie früher «bei dir».
+  static var stufenAktiv: Bool { aktiv && HLListenFilter.mediathekAktiv }
+
+  private static var kontext: NSManagedObjectContext {
+    (UIApplication.shared.delegate as! AppDelegate).storage.main.context
+  }
+
+  /// Ist der Song (Navidrome-ID) in der Mediathek? Laut Gerät (letzter Abgleich und eigene Änderungen).
+  static func inMediathek(navidromeId id: String) -> Bool {
+    guard let account = HLAPI.shared.account else { return false }
+    let r = NSFetchRequest<SongMO>(entityName: "Song")
+    r.predicate = NSPredicate(format: "id == %@ AND account == %@ AND hlInMediathek == YES", id,
+                              account.managedObject.objectID)
+    r.fetchLimit = 1
+    return ((try? kontext.count(for: r)) ?? 0) > 0
+  }
+
+  /// Anzahl Songs eines Künstlers (nach Name) in der Mediathek.
+  static func mediathekAnzahl(kuenstler name: String) -> Int {
+    guard let account = HLAPI.shared.account else { return 0 }
+    let r = NSFetchRequest<SongMO>(entityName: "Song")
+    r.predicate = NSPredicate(format: "artist.name ==[cd] %@ AND account == %@ AND hlInMediathek == YES", name,
+                              account.managedObject.objectID)
+    return (try? kontext.count(for: r)) ?? 0
+  }
+
+  /// Text für Künstler: «3 in deiner Mediathek», sonst «12 auf dem Server» (ohne Mediathek: «12 bei dir»).
+  static func kuenstlerText(name: String, aufServer: Int) -> String? {
+    guard stufenAktiv else { return aufServer > 0 ? "\(aufServer) bei dir" : nil }
+    let eigene = mediathekAnzahl(kuenstler: name)
+    if eigene > 0 { return "\(eigene) in deiner Mediathek" }
+    return aufServer > 0 ? "\(aufServer) auf dem Server" : nil
+  }
+
+  /// Herz gesetzt: Song in die Mediathek (Entscheid 18.11.2026). Das Herz entfernen nimmt ihn nicht heraus.
+  static func lieblingGesetzt(_ id: String) {
+    guard aktiv, !inMediathek(navidromeId: id) else { return }
+    Task {
+      do {
+        try await HLMediathek.shared.hinzufuegen(songIds: [id])
+        HLPlayer.shared.mediathekNeu.insert(id)
+      } catch {
+        HLPlayer.shared.zeigeHinweis(error.localizedDescription)
+      }
+    }
+  }
 
   /// Beschriftung für Wünschen (Vorschau, Shazam, Entdecken): wohin der Song nach der Lieferung kommt.
   static var wunschText: String {

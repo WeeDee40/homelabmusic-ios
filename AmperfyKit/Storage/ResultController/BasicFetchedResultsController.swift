@@ -27,6 +27,9 @@ import Foundation
 /// Passt jede Listenanfrage an (Bibliothek Musik/Kinder, Mediathek), gesetzt von HLListenFilter in der App.
 /// Bekommt Entität («Album», «Song», …), Amperfys unverändertes Prädikat und ob die Anfrage aus der Suche kommt;
 /// gibt das zu verwendende Prädikat zurück (nil = unverändert).
+/// HomeLabMusic: ein Song bekommt ein Herz (die App nimmt ihn in die Mediathek auf).
+nonisolated(unsafe) public var hlLieblingGesetzt: ((_ songId: String) -> ())?
+
 nonisolated(unsafe) public var hlListenFilter: ((_ entitaet: String, _ basis: NSPredicate?, _ suche: Bool) -> NSPredicate?)?
 /// Sortierung einer Liste anpassen (nil = Amperfys Sortierung).
 nonisolated(unsafe) public var hlListenSortierung: ((_ entitaet: String, _ basis: [NSSortDescriptor]) -> [NSSortDescriptor]?)?

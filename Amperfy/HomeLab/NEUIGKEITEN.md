@@ -1,3 +1,14 @@
+## 2026-11-18
+### Neu
+- Songs, die jemand aus der Familie schon hat, tragen unter «Entdecken» und in der Suche ein «+»: Antippen holt sie sofort in deine Mediathek. Ein Haken heisst jetzt immer «in deiner Mediathek».
+- Alben und Playlists unter «Entdecken» zeigen, wie viel davon in deiner Mediathek ist. «n zur Mediathek» holt alles, was schon auf dem Server ist; «Rest wünschen» lädt den Rest.
+- Ein Herz auf einem Song nimmt ihn auch in deine Mediathek auf.
+### Anders
+- Wünschst du einen Song, den die Familie schon hat, kommt er sofort in deine Mediathek statt nur «Hast du schon».
+- Bei Künstlern steht, wie viele Songs in deiner Mediathek und wie viele auf dem Server sind.
+### Behoben
+- Wer gleich nach dem Start im Player «Album zeigen» oder «Künstler zeigen» wählte, landete auf einer Seite ohne Zurück-Pfeil und kam nur mit einem Neustart wieder heraus.
+
 ## 2026-11-16b
 ### Neu
 - Die Suche versteht Themen und Anlässe: «Weihnachtslieder», «80er», «Oktoberfest», «Hochzeit» oder «Halloween» zeigen jetzt die bekanntesten Songs dazu, also «Last Christmas» statt Karaoke und Unbekanntem. Was schon in der Bibliothek ist, spielt ganz.
