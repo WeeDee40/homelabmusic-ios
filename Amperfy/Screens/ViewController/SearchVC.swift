@@ -54,12 +54,12 @@ class SearchDiffableDataSource: BasicUITableViewDiffableDataSource {
       }
     case .Playlist:
       return String(localized: "Playlists")
-    case .Artist:
-      return "Künstler" // HomeLabMusic
+    case .Artist: // HomeLabMusic: ohne eigene Treffer «… auf dem Server» (P11)
+      return HLMediathekUI.suchTitel("Künstler", searchVC.artists)
     case .Album:
-      return "Alben" // HomeLabMusic
+      return HLMediathekUI.suchTitel("Alben", searchVC.albums)
     case .Song:
-      return String(localized: "Songs")
+      return HLMediathekUI.suchTitel(String(localized: "Songs"), searchVC.songs)
     case .Entdecken: // HomeLabMusic
       return "Entdecken"
     case .Stoebern: // HomeLabMusic: Überschriften stehen in den Kacheln
@@ -78,6 +78,8 @@ class SearchVC: BasicTableViewController {
   nonisolated private static let categoryItemLimit = 10
   // HomeLabMusic: in «Alle» nur die besten Treffer je Art, damit «Entdecken» ohne langes Scrollen sichtbar ist
   nonisolated private static let categoryItemLimitAlle = 5
+  // HomeLabMusic: so viele beste Treffer holen, daraus Eigenes zuerst (P11)
+  nonisolated private static let categoryItemKandidaten = 12
 
   private var diffableDataSource: SearchDiffableDataSource?
   fileprivate var searchHistory: [SearchHistoryItem] = []
@@ -410,11 +412,13 @@ class SearchVC: BasicTableViewController {
         return cell
       } else if let song = container as? Song {
         let cell: PlayableTableCell = dequeueCell(for: tableView, at: indexPath)
+        cell.hlHaken = true // HomeLabMusic (P11)
         cell.display(playable: song, playContextCb: convertCellViewToPlayContext, rootView: self)
         return cell
       } else {
         let cell: GenericTableCell = dequeueCell(for: tableView, at: indexPath)
         cell.display(container: container, rootView: self)
+        hlHaken(cell, container)
         return cell
       }
     case .Playlist:
@@ -426,15 +430,18 @@ class SearchVC: BasicTableViewController {
       let cell: GenericTableCell = dequeueCell(for: tableView, at: indexPath)
       let artist = artists[indexPath.row]
       cell.display(container: artist, rootView: self)
+      hlHaken(cell, artist)
       return cell
     case .Album:
       let cell: GenericTableCell = dequeueCell(for: tableView, at: indexPath)
       let album = albums[indexPath.row]
       cell.display(container: album, rootView: self)
+      hlHaken(cell, album)
       return cell
     case .Song:
       let cell: PlayableTableCell = dequeueCell(for: tableView, at: indexPath)
       let song = songs[indexPath.row]
+      cell.hlHaken = true // HomeLabMusic (P11)
       cell.display(playable: song, playContextCb: convertCellViewToPlayContext, rootView: self)
       return cell
     case .Entdecken: // HomeLabMusic
@@ -606,11 +613,11 @@ class SearchVC: BasicTableViewController {
 
           var result = SearchResultObjectContainer()
           result.artistsIDs = FuzzySearcher.findBestMatch(in: artists, search: searchText)
-            .prefix(upToAsArray: Self.categoryItemLimitAlle)
+            .prefix(upToAsArray: Self.categoryItemKandidaten)
             .compactMap { $0 as? Artist }
             .compactMap { $0.managedObject.objectID }
           result.albumsIDs = FuzzySearcher.findBestMatch(in: albums, search: searchText)
-            .prefix(upToAsArray: Self.categoryItemLimitAlle)
+            .prefix(upToAsArray: Self.categoryItemKandidaten)
             .compactMap { $0 as? Album }
             .compactMap { $0.managedObject.objectID }
           result.playlistsIDs = FuzzySearcher.findBestMatch(in: playlists, search: searchText)
@@ -618,7 +625,7 @@ class SearchVC: BasicTableViewController {
             .compactMap { $0 as? Playlist }
             .compactMap { $0.managedObject.objectID }
           result.songsIDs = FuzzySearcher.findBestMatch(in: songs, search: searchText)
-            .prefix(upToAsArray: Self.categoryItemLimitAlle)
+            .prefix(upToAsArray: Self.categoryItemKandidaten)
             .compactMap { $0 as? Song }
             .compactMap { $0.managedObject.objectID }
           return result
@@ -627,19 +634,22 @@ class SearchVC: BasicTableViewController {
         guard searchText == self.searchController.searchBar.text else { return }
         self.isSearchActive = true
         self.searchHistory = []
-        self.artists = searchResult.artistsIDs
+        // HomeLabMusic: Eigenes zuerst (P11)
+        let hlAnzahl = self.searchController.searchBar.selectedScopeButtonIndex == 0
+          ? Self.categoryItemLimitAlle : Self.categoryItemLimit
+        self.artists = HLMediathekUI.eigenesZuerst(searchResult.artistsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? ArtistMO }
-          .compactMap { Artist(managedObject: $0) }
-        self.albums = searchResult.albumsIDs
+          .compactMap { Artist(managedObject: $0) }, anzahl: hlAnzahl)
+        self.albums = HLMediathekUI.eigenesZuerst(searchResult.albumsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? AlbumMO }
-          .compactMap { Album(managedObject: $0) }
+          .compactMap { Album(managedObject: $0) }, anzahl: hlAnzahl)
         self.playlists = searchResult.playlistsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? PlaylistMO }
           .compactMap { Playlist(library: self.appDelegate.storage.main.library, managedObject: $0)
           }
-        self.songs = searchResult.songsIDs
+        self.songs = HLMediathekUI.eigenesZuerst(searchResult.songsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? SongMO }
-          .compactMap { Song(managedObject: $0) }
+          .compactMap { Song(managedObject: $0) }, anzahl: hlAnzahl)
         self.tableView.separatorStyle = .singleLine
         self.updateDataSource(animated: false)
         self.updateContentUnavailable()
@@ -697,19 +707,22 @@ class SearchVC: BasicTableViewController {
         guard searchText == self.searchController.searchBar.text else { return }
         self.isSearchActive = true
         self.searchHistory = []
-        self.artists = searchResult.artistsIDs
+        // HomeLabMusic: Eigenes zuerst (P11)
+        let hlAnzahl = self.searchController.searchBar.selectedScopeButtonIndex == 0
+          ? Self.categoryItemLimitAlle : Self.categoryItemLimit
+        self.artists = HLMediathekUI.eigenesZuerst(searchResult.artistsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? ArtistMO }
-          .compactMap { Artist(managedObject: $0) }
-        self.albums = searchResult.albumsIDs
+          .compactMap { Artist(managedObject: $0) }, anzahl: hlAnzahl)
+        self.albums = HLMediathekUI.eigenesZuerst(searchResult.albumsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? AlbumMO }
-          .compactMap { Album(managedObject: $0) }
+          .compactMap { Album(managedObject: $0) }, anzahl: hlAnzahl)
         self.playlists = searchResult.playlistsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? PlaylistMO }
           .compactMap { Playlist(library: self.appDelegate.storage.main.library, managedObject: $0)
           }
-        self.songs = searchResult.songsIDs
+        self.songs = HLMediathekUI.eigenesZuerst(searchResult.songsIDs
           .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? SongMO }
-          .compactMap { Song(managedObject: $0) }
+          .compactMap { Song(managedObject: $0) }, anzahl: hlAnzahl)
         self.tableView.separatorStyle = .singleLine
         self.updateDataSource(animated: false)
         self.updateContentUnavailable()
@@ -727,6 +740,12 @@ class SearchVC: BasicTableViewController {
       updateDataSource(animated: false)
       updateContentUnavailable()
     }
+  }
+
+  /// HomeLabMusic (P11): ✓ für Künstler und Alben in der Mediathek, sonst Amperfys Pfeil.
+  private func hlHaken(_ cell: UITableViewCell, _ container: PlayableContainable) {
+    cell.accessoryView = HLMediathekUI.stufenAktiv && HLMediathekUI.eigen(container)
+      ? HLMediathekUI.haken(pfeil: true) : nil
   }
 
   func updateContentUnavailable() {

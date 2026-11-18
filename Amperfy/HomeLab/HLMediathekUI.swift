@@ -223,6 +223,51 @@ enum HLMediathekUI {
     return [songAktion(song)]
   }
 
+  // MARK: Suche (P11): Eigenes zuerst, mit ✓
+
+  /// Gehört der Treffer (Song, Album, Künstler) zur Mediathek?
+  static func eigen(_ c: PlayableContainable) -> Bool {
+    if let s = (c as? AbstractPlayable)?.asSong { return s.managedObject.hlInMediathek }
+    if let a = c as? Album { return a.managedObject.hlMediathekSeit != nil }
+    if let k = c as? Artist { return k.managedObject.hlInMediathek }
+    return false
+  }
+
+  /// Die besten Treffer, Eigenes vor dem Rest des Servers; innerhalb beider bleibt die Trefferfolge.
+  static func eigenesZuerst<T: PlayableContainable>(_ liste: [T], anzahl: Int) -> [T] {
+    guard stufenAktiv else { return Array(liste.prefix(anzahl)) }
+    let eigene = liste.filter { eigen($0) }
+    return Array((eigene + liste.filter { !eigen($0) }).prefix(anzahl))
+  }
+
+  /// Überschrift einer Trefferart: «Songs», ohne eigene Treffer «Songs auf dem Server».
+  static func suchTitel(_ basis: String, _ liste: [PlayableContainable]) -> String {
+    guard stufenAktiv, !liste.isEmpty, !liste.contains(where: { eigen($0) }) else { return basis }
+    return "\(basis) auf dem Server"
+  }
+
+  /// ✓ am Zeilenende für eigene Treffer; mit Pfeil für Künstler und Alben (öffnen eine Seite).
+  static func haken(pfeil: Bool) -> UIView {
+    let farbe = appDelegate.storage.settings.accounts.getSetting(HLAPI.shared.account?.info).read
+      .themePreference.asColor
+    let bild = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+    bild.tintColor = farbe
+    bild.accessibilityLabel = "In deiner Mediathek"
+    guard pfeil else {
+      bild.frame = CGRect(x: 0, y: 0, width: 24, height: 24)
+      bild.contentMode = .center
+      return bild
+    }
+    let weiter = UIImageView(image: UIImage(systemName: "chevron.right",
+                                            withConfiguration: UIImage.SymbolConfiguration(pointSize: 13, weight: .semibold)))
+    weiter.tintColor = .tertiaryLabel
+    let reihe = UIStackView(arrangedSubviews: [bild, weiter])
+    reihe.spacing = 10
+    reihe.alignment = .center
+    reihe.frame = CGRect(x: 0, y: 0, width: 46, height: 24)
+    return reihe
+  }
+
   // MARK: «+» in der Song-Zeile
 
   /// Knopf am Zeilenende für Songs, die nicht in der Mediathek sind; nil sonst.

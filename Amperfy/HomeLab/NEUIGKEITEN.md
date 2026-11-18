@@ -1,3 +1,10 @@
+## 2026-11-18c
+### Anders
+- Suche: Was in deiner Mediathek ist, steht bei Künstlern, Alben und Songs zuerst und trägt einen Haken. Gibt es in einer Art nur Treffer von der Familie, heisst die Überschrift «… auf dem Server».
+- Die Kacheln für Stimmungen und Anlässe zeigen jetzt ein passendes Zeichen (Geschenk, Feuerwerk, Skifahrer …) statt eines zufälligen Künstlerfotos.
+### Behoben
+- Auf der Seite «Hits der 80er» stand unter «Künstler» ein falscher Eintrag «80er».
+
 ## 2026-11-18b
 ### Neu
 - Der Player kann quer: Drehst du das iPhone bei offenem Player, siehst du links gross das Cover und rechts Titel, Zeitleiste und Knöpfe. Gut für die Halterung im Auto, den Schreibtisch oder die Küche. Der Rest der App bleibt hochkant.

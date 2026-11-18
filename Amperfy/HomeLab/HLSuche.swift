@@ -362,42 +362,45 @@ final class HLSuchEinbau {
 struct HLKachel: Hashable {
   let titel: String
   let suche: String
-  /// Suchwort für das Hintergrundbild (Titelbild einer passenden Deezer-Playlist), Englisch trifft besser.
+  /// Suchwort für Playlists auf der Kategorie-Seite und (nur Genres) für das Hintergrundbild, Englisch trifft besser.
   let bild: String
+  /// Feste Kacheln zeichnen ein Symbol statt eines Deezer-Bilds: Deezers Titelbilder zeigen meist einen Künstler
+  /// (Silvester: Daft Punk).
+  var symbol: String? = nil
 
   /// Stimmungen, die der Medienwunsch-Dienst erkennt (entdecken.py, STIMMUNG; er schreibt klein). Höchstens
   /// zwei Wörter: ab drei Wörtern fragt er Claude. Der Suchtext erscheint in der Überschrift («Klingt nach …»).
   static let stimmungen: [HLKachel] = [
-    HLKachel(titel: "Entspannt", suche: "Entspannt", bild: "chill"),
-    HLKachel(titel: "Gute Laune", suche: "Gute Laune", bild: "good vibes"),
-    HLKachel(titel: "Party", suche: "Party", bild: "party"),
-    HLKachel(titel: "Zum Joggen", suche: "Zum Joggen", bild: "running"),
-    HLKachel(titel: "Konzentration", suche: "Konzentration", bild: "focus"),
-    HLKachel(titel: "Melancholisch", suche: "Melancholisch", bild: "melancholic"),
-    HLKachel(titel: "Romantisch", suche: "Romantisch", bild: "love songs"),
-    HLKachel(titel: "Autofahren", suche: "Autofahren", bild: "road trip"),
+    HLKachel(titel: "Entspannt", suche: "Entspannt", bild: "chill", symbol: "leaf.fill"),
+    HLKachel(titel: "Gute Laune", suche: "Gute Laune", bild: "good vibes", symbol: "sun.max.fill"),
+    HLKachel(titel: "Party", suche: "Party", bild: "party", symbol: "party.popper.fill"),
+    HLKachel(titel: "Zum Joggen", suche: "Zum Joggen", bild: "running", symbol: "figure.run"),
+    HLKachel(titel: "Konzentration", suche: "Konzentration", bild: "focus", symbol: "brain.head.profile"),
+    HLKachel(titel: "Melancholisch", suche: "Melancholisch", bild: "melancholic", symbol: "cloud.rain.fill"),
+    HLKachel(titel: "Romantisch", suche: "Romantisch", bild: "love songs", symbol: "heart.fill"),
+    HLKachel(titel: "Autofahren", suche: "Autofahren", bild: "road trip", symbol: "car.fill"),
   ]
 
   /// Die grössten Genres der Bibliothek (ohne Hörspiele), höchstens acht.
   /// Anlässe und Jahrzehnte (entdecken.py, THEMEN; die Suche muss dort ein Thema treffen). Monate: Saison,
   /// passende stehen zuerst, Anlässe ausser Saison zuletzt.
   static let anlaesse: [(HLKachel, [Int])] = [
-    (HLKachel(titel: "Weihnachten", suche: "Weihnachtslieder", bild: "christmas hits"), [11, 12]),
-    (HLKachel(titel: "Silvester", suche: "Silvester", bild: "new year party"), [11, 12, 1]),
-    (HLKachel(titel: "Après-Ski", suche: "Après-Ski", bild: "apres ski"), [12, 1, 2, 3]),
-    (HLKachel(titel: "Fasnacht", suche: "Fasnacht", bild: "karneval hits"), [1, 2, 3]),
-    (HLKachel(titel: "Sommerhits", suche: "Sommerhits", bild: "summer hits"), [6, 7, 8]),
-    (HLKachel(titel: "Oktoberfest", suche: "Oktoberfest", bild: "oktoberfest"), [9, 10]),
-    (HLKachel(titel: "Halloween", suche: "Halloween", bild: "halloween party"), [10]),
-    (HLKachel(titel: "Aktuelle Hits", suche: "Aktuelle Hits", bild: "top hits"), []),
-    (HLKachel(titel: "Mundart", suche: "Mundart", bild: "mundart"), []),
-    (HLKachel(titel: "Hochzeit", suche: "Hochzeit", bild: "wedding songs"), []),
-    (HLKachel(titel: "Geburtstag", suche: "Geburtstag", bild: "birthday party"), []),
-    (HLKachel(titel: "Hits der 80er", suche: "80er", bild: "80s hits"), []),
-    (HLKachel(titel: "Hits der 90er", suche: "90er", bild: "90s hits"), []),
-    (HLKachel(titel: "Hits der 2000er", suche: "2000er", bild: "2000s hits"), []),
-    (HLKachel(titel: "Disney", suche: "Disney", bild: "disney hits"), []),
-    (HLKachel(titel: "Filmhits", suche: "Filmhits", bild: "movie soundtrack"), []),
+    (HLKachel(titel: "Weihnachten", suche: "Weihnachtslieder", bild: "christmas hits", symbol: "gift.fill"), [11, 12]),
+    (HLKachel(titel: "Silvester", suche: "Silvester", bild: "new year party", symbol: "sparkles"), [11, 12, 1]),
+    (HLKachel(titel: "Après-Ski", suche: "Après-Ski", bild: "apres ski", symbol: "figure.skiing.downhill"), [12, 1, 2, 3]),
+    (HLKachel(titel: "Fasnacht", suche: "Fasnacht", bild: "karneval hits", symbol: "theatermasks.fill"), [1, 2, 3]),
+    (HLKachel(titel: "Sommerhits", suche: "Sommerhits", bild: "summer hits", symbol: "beach.umbrella.fill"), [6, 7, 8]),
+    (HLKachel(titel: "Oktoberfest", suche: "Oktoberfest", bild: "oktoberfest", symbol: "mug.fill"), [9, 10]),
+    (HLKachel(titel: "Halloween", suche: "Halloween", bild: "halloween party", symbol: "moon.stars.fill"), [10]),
+    (HLKachel(titel: "Aktuelle Hits", suche: "Aktuelle Hits", bild: "top hits", symbol: "chart.line.uptrend.xyaxis"), []),
+    (HLKachel(titel: "Mundart", suche: "Mundart", bild: "mundart", symbol: "mountain.2.fill"), []),
+    (HLKachel(titel: "Hochzeit", suche: "Hochzeit", bild: "wedding songs", symbol: "bell.fill"), []),
+    (HLKachel(titel: "Geburtstag", suche: "Geburtstag", bild: "birthday party", symbol: "birthday.cake.fill"), []),
+    (HLKachel(titel: "Hits der 80er", suche: "80er", bild: "80s hits", symbol: "recordingtape"), []),
+    (HLKachel(titel: "Hits der 90er", suche: "90er", bild: "90s hits", symbol: "opticaldisc.fill"), []),
+    (HLKachel(titel: "Hits der 2000er", suche: "2000er", bild: "2000s hits", symbol: "headphones"), []),
+    (HLKachel(titel: "Disney", suche: "Disney", bild: "disney hits", symbol: "wand.and.stars"), []),
+    (HLKachel(titel: "Filmhits", suche: "Filmhits", bild: "movie soundtrack", symbol: "film.fill"), []),
   ]
 
   static func anlaesseJetzt(_ datum: Date = Date()) -> [HLKachel] {
@@ -507,7 +510,7 @@ struct HLStoebernView: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, 8)
-    .task { await bilder.laden(HLKachel.stimmungen + HLKachel.anlaesseJetzt() + genres) }
+    .task { await bilder.laden(genres) }
   }
 
   private func gruppe(_ titel: String, _ liste: [HLKachel], farbeAb: Int) -> some View {
@@ -516,7 +519,8 @@ struct HLStoebernView: View {
       LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
         ForEach(Array(liste.enumerated()), id: \.element) { i, k in
           Button { waehlen(k) } label: {
-            HLKachelBild(url: bilder.urls[k.bild], farbe: HLKachel.farben[(farbeAb + i) % HLKachel.farben.count])
+            HLKachelBild(url: k.symbol == nil ? bilder.urls[k.bild] : nil,
+                         farbe: HLKachel.farben[(farbeAb + i) % HLKachel.farben.count], symbol: k.symbol)
               .aspectRatio(1.6, contentMode: .fit)
               .overlay(alignment: .bottomLeading) {
                 Text(k.titel)
@@ -538,11 +542,22 @@ struct HLStoebernView: View {
 struct HLKachelBild: View {
   let url: URL?
   let farbe: Color
+  var symbol: String? = nil
   @State private var bild: UIImage?
 
   var body: some View {
     Color.clear
       .background(farbe.gradient)
+      .overlay(alignment: .topTrailing) {
+        if let symbol {
+          Image(systemName: symbol)
+            .font(.system(size: 46, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.9))
+            .rotationEffect(.degrees(-10))
+            .padding(.top, 12).padding(.trailing, 14)
+            .accessibilityHidden(true)
+        }
+      }
       .overlay {
         if let bild {
           Image(uiImage: bild).resizable().scaledToFill().transition(.opacity)

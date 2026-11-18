@@ -93,6 +93,7 @@ class PlayableTableCell: BasicTableCell {
   private var download: Download?
   private var rootView: UIViewController?
   private var playIndicator: PlayIndicator?
+  var hlHaken = false // HomeLabMusic: ✓ für eigene Songs (nur in der Suche, P11)
   private var isDislayAlbumTrackNumberStyle: Bool = false
   private var displayMode: DisplayMode = .normal
   #if targetEnvironment(macCatalyst) // ok
@@ -373,6 +374,7 @@ class PlayableTableCell: BasicTableCell {
     } else {
       // HomeLabMusic: «+» für Songs, die nicht in der Mediathek sind
       accessoryView = HLMediathekUI.zubehoer(fuer: playable) { [weak self] in self?.refresh() }
+        ?? (hlHaken && HLMediathekUI.eigen(playable) ? HLMediathekUI.haken(pfeil: false) : nil)
     }
 
     refreshSubtitleColor()
