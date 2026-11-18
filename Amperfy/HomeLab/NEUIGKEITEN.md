@@ -1,12 +1,12 @@
 ## 2026-11-18
 ### Neu
+- «Entdecken» ist neu aufgebaut, näher an Apple Music: zuoberst «Für dich gemacht» mit deinen Wochenmixen als grosse Karten, grosse Überschriften, «Charts Schweiz» und «Stimmungen für dich»: Ein Tipp auf Entspannt, Power, Party oder Bunt gemischt spielt sofort einen Mix aus deiner Mediathek.
+- «Deine Wünsche» ist jetzt eine Zeile mit eigener Seite statt einer langen Liste.
 - Songs, die jemand aus der Familie schon hat, tragen unter «Entdecken» und in der Suche ein «+»: Antippen holt sie sofort in deine Mediathek. Ein Haken heisst jetzt immer «in deiner Mediathek».
 - Alben und Playlists unter «Entdecken» zeigen, wie viel davon in deiner Mediathek ist. «n zur Mediathek» holt alles, was schon auf dem Server ist; «Rest wünschen» lädt den Rest.
 - Ein Herz auf einem Song nimmt ihn auch in deine Mediathek auf.
 - Albumseite: Unter den Songs steht, wie viel vom Album in deiner Mediathek ist, mit «zur Mediathek» und «Rest wünschen»; darunter die Songs, die auf dem Server noch fehlen, zum Reinhören.
 - Künstlerseite: Top-Songs, Alben, Singles und EPs und ähnliche Künstler direkt auf der Seite. Ein Haken heisst «in deiner Mediathek», ein halber Kreis «auf dem Server».
-- «Entdecken» ist neu aufgebaut, näher an Apple Music: zuoberst «Für dich gemacht» mit deinen Wochenmixen als grosse Karten, grosse Überschriften, «Charts Schweiz» und «Stimmungen für dich»: Ein Tipp auf Entspannt, Power, Party oder Bunt gemischt spielt sofort einen Mix aus deiner Mediathek.
-- «Deine Wünsche» ist jetzt eine Zeile mit eigener Seite statt einer langen Liste.
 - Songs stehen jetzt wie bei Apple Music in einem Raster: vier untereinander, seitwärts wischen zeigt die nächsten. Statt langer Listen in der Suche, unter «Entdecken» und auf Künstlerseiten.
 ### Anders
 - Wünschst du einen Song, den die Familie schon hat, kommt er sofort in deine Mediathek statt nur «Hast du schon».
