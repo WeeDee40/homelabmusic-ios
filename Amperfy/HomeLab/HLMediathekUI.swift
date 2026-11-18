@@ -60,6 +60,22 @@ enum HLMediathekUI {
     return aufServer > 0 ? "\(aufServer) auf dem Server" : nil
   }
 
+  /// Stufe eines Albums der Diskografie: in der Mediathek (mindestens ein Song), auf dem Server, sonst neu.
+  static func albumStufe(titel: String?, kuenstler: String, aufServer: Bool) -> HLStufe {
+    guard aufServer else { return .neu }
+    guard stufenAktiv, let titel, let account = HLAPI.shared.account else { return .mediathek }
+    let r = NSFetchRequest<AlbumMO>(entityName: "Album")
+    r.predicate = NSPredicate(format: "name ==[cd] %@ AND artist.name ==[cd] %@ AND account == %@ AND hlMediathekSeit != nil",
+                              titel, kuenstler, account.managedObject.objectID)
+    r.fetchLimit = 1
+    return ((try? kontext.count(for: r)) ?? 0) > 0 ? .mediathek : .server
+  }
+
+  /// Albumseite der Bibliothek: Songs des Albums, die noch nicht in der Mediathek sind (Navidrome-IDs).
+  static func nichtInMediathek(album: Album) -> [String] {
+    album.playables.compactMap { $0.asSong }.filter { !$0.managedObject.hlInMediathek }.map(\.id)
+  }
+
   /// Herz gesetzt: Song in die Mediathek (Entscheid 18.11.2026). Das Herz entfernen nimmt ihn nicht heraus.
   static func lieblingGesetzt(_ id: String) {
     guard aktiv, !inMediathek(navidromeId: id) else { return }

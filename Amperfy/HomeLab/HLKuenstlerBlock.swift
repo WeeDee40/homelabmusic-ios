@@ -75,22 +75,33 @@ struct HLKuenstlerBlock: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       if let d = modell.seite {
-        let id = d.kuenstler.id
         let istGefolgt = modell.folgt ?? false
         ViewThatFits(in: .horizontal) {
           knoepfe(d, istGefolgt, kurz: false)
           knoepfe(d, istGefolgt, kurz: true)
         }
-        let neu = d.top.filter { HLPlayer.shared.stufe($0) != .mediathek }
-        if !neu.isEmpty {
-          Text(HLMediathekUI.stufenAktiv ? "Beliebt, noch nicht in deiner Mediathek" : "Beliebt, noch nicht bei dir")
-            .font(.headline)
-          HLSongRaster(songs: Array(neu.prefix(12)))
+        if !d.top.isEmpty {
+          Text("Top-Songs").font(.headline)
+          HLSongRaster(songs: Array(d.top.prefix(12)))
         }
-        Button { oeffnen(.kuenstler(id)) } label: {
-          Label("Diskografie und ähnliche Künstler", systemImage: "sparkles").font(.subheadline.weight(.semibold))
+        // Diskografie direkt auf der Seite (Zeichen: ✓ Mediathek, ◐ Server, ohne = fehlt)
+        let alben = d.alben.filter { $0.typ == "album" }
+        let kurz = d.alben.filter { $0.typ != "album" }
+        if !alben.isEmpty {
+          Text("Alben").font(.headline)
+          HLAlbumBand(alben: alben, kuenstler: d.kuenstler.name)
         }
-        .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+        if !kurz.isEmpty {
+          Text("Singles und EPs").font(.headline)
+          HLAlbumBand(alben: kurz, kuenstler: d.kuenstler.name)
+        }
+        if !d.aehnlich.isEmpty {
+          Text("Ähnliche Künstler").font(.headline)
+          HLKuenstlerBand(liste: d.aehnlich)
+        }
+        if HLMediathekUI.stufenAktiv {
+          Text("Auf dem Server").font(.headline).padding(.top, 6)   // darunter Amperfys Liste der Bibliothek
+        }
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -157,5 +168,143 @@ final class HLKuenstlerEinbau {
     }
     .margins(.vertical, 0)
     return zelle
+  }
+}
+
+// MARK: - Albumseite der Bibliothek
+
+@MainActor
+final class HLAlbumModell: ObservableObject {
+  @Published private(set) var abgleich: HLAlbumAbgleich?
+  @Published var mediathekStand = 0                     // nach «Alle zur Mediathek» neu zählen
+  var geaendert: (() -> ())?
+  private var geladen = false
+
+  func laden(album: Album) async {
+    guard !geladen else { return }
+    geladen = true
+    guard let d = try? await HLAPI.shared.albumAbgleich(album.id) else { return }
+    abgleich = d
+    geaendert?()
+  }
+}
+
+/// Unter Amperfys Songliste: wie viel vom Album in deiner Mediathek ist, alles holen, Fehlendes wünschen,
+/// darunter die Songs, die auf dem Server fehlen (zum Reinhören und Wünschen).
+struct HLAlbumBlock: View {
+  let album: Album
+  @ObservedObject var modell: HLAlbumModell
+  @ObservedObject private var player = HLPlayer.shared
+  @State private var gewuenscht = false
+  @State private var rueckfrage = false
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      let fehlt = modell.abgleich?.fehlt ?? []
+      let _ = modell.mediathekStand
+      let offen = HLMediathekUI.stufenAktiv ? HLMediathekUI.nichtInMediathek(album: album) : []
+      let gesamt = max(modell.abgleich?.anzahl ?? 0, album.songCount)
+      let eigene = album.songCount - offen.count
+      let wuenschbar = fehlt.filter { player.stufe($0) == .neu && $0.deezerId != nil }
+      let anderswo = fehlt.filter { player.stufe($0) == .server }
+      if HLMediathekUI.stufenAktiv, gesamt > 0 {
+        Text("\(eigene) von \(gesamt) Songs in deiner Mediathek").font(.subheadline).foregroundStyle(.secondary)
+      }
+      HStack {
+        if !offen.isEmpty || !anderswo.isEmpty {
+          Button {
+            Task {
+              do {
+                try await HLMediathek.shared.hinzufuegen(songIds: offen)
+                player.zurMediathek(anderswo)
+                modell.mediathekStand += 1
+                player.zeigeHinweis("\(offen.count + anderswo.count) Songs zur Mediathek hinzugefügt.")
+              } catch {
+                player.zeigeHinweis(error.localizedDescription)
+              }
+            }
+          } label: { Label("\(offen.count + anderswo.count) zur Mediathek", systemImage: "plus") }
+            .buttonStyle(HLKapsel(haupt: true))
+        }
+        if !wuenschbar.isEmpty {
+          Button { rueckfrage = true } label: {
+            Label(gewuenscht ? "Gewünscht" : "Rest wünschen (\(wuenschbar.count))",
+                  systemImage: gewuenscht ? "hourglass" : "arrow.down.circle")
+          }
+          .buttonStyle(HLKapsel())
+          .disabled(gewuenscht)
+        }
+      }
+      if !fehlt.isEmpty {
+        Text("Fehlt noch auf dem Server").font(.headline).padding(.top, 4)
+        ForEach(fehlt.indices, id: \.self) { HLSongZeile(songs: fehlt, i: $0, mitAlbum: false, kurzerKnopf: true) }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, 20)
+    .padding(.vertical, 14)
+    .task { await modell.laden(album: album) }
+    .confirmationDialog("\(wuenschbarAnzahl) Songs wünschen?", isPresented: $rueckfrage, titleVisibility: .visible) {
+      Button("\(wuenschbarAnzahl) Songs wünschen") { wuenschen() }
+      Button("Abbrechen", role: .cancel) {}
+    } message: {
+      Text("Sie gehen an SoulSync und kommen nach und nach.")
+    }
+  }
+
+  private var wuenschbarAnzahl: Int {
+    (modell.abgleich?.fehlt ?? []).filter { player.stufe($0) == .neu && $0.deezerId != nil }.count
+  }
+
+  private func wuenschen() {
+    let liste = (modell.abgleich?.fehlt ?? []).filter { player.stufe($0) == .neu && $0.deezerId != nil }
+    gewuenscht = true
+    Task {
+      do {
+        let r = try await HLAPI.shared.wunsch(songs: Array(liste.compactMap(\.deezerId).prefix(HLSammelKnoepfe.hoechstens)))
+        player.alsAngefragtMarkieren(liste)
+        player.zeigeHinweis(r.meldung ?? "Gewünscht.")
+      } catch {
+        gewuenscht = false
+        player.zeigeHinweis(error.localizedDescription)
+      }
+    }
+  }
+}
+
+/// Alles, was AlbumDetailVC braucht: eine Fusszeile unter der Songliste (passt ihre Höhe selbst an).
+@MainActor
+final class HLAlbumEinbau {
+  private let modell = HLAlbumModell()
+  private let host: UIHostingController<AnyView>
+  private weak var vc: UITableViewController?
+  private var breite: CGFloat = 0
+
+  init?(album: Album, vc: UITableViewController) {
+    guard !(UIApplication.shared.delegate as! AppDelegate).storage.settings.user.isOfflineMode else { return nil }
+    self.vc = vc
+    host = UIHostingController(rootView: AnyView(EmptyView()))
+    let oeffnen: @MainActor (HLZiel) -> () = { [weak vc] ziel in
+      vc?.navigationController?.pushViewController(HLTab.zielAnsicht(ziel), animated: true)
+    }
+    host.rootView = AnyView(HLAlbumBlock(album: album, modell: modell).environment(\.hlOeffnen, oeffnen))
+    host.view.backgroundColor = .clear
+    vc.addChild(host)
+    host.didMove(toParent: vc)
+    modell.geaendert = { [weak self] in
+      Task { @MainActor in self?.groesseAnpassen(erzwingen: true) }
+    }
+    HLSpielLeiste.einbauen(in: vc)                      // Hinweise («Gewünscht», «Hinzugefügt»)
+  }
+
+  /// Aus viewDidLayoutSubviews: Fusszeile auf Breite und Inhalt bringen.
+  func groesseAnpassen(erzwingen: Bool = false) {
+    guard let tabelle = vc?.tableView else { return }
+    let w = tabelle.bounds.width
+    guard w > 0, erzwingen || w != breite else { return }
+    breite = w
+    let h = host.sizeThatFits(in: CGSize(width: w, height: .greatestFiniteMagnitude)).height
+    host.view.frame = CGRect(x: 0, y: 0, width: w, height: h)
+    tabelle.tableFooterView = host.view
   }
 }

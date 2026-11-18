@@ -45,6 +45,7 @@ class AlbumDetailVC: SingleSnapshotFetchedResultsTableViewController<SongMO> {
   private var optionsButton: UIBarButtonItem!
   private var detailOperationsView: GenericDetailTableHeader?
   let album: Album
+  private var hlBlock: HLAlbumEinbau? // HomeLabMusic: Stand der Mediathek und fehlende Songs unter der Liste
 
   init(account: Account, album: Album) {
     self.album = album
@@ -98,6 +99,7 @@ class AlbumDetailVC: SingleSnapshotFetchedResultsTableViewController<SongMO> {
     tableView.sectionHeaderHeight = 0.0
     tableView.estimatedSectionHeaderHeight = 0.0
     tableView.backgroundColor = .backgroundColor
+    hlBlock = HLAlbumEinbau(album: album, vc: self) // HomeLabMusic
 
     let playShuffleInfoConfig = PlayShuffleInfoConfiguration(
       infoCB: { "\(String(localized: "\(self.album.songCount) Songs"))" },
@@ -139,6 +141,11 @@ class AlbumDetailVC: SingleSnapshotFetchedResultsTableViewController<SongMO> {
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
     navigationController?.navigationBar.prefersLargeTitles = false
+  }
+
+  override func viewDidLayoutSubviews() { // HomeLabMusic: Fusszeile «Fehlt noch»
+    super.viewDidLayoutSubviews()
+    hlBlock?.groesseAnpassen()
   }
 
   override func viewIsAppearing(_ animated: Bool) {

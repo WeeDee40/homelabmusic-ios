@@ -338,6 +338,7 @@ struct HLAlbumGitter: View {
           VStack(alignment: .leading, spacing: 3) {
             GeometryReader { g in HLBild(pfad: a.bild, groesse: g.size.width) }
               .aspectRatio(1, contentMode: .fit)
+              .overlay(alignment: .topTrailing) { HLAlbumZeichen(album: a, kuenstler: a.kuenstler) }
             Text(a.titel ?? "").font(.subheadline.weight(.semibold)).lineLimit(1)
             Text([a.jahr, a.typText].compactMap { $0 }.joined(separator: " · "))
               .font(.caption).foregroundStyle(.secondary)
@@ -383,6 +384,7 @@ struct HLLaden<T: Sendable, Inhalt: View>: View {
 /// Waagrechte Reihe neuer Alben (Startseite).
 struct HLAlbumBand: View {
   let alben: [HLAlbum]
+  var kuenstler: String? = nil                          // Diskografie: für das Zeichen Mediathek/Server
   @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
@@ -392,12 +394,10 @@ struct HLAlbumBand: View {
           VStack(alignment: .leading, spacing: 3) {
             ZStack(alignment: .topTrailing) {
               HLBild(pfad: a.bild, groesse: 130)
-              if a.vorhanden == true {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.white, .green).font(.title3).padding(6)
-              }
+              HLAlbumZeichen(album: a, kuenstler: kuenstler ?? a.kuenstler)
             }
             Text(a.titel ?? "").font(.subheadline.weight(.semibold)).lineLimit(1)
-            Text(a.kuenstler ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            if kuenstler == nil { Text(a.kuenstler ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             Text([a.typText, Self.datum(a.jahrDatum)].compactMap { $0 }.joined(separator: " · "))
               .font(.caption2).foregroundStyle(.secondary)
           }
@@ -865,5 +865,29 @@ struct HLSongRaster: View {
     }
     .scrollTargetBehavior(.viewAligned)
     .scrollClipDisabled()
+  }
+}
+
+/// Zeichen oben rechts auf einem Album: ✓ in deiner Mediathek, ◐ auf dem Server, nichts = fehlt.
+/// Startseite (ohne «aufServer»): ✓, wenn das Album auf dem Server ist.
+struct HLAlbumZeichen: View {
+  let album: HLAlbum
+  let kuenstler: String?
+
+  var body: some View {
+    let stufe: HLStufe? = album.aufServer.map {
+      HLMediathekUI.albumStufe(titel: album.titel, kuenstler: kuenstler ?? "", aufServer: $0)
+    } ?? (album.vorhanden == true ? .mediathek : nil)
+    switch stufe {
+    case .mediathek:
+      Image(systemName: "checkmark.circle.fill").foregroundStyle(.white, .green).font(.title3).padding(6)
+        .accessibilityLabel(HLMediathekUI.stufenAktiv ? "In deiner Mediathek" : "Bei dir")
+    case .server:
+      Image(systemName: "circle.lefthalf.filled").foregroundStyle(.white, Color.accentColor).font(.title3)
+        .padding(6).shadow(color: .black.opacity(0.3), radius: 2)
+        .accessibilityLabel("Auf dem Server")
+    default:
+      EmptyView()
+    }
   }
 }
