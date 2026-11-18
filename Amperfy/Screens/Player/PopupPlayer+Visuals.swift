@@ -35,6 +35,7 @@ extension PopupPlayerVC {
   func refreshCurrentlyPlayingInfoView() {
     refreshBackgroundItemArtwork()
     largeCurrentlyPlayingView?.refresh()
+    hlQuer?.auffrischen()
     for visibleCell in tableView.visibleCells {
       if let currentlyPlayingCell = visibleCell as? CurrentlyPlayingTableCell {
         currentlyPlayingCell.refresh()
@@ -46,6 +47,7 @@ extension PopupPlayerVC {
   func refreshCurrentlyPlayingArtworks() {
     refreshBackgroundItemArtwork()
     largeCurrentlyPlayingView?.refreshArtwork()
+    hlQuer?.auffrischen()
     for visibleCell in tableView.visibleCells {
       if let currentlyPlayingCell = visibleCell as? CurrentlyPlayingTableCell {
         currentlyPlayingCell.refreshArtwork()

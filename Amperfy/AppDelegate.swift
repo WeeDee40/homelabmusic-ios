@@ -246,6 +246,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
 
+  // HomeLabMusic: iPhone im Hochformat, nur der offene Player darf sich drehen (HLQuerformat)
+  func application(
+    _ application: UIApplication,
+    supportedInterfaceOrientationsFor window: UIWindow?
+  )
+    -> UIInterfaceOrientationMask {
+    HLQuerformat.maske
+  }
+
   var isNormalInteraction: Bool {
     storage.settings.accounts.active != nil && !libraryUpdater
       .isVisualUpadateNeeded

@@ -55,6 +55,7 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
   var controlView: PlayerControlView?
   var largeCurrentlyPlayingView: LargeCurrentlyPlayingPlayerView?
   var accountNotificationHandler: AccountNotificationHandler?
+  var hlQuer: HLQuerformatEinbau? // HomeLabMusic: Querformat-Player (iPhone)
 
   var currentlyPlayingTableCell: CurrentlyPlayingTableCell?
   var contextPrevQueueSectionHeader: ContextQueuePrevSectionHeader?
@@ -109,6 +110,7 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
     }
 
     closeButtonPlaceholderView.isHidden = true
+    hlQuer = HLQuerformatEinbau(vc: self)
 
     setupTableView()
     fetchSongInfoAndUpdateViews()
@@ -176,6 +178,12 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
     refreshCellMasks()
     controlView?.refreshView()
     applyGradientBackground()
+    hlQuer?.anpassen()
+  }
+
+  override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    HLQuerformat.player(offen: true, self) // HomeLabMusic: nur der Player darf sich drehen
   }
 
   override func viewIsAppearing(_ animated: Bool) {
@@ -195,6 +203,7 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     resignFirstResponder()
+    HLQuerformat.player(offen: false, self)
   }
 
   override func viewWillLayoutSubviews() {
