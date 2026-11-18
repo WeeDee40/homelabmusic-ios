@@ -239,6 +239,19 @@ class TabBarVC: UITabBarController {
 
   public func push(vc: UIViewController) {
     guard let libraryGroup else { return }
+    // HomeLabMusic: Die Übersicht der Bibliothek legt UIKit erst beim ersten Öffnen des Tabs in den Stapel.
+    // Ein Sprung vorher (z. B. «Album zeigen» im Player gleich nach dem Start) machte das Album zur einzigen
+    // Seite: kein Zurück-Pfeil, und der Tab «Bibliothek» führte nicht mehr zur Übersicht.
+    if let nav = libraryGroup.managingNavigationController, nav.viewControllers.isEmpty {
+      selectedTab = libraryGroup
+      DispatchQueue.main.async {
+        if nav.viewControllers.isEmpty {
+          nav.setViewControllers([AppStoryboard.Main.segueToLibrary(account: self.account)], animated: false)
+        }
+        nav.pushViewController(vc, animated: true)
+      }
+      return
+    }
     libraryGroup.managingNavigationController?.pushViewController(vc, animated: true)
     selectedTab = libraryGroup
   }
