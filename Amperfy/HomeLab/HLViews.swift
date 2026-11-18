@@ -254,6 +254,7 @@ struct HLSongZeile: View {
   let songs: [HLSong]
   let i: Int
   var mitAlbum = true
+  var kurzerKnopf = false                              // im Raster: «Wunsch» nur als «+»
   @ObservedObject private var player = HLPlayer.shared
   @Environment(\.hlOeffnen) private var oeffnen
 
@@ -277,7 +278,7 @@ struct HLSongZeile: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(Rectangle())
       .onTapGesture { player.spielen(songs, ab: i) }
-      HLStatusKnopf(song: s)
+      HLStatusKnopf(song: s, kurz: kurzerKnopf)
     }
     .opacity(s.istVorschau && s.vorschau == nil ? 0.45 : 1)
     .swipeActions(edge: .trailing) {
@@ -313,7 +314,7 @@ struct HLKuenstlerBand: View {
               HLBild(pfad: a.bild, groesse: 96, rund: true)
               Text(a.name).font(.subheadline.weight(.semibold)).lineLimit(1)
               if let text = HLMediathekUI.kuenstlerText(name: a.name, aufServer: a.inBibliothek ?? 0) {
-                Text(text).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(text).font(.caption).foregroundStyle(.secondary).lineLimit(2).multilineTextAlignment(.center)
               }
             }
             .frame(width: 104)
@@ -571,7 +572,7 @@ struct HLStartView: View {
           if r.typ == "alben", let alben = r.alben {
             HLAlbumBand(alben: alben)
           } else if let songs = r.songs {
-            HLSongBand(songs: songs)
+            HLSongRaster(songs: songs)
           }
         } header: {
           VStack(alignment: .leading, spacing: 1) {
@@ -683,7 +684,7 @@ struct HLKuenstlerView: View {
           .listRowSeparator(.hidden)
         }
         Section("Beliebte Songs") {
-          ForEach(d.top.indices, id: \.self) { HLSongZeile(songs: d.top, i: $0) }
+          HLSongRaster(songs: d.top)
         }
         if !d.alben.isEmpty { Section("Alben und Singles") { HLAlbumGitter(liste: d.alben) } }
         if !d.aehnlich.isEmpty { Section("Ähnliche Künstler") { HLKuenstlerBand(liste: d.aehnlich) } }
@@ -837,5 +838,32 @@ struct HLSammelKnoepfe: View {
         player.zeigeHinweis(error.localizedDescription)
       }
     }
+  }
+}
+
+/// Song-Raster wie bei Apple Music: vier Songs untereinander, waagrecht seitenweise blättern; die nächste Spalte
+/// schaut am rechten Rand hervor. Lange Listen gibt es nur noch auf Vollansichten (Album, Playlist).
+struct HLSongRaster: View {
+  let songs: [HLSong]
+  var zeilen = 4
+  var mitAlbum = true
+  @ObservedObject private var player = HLPlayer.shared
+
+  var body: some View {
+    let sichtbar = songs.indices.filter { !player.ausgeblendet.contains(songs[$0].schluessel) }
+    let reihen = max(1, min(zeilen, sichtbar.count))
+    ScrollView(.horizontal, showsIndicators: false) {
+      LazyHGrid(rows: Array(repeating: GridItem(.fixed(56), spacing: 6), count: reihen), spacing: 18) {
+        ForEach(sichtbar, id: \.self) { i in
+          HLSongZeile(songs: songs, i: i, mitAlbum: mitAlbum, kurzerKnopf: true)
+            .containerRelativeFrame(.horizontal) { breite, _ in
+              sichtbar.count > zeilen ? breite * 0.88 : breite
+            }
+        }
+      }
+      .scrollTargetLayout()
+    }
+    .scrollTargetBehavior(.viewAligned)
+    .scrollClipDisabled()
   }
 }

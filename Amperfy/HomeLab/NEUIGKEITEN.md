@@ -3,6 +3,7 @@
 - Songs, die jemand aus der Familie schon hat, tragen unter «Entdecken» und in der Suche ein «+»: Antippen holt sie sofort in deine Mediathek. Ein Haken heisst jetzt immer «in deiner Mediathek».
 - Alben und Playlists unter «Entdecken» zeigen, wie viel davon in deiner Mediathek ist. «n zur Mediathek» holt alles, was schon auf dem Server ist; «Rest wünschen» lädt den Rest.
 - Ein Herz auf einem Song nimmt ihn auch in deine Mediathek auf.
+- Songs stehen jetzt wie bei Apple Music in einem Raster: vier untereinander, seitwärts wischen zeigt die nächsten. Statt langer Listen in der Suche, unter «Entdecken» und auf Künstlerseiten.
 ### Anders
 - Wünschst du einen Song, den die Familie schon hat, kommt er sofort in deine Mediathek statt nur «Hast du schon».
 - Bei Künstlern steht, wie viele Songs in deiner Mediathek und wie viele auf dem Server sind.

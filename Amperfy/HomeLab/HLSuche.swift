@@ -148,7 +148,7 @@ struct HLSuchTreffer: View {
           }
           .buttonStyle(.plain).foregroundStyle(Color.accentColor)
         }
-        ForEach(a.songs.prefix(10).indices, id: \.self) { HLSongZeile(songs: a.songs, i: $0) }
+        HLSongRaster(songs: a.songs)
       }
     }
     if !d.kuenstler.isEmpty {
@@ -161,7 +161,7 @@ struct HLSuchTreffer: View {
     if !songs.isEmpty {
       VStack(alignment: .leading, spacing: 10) {
         Text("Songs").font(.headline)
-        ForEach(songs.indices, id: \.self) { HLSongZeile(songs: songs, i: $0) }
+        HLSongRaster(songs: songs)
       }
     }
     if let listen = d.playlists, !listen.isEmpty {

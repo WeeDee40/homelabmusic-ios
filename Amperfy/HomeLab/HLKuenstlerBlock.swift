@@ -81,10 +81,11 @@ struct HLKuenstlerBlock: View {
           knoepfe(d, istGefolgt, kurz: false)
           knoepfe(d, istGefolgt, kurz: true)
         }
-        let neu = d.top.filter { HLPlayer.shared.status($0) != "bibliothek" }
+        let neu = d.top.filter { HLPlayer.shared.stufe($0) != .mediathek }
         if !neu.isEmpty {
-          Text("Beliebt, noch nicht bei dir").font(.headline)
-          HLSongBand(songs: Array(neu.prefix(10)))
+          Text(HLMediathekUI.stufenAktiv ? "Beliebt, noch nicht in deiner Mediathek" : "Beliebt, noch nicht bei dir")
+            .font(.headline)
+          HLSongRaster(songs: Array(neu.prefix(12)))
         }
         Button { oeffnen(.kuenstler(id)) } label: {
           Label("Diskografie und ähnliche Künstler", systemImage: "sparkles").font(.subheadline.weight(.semibold))
