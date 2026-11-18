@@ -5,7 +5,8 @@
 //  Querformat nur für den Player (PLAN-musik-erlebnis.md, Etappe F). Das iPhone bleibt überall im Hochformat;
 //  solange der Player offen ist, darf es sich drehen. Im Querformat zeigt der Player links gross das Cover und
 //  rechts Titel, Künstler, Album und Amperfys eigene Steuerung (Zeitleiste, Knöpfe). Die Steuerung wird dafür
-//  nur umgehängt, nicht verdoppelt: Amperfy frischt sie weiter selbst auf.
+//  nur umgehängt, nicht verdoppelt: Amperfy frischt sie weiter selbst auf. Der Knopf «Songtext» zeigt links statt
+//  des Covers Amperfys Songtext-Ansicht (LyricsVC, mitlaufend bei Zeitmarken; Etappe L).
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -57,6 +58,9 @@ final class HLQuerformatEinbau {
   private let album = UILabel()
   private let steuerPlatz = UIView()
   private let schliessen = UIButton(type: .system)
+  private let songtextKnopf = UIButton(type: .system)
+  private var songtext: LyricsVC?
+  private var songtextAn = false
   private var versteckt: [UIView: Bool] = [:]
   private(set) var aktiv = false
 
@@ -80,7 +84,11 @@ final class HLQuerformatEinbau {
     schliessen.tintColor = .label
     schliessen.accessibilityLabel = "Player schliessen"
     schliessen.addAction(UIAction { [weak vc] _ in vc?.dismiss(animated: true) }, for: .touchUpInside)
-    for v in [cover, titel, kuenstler, album, steuerPlatz, schliessen] as [UIView] {
+    songtextKnopf.tintColor = .label
+    songtextKnopf.accessibilityLabel = "Songtext"
+    songtextKnopf.addAction(UIAction { [weak self] _ in self?.songtextUmschalten() }, for: .touchUpInside)
+    knopfBild()
+    for v in [cover, titel, kuenstler, album, steuerPlatz, schliessen, songtextKnopf] as [UIView] {
       huelle.addSubview(v)
     }
     vc.view.addSubview(huelle)
@@ -102,21 +110,48 @@ final class HLQuerformatEinbau {
     let seite = min(s.height, s.width * 0.45)
     cover.frame = CGRect(x: s.minX, y: s.midY - seite / 2, width: seite, height: seite)
     schliessen.frame = CGRect(x: b.maxX - vc.view.safeAreaInsets.right - 52, y: s.minY - 4, width: 44, height: 44)
-    let x = cover.frame.maxX + 28
+    songtextKnopf.frame = schliessen.frame.offsetBy(dx: -48, dy: 0)
+    cover.isHidden = songtextAn
+    songtext?.view.isHidden = !songtextAn
+    if songtextAn, let l = songtext {
+      l.view.frame = CGRect(x: s.minX, y: s.minY, width: s.width * 0.45, height: s.height)
+    }
+    let x = (songtextAn ? s.minX + s.width * 0.45 : cover.frame.maxX) + 28
     let w = s.maxX - x
     let steuerHoehe = min(PlayerControlView.frameHeight, s.height - 90)
     let gesamt = 34 + 26 + 22 + 10 + steuerHoehe
     var y = s.midY - gesamt / 2
-    titel.frame = CGRect(x: x, y: y, width: w - 44, height: 34); y += 34
+    titel.frame = CGRect(x: x, y: y, width: w - 92, height: 34); y += 34
     kuenstler.frame = CGRect(x: x, y: y, width: w, height: 26); y += 26
     album.frame = CGRect(x: x, y: y, width: w, height: 22); y += 22 + 10
     steuerPlatz.frame = CGRect(x: x - 8, y: y, width: w + 16, height: steuerHoehe)
     vc.controlView?.frame = steuerPlatz.bounds
   }
 
+  private func knopfBild() {
+    songtextKnopf.setImage(UIImage(systemName: songtextAn ? "quote.bubble.fill" : "quote.bubble"), for: .normal)
+  }
+
+  /// Songtext statt Cover (und zurück). Die Ansicht entsteht beim ersten Mal und bleibt danach bestehen.
+  private func songtextUmschalten() {
+    guard let vc else { return }
+    songtextAn.toggle()
+    knopfBild()
+    if songtextAn, songtext == nil {
+      let l = LyricsVC()
+      vc.addChild(l)
+      huelle.addSubview(l.view)
+      l.didMove(toParent: vc)
+      songtext = l
+    }
+    if songtextAn { songtext?.refreshLyrics() }
+    anpassen()
+  }
+
   /// Aus refreshCurrentlyPlayingInfoView / refreshCurrentlyPlayingArtworks.
   func auffrischen() {
     guard aktiv, let vc else { return }
+    if songtextAn { songtext?.refreshLyrics() }
     vc.playerHandler?.refreshCurrentlyPlayingInfo(
       artworkImage: cover, titleLabel: titel, artistLabel: kuenstler, albumLabel: album
     )

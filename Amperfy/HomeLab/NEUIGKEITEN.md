@@ -1,4 +1,6 @@
 ## 2026-11-18c
+### Neu
+- Im Querformat-Player zeigt der Knopf mit der Sprechblase den Songtext statt des Covers, mitlaufend, wenn der Server Zeitmarken hat.
 ### Anders
 - Die Suche ist aus einem Guss: zuoberst der Top-Treffer, dann Künstler, Songs, Alben und Playlists, jeder Treffer nur einmal, egal ob aus deiner Mediathek, vom Server oder neu. Was in deiner Mediathek ist, steht zuerst und trägt einen Haken. Unter «Offline» bleibt die bisherige Liste.
 - Kategorie-Seiten, «Entdecken» und deine Wünsche zeigen beim Öffnen sofort den letzten Stand und frischen ihn im Hintergrund auf.
