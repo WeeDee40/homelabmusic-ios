@@ -586,7 +586,8 @@ struct HLKategorieSeite: View {
   @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
-    HLLaden(laden: { try await HLAPI.shared.kategorie(suche, playlists: playlistSuche) }) { k in
+    HLLaden(laden: { try await HLAPI.shared.kategorie(suche, playlists: playlistSuche) },
+            gemerkt: { HLAPI.shared.kategorieGemerkt(suche, playlists: playlistSuche) }) { k in
       inhalt(k)
     }
     .navigationTitle(titel)

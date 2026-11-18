@@ -484,7 +484,8 @@ final class HLAPI {
     abfrage: [String: String] = [:],
     methode: String = "GET",
     inhalt: [String: any Encodable & Sendable]? = nil,
-    erneut: Bool = true
+    erneut: Bool = true,
+    merken: Bool = false
   ) async throws -> T {
     guard let basis = basisURL else { throw HLAPIFehler.keinKonto }
     var teile = URLComponents(url: basis.appendingPathComponent(pfad), resolvingAgainstBaseURL: false)!
@@ -503,16 +504,53 @@ final class HLAPI {
     if code == 401, erneut {                       // Token veraltet: neu anmelden, einmal wiederholen
       token = nil
       HLSchluesselbund.loeschen(schluessel)
-      return try await anfrage(pfad, abfrage: abfrage, methode: methode, inhalt: inhalt, erneut: false)
+      return try await anfrage(pfad, abfrage: abfrage, methode: methode, inhalt: inhalt, erneut: false, merken: merken)
     }
     guard code == 200 || code == 202 else {
       throw HLAPIFehler.server(Self.meldung(daten) ?? "Fehler \(code)")
     }
-    return try Self.decoder.decode(T.self, from: daten)
+    let wert = try Self.decoder.decode(T.self, from: daten)
+    if merken, code == 200, let datei = merkDatei(pfad, abfrage) {
+      try? FileManager.default.createDirectory(at: datei.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try? daten.write(to: datei, options: .atomic)
+    }
+    return wert
+  }
+
+  // MARK: Gemerkte Antworten (Etappe J)
+
+  /// Letzte Antwort einer Seite auf dem Gerät (Caches, pro Konto): Die Seite zeigt sie sofort, die frische kommt
+  /// danach. iOS darf den Ordner leeren; dann wartet die Seite einmal wie früher.
+  private func merkDatei(_ pfad: String, _ abfrage: [String: String]) -> URL? {
+    guard let konto = account?.info.ident else { return nil }
+    let schluessel = ([konto, pfad] + abfrage.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" })
+      .joined(separator: "|")
+    let name = SHA256.hash(data: Data(schluessel.utf8)).map { String(format: "%02x", $0) }.joined()
+    return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+      .appendingPathComponent("homelabmusic-antworten", isDirectory: true)
+      .appendingPathComponent(name + ".json")
+  }
+
+  private func gemerkt<T: Decodable>(_ pfad: String, _ abfrage: [String: String] = [:]) -> T? {
+    guard let datei = merkDatei(pfad, abfrage), let daten = try? Data(contentsOf: datei) else { return nil }
+    return try? Self.decoder.decode(T.self, from: daten)
+  }
+
+  func reihenGemerkt() -> HLReihen? { gemerkt("entdecken/reihen") }
+  func chartsGemerkt() -> HLSongListe? { gemerkt("entdecken/charts") }
+  func wuenscheGemerkt() -> HLWunschListe? { gemerkt("entdecken/wuensche") }
+  func kategorieGemerkt(_ q: String, playlists: String?) -> HLKategorie? {
+    gemerkt("entdecken/kategorie", Self.kategorieAbfrage(q, playlists))
+  }
+
+  private static func kategorieAbfrage(_ q: String, _ playlists: String?) -> [String: String] {
+    var abfrage = ["q": q]
+    if let playlists { abfrage["playlists"] = playlists }
+    return abfrage
   }
 
   func jetzt() async throws -> HLJetzt { try await anfrage("entdecken/jetzt") }
-  func reihen() async throws -> HLReihen { try await anfrage("entdecken/reihen") }
+  func reihen() async throws -> HLReihen { try await anfrage("entdecken/reihen", merken: true) }
 
   private struct HLErkannt: Codable, Sendable { var song: HLSong }
 
@@ -536,16 +574,14 @@ final class HLAPI {
   func stimmungMix(_ stimmung: String) async throws -> HLSongListe {
     try await anfrage("entdecken/stimmung_mix", abfrage: ["stimmung": stimmung])
   }
-  func charts() async throws -> HLSongListe { try await anfrage("entdecken/charts") }
+  func charts() async throws -> HLSongListe { try await anfrage("entdecken/charts", merken: true) }
   func kategorie(_ q: String, playlists: String?) async throws -> HLKategorie {
-    var abfrage = ["q": q]
-    if let playlists { abfrage["playlists"] = playlists }
-    return try await anfrage("entdecken/kategorie", abfrage: abfrage)
+    try await anfrage("entdecken/kategorie", abfrage: Self.kategorieAbfrage(q, playlists), merken: true)
   }
   func albumAbgleich(_ navidromeId: String) async throws -> HLAlbumAbgleich {
     try await anfrage("entdecken/album_abgleich", abfrage: ["navidrome": navidromeId])
   }
-  func wuensche() async throws -> HLWunschListe { try await anfrage("entdecken/wuensche") }
+  func wuensche() async throws -> HLWunschListe { try await anfrage("entdecken/wuensche", merken: true) }
 
   func sender(art: String, id: String) async throws -> HLSender {
     try await anfrage("entdecken/sender", abfrage: [art: id, "anzahl": "30"])

@@ -358,6 +358,8 @@ struct HLAlbumGitter: View {
 /// Lädt Daten und zeigt Laden, Fehler oder Inhalt.
 struct HLLaden<T: Sendable, Inhalt: View>: View {
   let laden: @MainActor () async throws -> T
+  /// Letzte Antwort vom Gerät (Etappe J): sofort zeigen, die frische ersetzt sie.
+  var gemerkt: (@MainActor () -> T?)? = nil
   @ViewBuilder let inhalt: (T) -> Inhalt
   @State private var daten: T?
   @State private var fehler: String?
@@ -376,12 +378,16 @@ struct HLLaden<T: Sendable, Inhalt: View>: View {
         ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
-    .task { if daten == nil { await holen() } }
+    .task {
+      guard daten == nil else { return }
+      daten = gemerkt?()
+      await holen()
+    }
   }
 
   private func holen() async {
     fehler = nil
-    do { daten = try await laden() } catch { fehler = error.localizedDescription }
+    do { daten = try await laden() } catch { if daten == nil { fehler = error.localizedDescription } }
   }
 }
 
@@ -713,6 +719,12 @@ struct HLStartView: View {
   private func laden() async {
     fehler = nil
     mixe = HLMixKarte.ausBibliothek()
+    if !geladen {                                    // Etappe J: letzte Antworten vom Gerät sofort zeigen
+      if reihen.isEmpty, let r = HLAPI.shared.reihenGemerkt() { reihen = r.reihen }
+      if charts.isEmpty, let c = HLAPI.shared.chartsGemerkt() { charts = c.songs }
+      if wuensche.isEmpty, let w = HLAPI.shared.wuenscheGemerkt() { wuensche = w.wuensche }
+      if !reihen.isEmpty || !charts.isEmpty { geladen = true }
+    }
     async let j = try? HLAPI.shared.jetzt()
     async let r = try? HLAPI.shared.reihen()
     async let c = try? HLAPI.shared.charts()
