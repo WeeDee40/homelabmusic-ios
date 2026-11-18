@@ -554,6 +554,7 @@
 		653BED801A7B496DF7EA163F /* NEUIGKEITEN.md in Resources */ = {isa = PBXBuildFile; fileRef = 24597A16067654126A4F5B5E /* NEUIGKEITEN.md */; };
 		9B888816333B100FCAA8D452 /* HLKuenstlerBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40719B6BB5D462808CF79307 /* HLKuenstlerBlock.swift */; };
 		5F9A8E40893A8EEAD11D4E8F /* HLQuerformat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BEE3FBAB7C3D85260538E4B /* HLQuerformat.swift */; };
+		8F8A1F63D2C79B8DF06C33EC /* HLSuchAlle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16D5F573742B938E88553F37 /* HLSuchAlle.swift */; };
 		D86070DC277DB9F1FAEAA274 /* HLMiniKnopf.swift in Sources */ = {isa = PBXBuildFile; fileRef = E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */; };
 		290546E1324D823ECB67F744 /* HLSpeicher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */; };
 		6E905B743E4935605810A429 /* HLPocketID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8AEF79D3608861F01DEBCF /* HLPocketID.swift */; };
@@ -1203,6 +1204,7 @@
 		24597A16067654126A4F5B5E /* NEUIGKEITEN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = NEUIGKEITEN.md; sourceTree = "<group>"; };
 		40719B6BB5D462808CF79307 /* HLKuenstlerBlock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLKuenstlerBlock.swift; sourceTree = "<group>"; };
 		5BEE3FBAB7C3D85260538E4B /* HLQuerformat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLQuerformat.swift; sourceTree = "<group>"; };
+		16D5F573742B938E88553F37 /* HLSuchAlle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSuchAlle.swift; sourceTree = "<group>"; };
 		E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLMiniKnopf.swift; sourceTree = "<group>"; };
 		1B50D04CFB33F09905FA4834 /* HLSpeicher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSpeicher.swift; sourceTree = "<group>"; };
 		9A8AEF79D3608861F01DEBCF /* HLPocketID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLPocketID.swift; sourceTree = "<group>"; };
@@ -2241,6 +2243,7 @@
 				E06CFED9597A69E1E4458101 /* HLMiniKnopf.swift */,
 				40719B6BB5D462808CF79307 /* HLKuenstlerBlock.swift */,
 				5BEE3FBAB7C3D85260538E4B /* HLQuerformat.swift */,
+				16D5F573742B938E88553F37 /* HLSuchAlle.swift */,
 				24597A16067654126A4F5B5E /* NEUIGKEITEN.md */,
 				AFDFAE30458AAEDC70DB5ED0 /* HLNeuigkeiten.swift */,
 				2C91F5D10EA3AFFB436ED4D5 /* HLSuche.swift */,
@@ -2547,6 +2550,7 @@
 				D86070DC277DB9F1FAEAA274 /* HLMiniKnopf.swift in Sources */,
 				9B888816333B100FCAA8D452 /* HLKuenstlerBlock.swift in Sources */,
 				5F9A8E40893A8EEAD11D4E8F /* HLQuerformat.swift in Sources */,
+				8F8A1F63D2C79B8DF06C33EC /* HLSuchAlle.swift in Sources */,
 				556C3D8A4ADDF627DC6A094B /* HLNeuigkeiten.swift in Sources */,
 				D18B277ECFA8378D4BF4F7FE /* HLSuche.swift in Sources */,
 				113ECF5D3FD5B7F696828C59 /* HLBibliothek.swift in Sources */,

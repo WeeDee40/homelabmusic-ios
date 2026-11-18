@@ -60,8 +60,8 @@ class SearchDiffableDataSource: BasicUITableViewDiffableDataSource {
       return HLMediathekUI.suchTitel("Alben", searchVC.albums)
     case .Song:
       return HLMediathekUI.suchTitel(String(localized: "Songs"), searchVC.songs)
-    case .Entdecken: // HomeLabMusic
-      return "Entdecken"
+    case .Entdecken: // HomeLabMusic: seit Etappe H die einzige Ansicht in «Alle», ohne Überschrift
+      return ""
     case .Stoebern: // HomeLabMusic: Überschriften stehen in den Kacheln
       return ""
     case .none:
@@ -194,6 +194,20 @@ class SearchVC: BasicTableViewController {
     hlSuche.modell.geaendert = { [weak self] in
       self?.updateDataSource(animated: false)
       self?.updateContentUnavailable()
+    }
+    hlSuche.modell.lokalOeffnen = { [weak self] eintrag in // Etappe H: Treffer aus der Datenbank öffnen
+      guard let self else { return }
+      let _ = appDelegate.storage.main.library.createOrUpdateSearchHistory(container: eintrag)
+      appDelegate.storage.main.library.saveContext()
+      let ziel: UIViewController
+      if let artist = eintrag as? Artist {
+        ziel = AppStoryboard.Main.segueToArtistDetail(account: account, artist: artist)
+      } else if let album = eintrag as? Album {
+        ziel = AppStoryboard.Main.segueToAlbumDetail(account: account, album: album)
+      } else if let playlist = eintrag as? Playlist {
+        ziel = AppStoryboard.Main.segueToPlaylistDetail(account: account, playlist: playlist)
+      } else { return }
+      navigationController?.pushViewController(ziel, animated: true)
     }
     hlSuche.modell.uebernehmen = { [weak self] text in // Vorschlag oder «Zuletzt gesucht» ins Suchfeld
       guard let self else { return }
@@ -472,9 +486,8 @@ class SearchVC: BasicTableViewController {
         .tableSectionHeightLarge : 0
     case .Song:
       return (isSearchActive && !songs.isEmpty) ? CommonScreenOperations.tableSectionHeightLarge : 0
-    case .Entdecken: // HomeLabMusic
-      return (isSearchActive && hlSuche.modell.sichtbar) ? CommonScreenOperations
-        .tableSectionHeightLarge : 0
+    case .Entdecken: // HomeLabMusic: ohne Überschrift (Etappe H)
+      return 0
     case .Stoebern: // HomeLabMusic
       return 0
     case .none:
@@ -634,23 +647,26 @@ class SearchVC: BasicTableViewController {
         guard searchText == self.searchController.searchBar.text else { return }
         self.isSearchActive = true
         self.searchHistory = []
-        // HomeLabMusic: Eigenes zuerst (P11)
-        let hlAnzahl = self.searchController.searchBar.selectedScopeButtonIndex == 0
-          ? Self.categoryItemLimitAlle : Self.categoryItemLimit
-        self.artists = HLMediathekUI.eigenesZuerst(searchResult.artistsIDs
-          .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? ArtistMO }
-          .compactMap { Artist(managedObject: $0) }, anzahl: hlAnzahl)
-        self.albums = HLMediathekUI.eigenesZuerst(searchResult.albumsIDs
-          .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? AlbumMO }
-          .compactMap { Album(managedObject: $0) }, anzahl: hlAnzahl)
-        self.playlists = searchResult.playlistsIDs
-          .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? PlaylistMO }
-          .compactMap { Playlist(library: self.appDelegate.storage.main.library, managedObject: $0)
-          }
-        self.songs = HLMediathekUI.eigenesZuerst(searchResult.songsIDs
-          .compactMap { self.appDelegate.storage.main.context.object(with: $0) as? SongMO }
-          .compactMap { Song(managedObject: $0) }, anzahl: hlAnzahl)
-        self.tableView.separatorStyle = .singleLine
+        // HomeLabMusic (Etappe H): in «Alle» zeigt eine einzige Ansicht alles; die Datenbank-Treffer gehen an sie,
+        // Amperfys Abschnitte bleiben leer. Eigenes zuerst (P11).
+        let kontext = self.appDelegate.storage.main.context
+        self.hlSuche.modell.lokalSetzen(HLLokal(
+          text: searchText,
+          kuenstler: HLMediathekUI.eigenesZuerst(searchResult.artistsIDs
+            .compactMap { kontext.object(with: $0) as? ArtistMO }.map { Artist(managedObject: $0) }, anzahl: 8),
+          alben: HLMediathekUI.eigenesZuerst(searchResult.albumsIDs
+            .compactMap { kontext.object(with: $0) as? AlbumMO }.map { Album(managedObject: $0) }, anzahl: 10),
+          songs: HLMediathekUI.eigenesZuerst(searchResult.songsIDs
+            .compactMap { kontext.object(with: $0) as? SongMO }.map { Song(managedObject: $0) }, anzahl: 12),
+          playlists: searchResult.playlistsIDs
+            .compactMap { kontext.object(with: $0) as? PlaylistMO }
+            .map { Playlist(library: self.appDelegate.storage.main.library, managedObject: $0) }
+        ))
+        self.artists = []
+        self.albums = []
+        self.playlists = []
+        self.songs = []
+        self.tableView.separatorStyle = .none
         self.updateDataSource(animated: false)
         self.updateContentUnavailable()
       } catch {

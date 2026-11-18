@@ -16,11 +16,8 @@ import SwiftUI
 import UIKit
 
 extension HLSuche {
-  /// Songs aus der Bibliothek stehen schon oben in Amperfys Treffern.
-  var neueSongs: [HLSong] { songs.filter { $0.status != "bibliothek" } }
-
   var hatInhalt: Bool {
-    top != nil || abschnitte?.isEmpty == false || !kuenstler.isEmpty || !neueSongs.isEmpty || !alben.isEmpty
+    top != nil || abschnitte?.isEmpty == false || !kuenstler.isEmpty || !songs.isEmpty || !alben.isEmpty
       || playlists?.isEmpty == false
   }
 }
@@ -31,6 +28,10 @@ final class HLSuchModell: ObservableObject {
   @Published private(set) var laedt = false
   @Published private(set) var fehler: String?
   @Published private(set) var vorschlaege = [HLVorschlag]()
+  /// Etappe H: Treffer aus Amperfys Datenbank; SearchVC setzt sie, die Ansicht führt beides zusammen.
+  @Published private(set) var lokal = HLLokal()
+  /// Künstler, Album oder Playlist aus der Datenbank auf Amperfys Seite öffnen (setzt SearchVC).
+  var lokalOeffnen: ((PlayableContainable) -> ())?
   /// Der Abschnitt kommt oder geht: SearchVC baut die Tabelle neu auf.
   var geaendert: (() -> ())?
   /// Text ins Suchfeld setzen und suchen (Vorschlag, «Zuletzt gesucht»); setzt SearchVC.
@@ -40,7 +41,17 @@ final class HLSuchModell: ObservableObject {
   private var vorschlagAufgabe: Task<(), Never>?
   private var merkAufgabe: Task<(), Never>?
 
-  var sichtbar: Bool { laedt || fehler != nil || ergebnis?.hatInhalt == true || !vorschlaege.isEmpty }
+  var sichtbar: Bool {
+    laedt || fehler != nil || ergebnis?.hatInhalt == true || !vorschlaege.isEmpty || !lokal.istLeer
+  }
+
+  /// Neue Treffer aus der Datenbank (nur, wenn sie noch zur Eingabe passen).
+  func lokalSetzen(_ neu: HLLokal) {
+    guard neu.text.trimmingCharacters(in: .whitespaces) == text || neu.istLeer else { return }
+    let warSichtbar = sichtbar
+    lokal = neu
+    if warSichtbar != sichtbar { geaendert?() }
+  }
 
   /// Vorschläge kommen schneller als die Treffer; ab drei Wörtern keine (dann ist es ein Satz).
   private func vorschlaegeHolen(_ q: String) {
@@ -83,6 +94,7 @@ final class HLSuchModell: ObservableObject {
     text = q
     fehler = nil
     vorschlaegeHolen(q)
+    if lokal.text.trimmingCharacters(in: .whitespaces) != q { lokal = HLLokal() }
     guard q.count >= 2 else {
       ergebnis = nil
       laedt = false
@@ -110,14 +122,23 @@ final class HLSuchModell: ObservableObject {
   }
 }
 
-/// Eine einzige Tabellenzeile: Amperfys Tabelle kennt nur Einträge aus der Datenbank.
+/// Eine einzige Tabellenzeile mit allen Treffern (Etappe H): Datenbank und Dienst zusammengeführt, in der
+/// Reihenfolge von Apple Music. Amperfys eigene Abschnitte bleiben in «Alle» leer.
 struct HLSuchTreffer: View {
   @ObservedObject var modell: HLSuchModell
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    let d = modell.ergebnis
+    let lokal = modell.lokal
+    let lokalOeffnen: (PlayableContainable) -> () = { modell.lokalOeffnen?($0) }
+    VStack(alignment: .leading, spacing: 22) {
       if !modell.vorschlaege.isEmpty {
         HLVorschlagBand(liste: modell.vorschlaege) { modell.uebernehmen?($0.suche) }
+      }
+      if let top = d?.top {
+        HLTopKarte(top: top)
+      } else if let k = HLSuchMischung.lokalerTop(lokal) {
+        HLLokalTopKarte(kuenstler: k, oeffnen: lokalOeffnen)
       }
       if modell.laedt {
         HStack(spacing: 10) {
@@ -127,54 +148,51 @@ struct HLSuchTreffer: View {
         }
       }
       if let fehler = modell.fehler { Text(fehler).foregroundStyle(.secondary) }
-      if let d = modell.ergebnis { inhalt(d) }
+      // Genre/Stimmung/Thema erkannt: diese Abschnitte zuerst
+      ForEach(d?.abschnitte ?? [], id: \.self) { a in abschnitt(a) }
+      let topName = d?.top?.art == "kuenstler" ? d?.top?.kuenstler?.name
+        : (d?.top == nil ? HLSuchMischung.lokalerTop(lokal)?.name : nil)
+      let kuenstler = HLSuchMischung.kuenstler(d?.kuenstler ?? [], lokal.kuenstler, ohne: topName)
+      if !kuenstler.isEmpty {
+        gruppe("Künstler") { HLMischKuenstlerBand(liste: kuenstler, lokalOeffnen: lokalOeffnen) }
+      }
+      let songs = HLSuchMischung.songs(d?.songs ?? [], lokal.songs)
+      if !songs.isEmpty {
+        gruppe("Songs") { HLSongRaster(songs: songs) }
+      }
+      let alben = HLSuchMischung.alben(d?.alben ?? [], lokal.alben)
+      if !alben.isEmpty {
+        gruppe("Alben") { HLMischAlbumBand(liste: alben, lokalOeffnen: lokalOeffnen) }
+      }
+      let playlists = HLSuchMischung.playlists(d?.playlists ?? [], lokal.playlists)
+      if !playlists.isEmpty {
+        gruppe("Playlists") { HLMischPlaylistBand(liste: playlists, lokalOeffnen: lokalOeffnen) }
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
-  @ViewBuilder private func inhalt(_ d: HLSuche) -> some View {
-    if let top = d.top { HLTopKarte(top: top) }
-    // Genre/Stimmung/Thema erkannt: diese Abschnitte zuerst, die Titelsuche danach
-    ForEach(d.abschnitte ?? [], id: \.self) { a in
-      VStack(alignment: .leading, spacing: 10) {
-        HStack(alignment: .bottom) {
-          VStack(alignment: .leading, spacing: 1) {
-            Text(a.titel).font(.headline)
-            if let u = a.untertitel { Text(u).font(.caption).foregroundStyle(.secondary) }
-          }
-          Spacer()
-          Button { HLPlayer.shared.spielen(a.songs, ab: 0) } label: {
-            Label("Alle", systemImage: "play.fill").font(.caption.weight(.semibold))
-          }
-          .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+  private func gruppe(_ titel: String, @ViewBuilder inhalt: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(titel).font(.title3.bold())
+      inhalt()
+    }
+  }
+
+  private func abschnitt(_ a: HLAbschnitt) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .bottom) {
+        VStack(alignment: .leading, spacing: 1) {
+          Text(a.titel).font(.headline)
+          if let u = a.untertitel { Text(u).font(.caption).foregroundStyle(.secondary) }
         }
-        HLSongRaster(songs: a.songs)
+        Spacer()
+        Button { HLPlayer.shared.spielen(a.songs, ab: 0) } label: {
+          Label("Alle", systemImage: "play.fill").font(.caption.weight(.semibold))
+        }
+        .buttonStyle(.plain).foregroundStyle(Color.accentColor)
       }
-    }
-    if !d.kuenstler.isEmpty {
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Künstler").font(.headline)
-        HLKuenstlerBand(liste: d.kuenstler)
-      }
-    }
-    let songs = d.neueSongs
-    if !songs.isEmpty {
-      VStack(alignment: .leading, spacing: 10) {
-        Text("Songs").font(.headline)
-        HLSongRaster(songs: songs)
-      }
-    }
-    if let listen = d.playlists, !listen.isEmpty {
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Playlists").font(.headline)
-        HLPlaylistBand(liste: listen)
-      }
-    }
-    if !d.alben.isEmpty {
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Alben").font(.headline)
-        HLAlbumBand(alben: d.alben)
-      }
+      HLSongRaster(songs: a.songs)
     }
   }
 }

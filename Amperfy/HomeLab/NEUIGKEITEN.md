@@ -1,6 +1,7 @@
 ## 2026-11-18c
 ### Anders
-- Suche: Was in deiner Mediathek ist, steht bei Künstlern, Alben und Songs zuerst und trägt einen Haken. Gibt es in einer Art nur Treffer von der Familie, heisst die Überschrift «… auf dem Server».
+- Die Suche ist aus einem Guss: zuoberst der Top-Treffer, dann Künstler, Songs, Alben und Playlists, jeder Treffer nur einmal, egal ob aus deiner Mediathek, vom Server oder neu. Was in deiner Mediathek ist, steht zuerst und trägt einen Haken. Unter «Offline» bleibt die bisherige Liste.
+- Kategorie-Seiten, «Entdecken» und deine Wünsche zeigen beim Öffnen sofort den letzten Stand und frischen ihn im Hintergrund auf.
 - Die Kacheln für Stimmungen und Anlässe zeigen jetzt ein passendes Zeichen (Geschenk, Feuerwerk, Skifahrer …) statt eines zufälligen Künstlerfotos.
 ### Behoben
 - Auf der Seite «Hits der 80er» stand unter «Künstler» ein falscher Eintrag «80er».
