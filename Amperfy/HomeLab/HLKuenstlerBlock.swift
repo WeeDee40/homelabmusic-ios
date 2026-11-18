@@ -202,30 +202,21 @@ struct HLAlbumBlock: View {
     VStack(alignment: .leading, spacing: 12) {
       let fehlt = modell.abgleich?.fehlt ?? []
       let _ = modell.mediathekStand
-      let offen = HLMediathekUI.stufenAktiv ? HLMediathekUI.nichtInMediathek(album: album) : []
-      let lokal = album.playables.count                 // nur Songs, die wirklich an diesem Album hängen
-      let gesamt = max(modell.abgleich?.anzahl ?? 0, lokal)
-      let eigene = lokal - offen.count
+      // Was auf dem Server zum Album gehört: vom Dienst (Amperfy hängt Songs bei Doppel-Alben nicht immer an)
+      let vorhanden = modell.abgleich?.vorhanden ?? []
+      let eigene = vorhanden.filter { player.stufe($0) == .mediathek }
+      let server = vorhanden.filter { player.stufe($0) == .server } + fehlt.filter { player.stufe($0) == .server }
       let wuenschbar = fehlt.filter { player.stufe($0) == .neu && $0.deezerId != nil }
-      let anderswo = fehlt.filter { player.stufe($0) == .server }
-      if HLMediathekUI.stufenAktiv, gesamt > 0 {
-        Text("\(eigene) von \(gesamt) Songs in deiner Mediathek").font(.subheadline).foregroundStyle(.secondary)
+      if let text = Self.standText(eigene: eigene.count, server: server.count, fehlen: wuenschbar.count) {
+        Text(text).font(.subheadline).foregroundStyle(.secondary)
       }
       HStack {
-        if !offen.isEmpty || !anderswo.isEmpty {
+        if HLMediathekUI.stufenAktiv, !server.isEmpty {
           Button {
-            Task {
-              do {
-                try await HLMediathek.shared.hinzufuegen(songIds: offen)
-                player.zurMediathek(anderswo)
-                modell.mediathekStand += 1
-                modell.geaendert?()
-                player.zeigeHinweis("\(offen.count + anderswo.count) Songs zur Mediathek hinzugefügt.")
-              } catch {
-                player.zeigeHinweis(error.localizedDescription)
-              }
-            }
-          } label: { Label("\(offen.count + anderswo.count) zur Mediathek", systemImage: "plus") }
+            player.zurMediathek(server)
+            modell.mediathekStand += 1
+            modell.geaendert?()
+          } label: { Label("\(server.count) zur Mediathek", systemImage: "plus") }
             .buttonStyle(HLKapsel(haupt: true))
         }
         if !wuenschbar.isEmpty {
@@ -236,6 +227,10 @@ struct HLAlbumBlock: View {
           .buttonStyle(HLKapsel())
           .disabled(gewuenscht)
         }
+      }
+      if album.playables.isEmpty, !vorhanden.isEmpty {     // Amperfy zeigt hier keine Zeile (Doppel-Album)
+        Text("Auf dem Server").font(.headline).padding(.top, 4)
+        ForEach(vorhanden.indices, id: \.self) { HLSongZeile(songs: vorhanden, i: $0, mitAlbum: false, kurzerKnopf: true) }
       }
       if !fehlt.isEmpty {
         Text("Fehlt noch auf dem Server").font(.headline).padding(.top, 4)
@@ -252,6 +247,19 @@ struct HLAlbumBlock: View {
     } message: {
       Text("Sie gehen an SoulSync und kommen nach und nach.")
     }
+  }
+
+  /// «1 in deiner Mediathek · 2 auf dem Server · 12 fehlen» (ohne Nullen; ohne Mediathek «… bei dir»).
+  static func standText(eigene: Int, server: Int, fehlen: Int) -> String? {
+    var teile = [String]()
+    if HLMediathekUI.stufenAktiv {
+      if eigene > 0 { teile.append("\(eigene) in deiner Mediathek") }
+      if server > 0 { teile.append("\(server) auf dem Server") }
+    } else if eigene + server > 0 {
+      teile.append("\(eigene + server) bei dir")
+    }
+    if fehlen > 0 { teile.append("\(fehlen) \(fehlen == 1 ? "fehlt" : "fehlen")") }
+    return teile.isEmpty ? nil : teile.joined(separator: " · ")
   }
 
   private var wuenschbarAnzahl: Int {

@@ -138,6 +138,7 @@ struct HLVorschlaege: Codable, Sendable {
 struct HLAlbumAbgleich: Codable, Sendable {
   var deezerAlbum: HLAlbum?
   var anzahl: Int?
+  var vorhanden: [HLSong]?                              // Songs des Albums auf dem Server (unabhängig von Amperfy)
   var fehlt: [HLSong]
 }
 
