@@ -142,6 +142,13 @@ struct HLAlbumAbgleich: Codable, Sendable {
   var fehlt: [HLSong]
 }
 
+/// Liste von Songs mit Überschrift (Stimmungs-Mix, Charts).
+struct HLSongListe: Codable, Sendable {
+  var titel: String
+  var songs: [HLSong]
+  var meldung: String?
+}
+
 struct HLPlaylistSeite: Codable, Sendable {
   var playlist: HLPlaylistKurz
   var songs: [HLSong]
@@ -515,6 +522,10 @@ final class HLAPI {
   func kuenstler(_ id: Int) async throws -> HLKuenstlerSeite { try await anfrage("entdecken/kuenstler/\(id)") }
   func album(_ id: Int) async throws -> HLAlbumSeite { try await anfrage("entdecken/album/\(id)") }
   func playlist(_ id: Int) async throws -> HLPlaylistSeite { try await anfrage("entdecken/playlist/\(id)") }
+  func stimmungMix(_ stimmung: String) async throws -> HLSongListe {
+    try await anfrage("entdecken/stimmung_mix", abfrage: ["stimmung": stimmung])
+  }
+  func charts() async throws -> HLSongListe { try await anfrage("entdecken/charts") }
   func albumAbgleich(_ navidromeId: String) async throws -> HLAlbumAbgleich {
     try await anfrage("entdecken/album_abgleich", abfrage: ["navidrome": navidromeId])
   }

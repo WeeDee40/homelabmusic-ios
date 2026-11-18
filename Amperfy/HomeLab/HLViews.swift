@@ -11,6 +11,8 @@
 //  (at your option) any later version.
 //
 
+import AmperfyKit
+import CoreData
 import SwiftUI
 import UIKit
 
@@ -23,6 +25,7 @@ enum HLZiel: Hashable {
   case sender(art: String, id: String)
   case bibliothek(kuenstler: String)                   // Amperfys Künstlerseite der Bibliothek
   case stoebern(titel: String, suche: String)          // Kachel der leeren Suche
+  case wuensche                                        // alle letzten Wünsche mit Stand
 }
 
 /// Navigationsstapel des Tabs «Entdecken»; geteilt, damit auch der Mini-Player dort Seiten öffnen kann.
@@ -79,6 +82,7 @@ struct HLZielView: View {
     case let .sender(art, id): HLMixView(art: art, id: id)
     case .bibliothek: EmptyView()                      // läuft über HLTab.bibliothekOeffnen
     case let .stoebern(titel, suche): HLStoebernSeite(titel: titel, suche: suche)
+    case .wuensche: HLWuenscheView()
     }
   }
 }
@@ -527,95 +531,58 @@ struct HLRadioZeile: View {
   }
 }
 
+/// Entdecken nach Apple-Music-Art (Etappe D, PLAN-musik-erlebnis.md): freie Fläche, grosse Überschriften,
+/// zuoberst die eigenen Wochenmixe als Karten, Song-Raster statt Listen, Wünsche als eine Zeile.
 struct HLStartView: View {
   @ObservedObject private var player = HLPlayer.shared
   @State private var jetzt: HLJetzt?
   @State private var wuensche: [HLWunsch] = []
   @State private var reihen: [HLReihe] = []
+  @State private var charts: [HLSong] = []
+  @State private var mixe: [HLMixKarte] = []
   @State private var geladen = false
   @State private var fehler: String?
   @State private var zuletzt = Date.distantPast
+  @State private var stimmungLaeuft: String?
   @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
-    List {
-      if let j = jetzt {
-        Section(j.quelle == "laeuft" ? "Läuft gerade" : "Zuletzt gehört") {
-          HStack(spacing: 14) {
-            HLBild(pfad: j.song.bild, groesse: 76)
-            VStack(alignment: .leading, spacing: 3) {
-              Text(j.song.titel ?? "").font(.headline).lineLimit(2)
-              Text(j.song.kuenstler ?? "").foregroundStyle(.secondary).lineLimit(1)
+    ScrollView {
+      LazyVStack(alignment: .leading, spacing: 30) {
+        if !mixe.isEmpty {
+          abschnitt("Für dich gemacht", "Jeden Montag neu") {
+            ScrollView(.horizontal, showsIndicators: false) {
+              HStack(spacing: 14) { ForEach(mixe) { HLMixKarteView(karte: $0) } }
             }
-          }
-          HStack {
-            Button {
-              if let id = j.song.navidromeId { oeffnen(.sender(art: "navidrome", id: id)) }
-            } label: { Label("Mix starten", systemImage: "dot.radiowaves.left.and.right") }
-              .buttonStyle(HLKapsel(haupt: true))
-            if let k = j.song.kuenstlerId {
-              Button("Künstler entdecken") { oeffnen(.kuenstler(k)) }.buttonStyle(HLKapsel())
-            }
-          }
-          .listRowSeparator(.hidden)
-        }
-      }
-      if !player.radioVerlauf.isEmpty {
-        Section(player.radioLaeuft ? "Läuft im Radio · \(player.radioVerlauf[0].sender)" : "Zuletzt im Radio") {
-          ForEach(player.radioVerlauf, id: \.self) { e in
-            HLRadioZeile(eintrag: e, gross: e == player.radioVerlauf.first)
+            .scrollClipDisabled()
           }
         }
-      }
-      ForEach(reihen, id: \.self) { r in
-        Section {
-          if r.typ == "alben", let alben = r.alben {
-            HLAlbumBand(alben: alben)
-          } else if let songs = r.songs {
-            HLSongRaster(songs: songs)
-          }
-        } header: {
-          VStack(alignment: .leading, spacing: 1) {
-            Text(r.titel)
-            if let u = r.untertitel { Text(u).font(.caption).textCase(nil) }
-          }
-          .contentShape(Rectangle())
-          .onTapGesture { if let k = r.kuenstlerId { oeffnen(.kuenstler(k)) } }
-        }
-      }
-      if !wuensche.isEmpty {
-        Section("Deine letzten Wünsche") {
-          let liste = Array(wuensche.prefix(10))
-          let abspielbar = liste.filter(\.abspielbar)
-          ForEach(liste, id: \.self) { w in
-            HStack(spacing: 12) {
-              if w.abspielbar { HLBild(pfad: w.alsSong.bild, groesse: 40) }
-              VStack(alignment: .leading) {
-                Text(w.titel).font(.body.weight(.semibold)).lineLimit(1)
-                  .foregroundStyle(HLPlayer.shared.aktuell?.navidromeId == w.songId && w.songId != nil
-                    ? Color.accentColor : .primary)
-                Text(w.kuenstler).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
-              }
-              Spacer()
-              if w.abspielbar {
-                Image(systemName: "play.circle.fill").font(.title2).foregroundStyle(Color.accentColor)
-              } else if let f = w.fortschritt {
-                HLFortschrittAnzeige(wunsch: w, fortschritt: f) { Task { await laden() } }
-              } else {
-                Text(Self.statusText[w.status] ?? w.status).font(.footnote).foregroundStyle(.secondary)
-              }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {                              // gelieferte Wünsche ab hier der Reihe nach spielen
-              guard w.abspielbar, let i = abspielbar.firstIndex(of: w) else { return }
-              HLPlayer.shared.spielen(abspielbar.map(\.alsSong), ab: i)
+        weiterhoeren
+        ForEach(reihen, id: \.self) { r in
+          abschnitt(r.titel, r.untertitel, ziel: r.kuenstlerId.map { HLZiel.kuenstler($0) }) {
+            if r.typ == "alben", let alben = r.alben {
+              HLAlbumBand(alben: alben)
+            } else if let songs = r.songs {
+              HLSongRaster(songs: songs)
             }
           }
         }
+        if HLMediathekUI.stufenAktiv {
+          abschnitt("Stimmungen für dich", "Ein Tipp, und es läuft: Mix aus deiner Mediathek") {
+            ScrollView(.horizontal, showsIndicators: false) {
+              HStack(spacing: 12) { ForEach(HLStimmung.alle) { stimmungKachel($0) } }
+            }
+            .scrollClipDisabled()
+          }
+        }
+        if !charts.isEmpty {
+          abschnitt("Charts Schweiz", "Was gerade läuft") { HLSongRaster(songs: charts) }
+        }
+        wuenscheZeile
+        if let fehler { Text(fehler).foregroundStyle(.secondary) }
       }
-      if let fehler {
-        Section { Text(fehler).foregroundStyle(.secondary) }
-      }
+      .padding(.horizontal, 20)
+      .padding(.vertical, 10)
     }
     .overlay { if !geladen { ProgressView() } }
     .onAppear { neuLaden() }                       // beim Öffnen des Tabs und beim Zurückkehren
@@ -625,8 +592,116 @@ struct HLStartView: View {
     .refreshable { await laden() }
   }
 
-  static let statusText = ["angefragt": "⏳ kommt bald", "geliefert": "✓ da", "gefunden": "✓ hattest du",
-                           "nicht_gefunden": "– nicht gefunden", "weg": "– nicht mehr da"]
+  // MARK: Bausteine
+
+  /// Überschrift wie bei Apple Music: gross und fett, mit «›», wenn es eine Vollansicht gibt.
+  private func abschnitt(_ titel: String, _ untertitel: String? = nil, ziel: HLZiel? = nil,
+                         @ViewBuilder inhalt: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .firstTextBaseline, spacing: 4) {
+        Text(titel).font(.title2.bold()).foregroundStyle(.primary).lineLimit(1)
+        if ziel != nil { Image(systemName: "chevron.right").font(.headline).foregroundStyle(.secondary) }
+        Spacer(minLength: 0)
+      }
+      .contentShape(Rectangle())
+      .onTapGesture { if let ziel { oeffnen(ziel) } }
+      if let untertitel { Text(untertitel).font(.subheadline).foregroundStyle(.secondary).padding(.top, -8) }
+      inhalt()
+    }
+  }
+
+  @ViewBuilder private var weiterhoeren: some View {
+    if jetzt != nil || !player.radioVerlauf.isEmpty {
+      abschnitt(jetzt?.quelle == "laeuft" ? "Läuft gerade" : "Weiterhören") {
+        VStack(alignment: .leading, spacing: 14) {
+          if let j = jetzt {
+            HStack(spacing: 14) {
+              HLBild(pfad: j.song.bild, groesse: 72)
+              VStack(alignment: .leading, spacing: 3) {
+                Text(j.song.titel ?? "").font(.headline).lineLimit(2)
+                Text(j.song.kuenstler ?? "").foregroundStyle(.secondary).lineLimit(1)
+              }
+              Spacer(minLength: 0)
+            }
+            HStack {
+              Button {
+                if let id = j.song.navidromeId { oeffnen(.sender(art: "navidrome", id: id)) }
+              } label: { Label("Mix starten", systemImage: "dot.radiowaves.left.and.right") }
+                .buttonStyle(HLKapsel(haupt: true))
+              if let k = j.song.kuenstlerId {
+                Button("Künstler entdecken") { oeffnen(.kuenstler(k)) }.buttonStyle(HLKapsel())
+              }
+            }
+          }
+          ForEach(player.radioVerlauf.prefix(3), id: \.self) { e in
+            HLRadioZeile(eintrag: e, gross: e == player.radioVerlauf.first)
+          }
+        }
+      }
+    }
+  }
+
+  private func stimmungKachel(_ s: HLStimmung) -> some View {
+    Button {
+      guard stimmungLaeuft == nil else { return }
+      stimmungLaeuft = s.id
+      Task {
+        defer { stimmungLaeuft = nil }
+        do {
+          let r = try await HLAPI.shared.stimmungMix(s.id)
+          if r.songs.isEmpty {
+            player.zeigeHinweis(r.meldung ?? "Dafür passt in deiner Mediathek noch nichts.")
+          } else {
+            player.spielen(r.songs, ab: 0)
+            player.zeigeHinweis("\(s.titel): \(r.songs.count) Songs aus deiner Mediathek")
+          }
+        } catch {
+          player.zeigeHinweis(error.localizedDescription)
+        }
+      }
+    } label: {
+      ZStack(alignment: .bottomLeading) {
+        LinearGradient(colors: s.farben, startPoint: .topLeading, endPoint: .bottomTrailing)
+        Image(systemName: s.symbol).font(.system(size: 44, weight: .semibold)).foregroundStyle(.white.opacity(0.35))
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(12)
+        HStack {
+          Text(s.titel).font(.headline).foregroundStyle(.white)
+          Spacer()
+          if stimmungLaeuft == s.id { ProgressView().tint(.white) } else {
+            Image(systemName: "play.fill").foregroundStyle(.white)
+          }
+        }
+        .padding(12)
+      }
+      .frame(width: 150, height: 110)
+      .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder private var wuenscheZeile: some View {
+    if !wuensche.isEmpty {
+      let unterwegs = wuensche.filter { $0.status == "angefragt" }.count
+      let da = wuensche.filter(\.abspielbar).count
+      Button { oeffnen(.wuensche) } label: {
+        HStack(spacing: 12) {
+          Image(systemName: "sparkles").font(.title3).foregroundStyle(Color.accentColor)
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Deine Wünsche").font(.headline).foregroundStyle(.primary)
+            Text([unterwegs > 0 ? "\(unterwegs) unterwegs" : nil, da > 0 ? "\(da) da" : nil].compactMap { $0 }
+              .joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary)
+          }
+          Spacer()
+          Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+      }
+      .buttonStyle(.plain)
+    }
+  }
+
+  // MARK: Laden
 
   /// Neu laden, höchstens alle 3 Sekunden; der alte Inhalt bleibt bis dahin stehen.
   private func neuLaden() {
@@ -637,11 +712,125 @@ struct HLStartView: View {
 
   private func laden() async {
     fehler = nil
+    mixe = HLMixKarte.ausBibliothek()
     async let j = try? HLAPI.shared.jetzt()
     async let r = try? HLAPI.shared.reihen()
+    async let c = try? HLAPI.shared.charts()
     do { wuensche = try await HLAPI.shared.wuensche().wuensche } catch { fehler = error.localizedDescription }
     if let neu = await j { jetzt = neu }
     if let neu = await r { reihen = neu.reihen }
+    if let neu = await c { charts = neu.songs }
+    geladen = true
+  }
+}
+
+/// Stimmungen für «Stimmungen für dich» (gleiche Schlüssel wie entdecken.STIMMUNGEN).
+struct HLStimmung: Identifiable {
+  let id: String
+  let titel: String
+  let symbol: String
+  let farben: [Color]
+
+  static let alle = [
+    HLStimmung(id: "entspannt", titel: "Entspannt", symbol: "leaf.fill", farben: [.teal, .blue]),
+    HLStimmung(id: "power", titel: "Power", symbol: "bolt.fill", farben: [.orange, .red]),
+    HLStimmung(id: "party", titel: "Party", symbol: "party.popper.fill", farben: [.pink, .purple]),
+    HLStimmung(id: "bunt", titel: "Bunt gemischt", symbol: "shuffle", farben: [.indigo, .mint]),
+  ]
+}
+
+/// Eine Wochenmix-Playlist der Person (Navidrome, vom Medienwunsch-Dienst jeden Montag neu gebaut).
+struct HLMixKarte: Identifiable {
+  let id: NSManagedObjectID
+  let playlistId: String
+  let name: String
+  let anzahl: Int
+
+  static let namen = ["Neu für dich", "Favoriten", "Power", "Entspannung"]
+
+  @MainActor static func ausBibliothek() -> [HLMixKarte] {
+    guard let account = HLAPI.shared.account else { return [] }
+    let kontext = (UIApplication.shared.delegate as! AppDelegate).storage.main.context
+    let r = NSFetchRequest<PlaylistMO>(entityName: "Playlist")
+    r.predicate = NSPredicate(format: "account == %@ AND name IN %@", account.managedObject.objectID, namen)
+    hlBibliothekFiltern(r)                              // nur die eigenen (fremde Playlists sind ausgeblendet)
+    let gefunden = ((try? kontext.fetch(r)) ?? []).map { Playlist(library: (UIApplication.shared.delegate as! AppDelegate).storage.main.library, managedObject: $0) }
+    var gesehen = Set<String>()
+    return namen.compactMap { n in gefunden.first { $0.name == n && gesehen.insert($0.name).inserted } }
+      .map { HLMixKarte(id: $0.managedObject.objectID, playlistId: $0.id, name: $0.name, anzahl: $0.songCount) }
+  }
+}
+
+/// Grosse Karte wie Apple Musics «Für dich gemacht»; öffnet die Playlist in der Bibliothek.
+struct HLMixKarteView: View {
+  let karte: HLMixKarte
+
+  var body: some View {
+    Button { oeffnen() } label: {
+      VStack(alignment: .leading, spacing: 6) {
+        HLBild(pfad: "/entdecken/cover/pl-\(karte.playlistId)?size=600", groesse: 170)
+          .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+        Text(karte.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
+        Text(karte.anzahl == 1 ? "1 Song" : "\(karte.anzahl) Songs").font(.caption).foregroundStyle(.secondary)
+      }
+      .frame(width: 170, alignment: .leading)
+    }
+    .buttonStyle(.plain)
+  }
+
+  @MainActor private func oeffnen() {
+    let app = UIApplication.shared.delegate as! AppDelegate
+    guard let account = HLAPI.shared.account,
+          let mo = try? app.storage.main.context.existingObject(with: karte.id) as? PlaylistMO else { return }
+    let liste = Playlist(library: app.storage.main.library, managedObject: mo)
+    AppDelegate.mainWindowHostVC?.pushNavLibrary(vc: AppStoryboard.Main.segueToPlaylistDetail(account: account, playlist: liste))
+  }
+}
+
+/// Alle letzten Wünsche mit Stand (früher als lange Liste auf der Entdecken-Seite).
+struct HLWuenscheView: View {
+  @State private var wuensche: [HLWunsch] = []
+  @State private var geladen = false
+
+  var body: some View {
+    List {
+      let abspielbar = wuensche.filter(\.abspielbar)
+      ForEach(wuensche, id: \.self) { w in
+        HStack(spacing: 12) {
+          if w.abspielbar { HLBild(pfad: w.alsSong.bild, groesse: 40) }
+          VStack(alignment: .leading) {
+            Text(w.titel).font(.body.weight(.semibold)).lineLimit(1)
+              .foregroundStyle(HLPlayer.shared.aktuell?.navidromeId == w.songId && w.songId != nil
+                ? Color.accentColor : .primary)
+            Text(w.kuenstler).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+          }
+          Spacer()
+          if w.abspielbar {
+            Image(systemName: "play.circle.fill").font(.title2).foregroundStyle(Color.accentColor)
+          } else if let f = w.fortschritt {
+            HLFortschrittAnzeige(wunsch: w, fortschritt: f) { Task { await laden() } }
+          } else {
+            Text(Self.statusText[w.status] ?? w.status).font(.footnote).foregroundStyle(.secondary)
+          }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {                                  // gelieferte Wünsche ab hier der Reihe nach spielen
+          guard w.abspielbar, let i = abspielbar.firstIndex(of: w) else { return }
+          HLPlayer.shared.spielen(abspielbar.map(\.alsSong), ab: i)
+        }
+      }
+    }
+    .overlay { if !geladen { ProgressView() } else if wuensche.isEmpty { Text("Noch keine Wünsche.").foregroundStyle(.secondary) } }
+    .navigationTitle("Deine Wünsche")
+    .task { await laden() }
+    .refreshable { await laden() }
+  }
+
+  static let statusText = ["angefragt": "⏳ kommt bald", "geliefert": "✓ da", "gefunden": "✓ hattest du",
+                           "nicht_gefunden": "– nicht gefunden", "weg": "– nicht mehr da"]
+
+  private func laden() async {
+    wuensche = (try? await HLAPI.shared.wuensche().wuensche) ?? wuensche
     geladen = true
   }
 }
