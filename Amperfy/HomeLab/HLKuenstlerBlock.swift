@@ -203,8 +203,9 @@ struct HLAlbumBlock: View {
       let fehlt = modell.abgleich?.fehlt ?? []
       let _ = modell.mediathekStand
       let offen = HLMediathekUI.stufenAktiv ? HLMediathekUI.nichtInMediathek(album: album) : []
-      let gesamt = max(modell.abgleich?.anzahl ?? 0, album.songCount)
-      let eigene = album.songCount - offen.count
+      let lokal = album.playables.count                 // nur Songs, die wirklich an diesem Album hängen
+      let gesamt = max(modell.abgleich?.anzahl ?? 0, lokal)
+      let eigene = lokal - offen.count
       let wuenschbar = fehlt.filter { player.stufe($0) == .neu && $0.deezerId != nil }
       let anderswo = fehlt.filter { player.stufe($0) == .server }
       if HLMediathekUI.stufenAktiv, gesamt > 0 {
@@ -218,6 +219,7 @@ struct HLAlbumBlock: View {
                 try await HLMediathek.shared.hinzufuegen(songIds: offen)
                 player.zurMediathek(anderswo)
                 modell.mediathekStand += 1
+                modell.geaendert?()
                 player.zeigeHinweis("\(offen.count + anderswo.count) Songs zur Mediathek hinzugefügt.")
               } catch {
                 player.zeigeHinweis(error.localizedDescription)
@@ -277,6 +279,7 @@ struct HLAlbumBlock: View {
 final class HLAlbumEinbau {
   private let modell = HLAlbumModell()
   private let host: UIHostingController<AnyView>
+  private let huelle = UIView()                         // die Tabelle setzt die Lage der Hülle, SwiftUI nur den Inhalt
   private weak var vc: UITableViewController?
   private var breite: CGFloat = 0
 
@@ -290,9 +293,12 @@ final class HLAlbumEinbau {
     host.rootView = AnyView(HLAlbumBlock(album: album, modell: modell).environment(\.hlOeffnen, oeffnen))
     host.view.backgroundColor = .clear
     vc.addChild(host)
+    huelle.addSubview(host.view)
     host.didMove(toParent: vc)
+    huelle.clipsToBounds = true
+    // Neue Daten: erst nach dem Neuzeichnen von SwiftUI messen (sonst gilt noch die alte Höhe)
     modell.geaendert = { [weak self] in
-      Task { @MainActor in self?.groesseAnpassen(erzwingen: true) }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self?.groesseAnpassen(erzwingen: true) }
     }
     HLSpielLeiste.einbauen(in: vc)                      // Hinweise («Gewünscht», «Hinzugefügt»)
   }
@@ -304,7 +310,8 @@ final class HLAlbumEinbau {
     guard w > 0, erzwingen || w != breite else { return }
     breite = w
     let h = host.sizeThatFits(in: CGSize(width: w, height: .greatestFiniteMagnitude)).height
-    host.view.frame = CGRect(x: 0, y: 0, width: w, height: h)
-    tabelle.tableFooterView = host.view
+    huelle.frame = CGRect(x: 0, y: 0, width: w, height: h)
+    host.view.frame = huelle.bounds
+    tabelle.tableFooterView = huelle                    // erneut zuweisen: die Tabelle setzt sie unter die Zeilen
   }
 }
