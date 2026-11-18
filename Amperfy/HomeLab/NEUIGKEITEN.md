@@ -1,3 +1,11 @@
+## 2026-11-18b
+### Neu
+- Der Player kann quer: Drehst du das iPhone bei offenem Player, siehst du links gross das Cover und rechts Titel, Zeitleiste und Knöpfe. Gut für die Halterung im Auto, den Schreibtisch oder die Küche. Der Rest der App bleibt hochkant.
+- In der Suche gibt es neu die Kacheln «Anlässe»: Weihnachten, Silvester, Après-Ski, Fasnacht, Sommerhits, Hochzeit, Geburtstag, die Hits der 80er, 90er und 2000er und mehr. Was gerade Saison hat, steht vorne.
+- Eine Kachel (Stimmung, Anlass oder Genre) öffnet jetzt eine eigene Seite: oben eine grosse Playlist, darunter «Aus deiner Mediathek», «Auf dem Server» (mit «zur Mediathek») und «Neu» zum Reinhören und Wünschen, dazu weitere Playlists.
+### Anders
+- Mix ab einem Song und «Neu für dich» nehmen jetzt auch Songs vom Server, die du noch nie gehört hast und die nicht in deiner Mediathek sind, sofern sie zu deinem Geschmack passen. Sie spielen sofort ganz.
+
 ## 2026-11-18
 ### Neu
 - «Entdecken» ist neu aufgebaut, näher an Apple Music: zuoberst «Für dich gemacht» mit deinen Wochenmixen als grosse Karten, grosse Überschriften, «Charts Schweiz» und «Stimmungen für dich»: Ein Tipp auf Entspannt, Power, Party oder Bunt gemischt spielt sofort einen Mix aus deiner Mediathek.
