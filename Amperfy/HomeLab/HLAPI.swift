@@ -143,6 +143,17 @@ struct HLAlbumAbgleich: Codable, Sendable {
 }
 
 /// Liste von Songs mit Überschrift (Stimmungs-Mix, Charts).
+/// Kategorie-Seite aus dem Stöbern (Etappe G): Stimmung, Genre oder Anlass.
+struct HLKategorie: Codable, Sendable {
+  var titel: String
+  var art: String?                                      // "stimmung", "genre", "thema"
+  var playlists: [HLPlaylistKurz]
+  var mediathek: [HLSong]                               // in der eigenen Mediathek
+  var server: [HLSong]                                  // auf dem Server, nicht in der Mediathek
+  var neu: [HLSong]                                     // Vorschau, zum Wünschen
+  var kuenstler: [HLKuenstler]?
+}
+
 struct HLSongListe: Codable, Sendable {
   var titel: String
   var songs: [HLSong]
@@ -526,6 +537,11 @@ final class HLAPI {
     try await anfrage("entdecken/stimmung_mix", abfrage: ["stimmung": stimmung])
   }
   func charts() async throws -> HLSongListe { try await anfrage("entdecken/charts") }
+  func kategorie(_ q: String, playlists: String?) async throws -> HLKategorie {
+    var abfrage = ["q": q]
+    if let playlists { abfrage["playlists"] = playlists }
+    return try await anfrage("entdecken/kategorie", abfrage: abfrage)
+  }
   func albumAbgleich(_ navidromeId: String) async throws -> HLAlbumAbgleich {
     try await anfrage("entdecken/album_abgleich", abfrage: ["navidrome": navidromeId])
   }

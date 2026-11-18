@@ -337,7 +337,7 @@ final class HLSuchEinbau {
     let liste = genres ?? []
     return hostZelle {
       HLStoebernView(genres: liste, suchen: { [weak self] text in self?.modell.uebernehmen?(text) }) { [weak self] k in
-        self?.oeffnen(.stoebern(titel: k.titel, suche: k.suche))
+        self?.oeffnen(.stoebern(titel: k.titel, suche: k.suche, playlists: k.bild))
       }
     }
   }
@@ -379,6 +379,35 @@ struct HLKachel: Hashable {
   ]
 
   /// Die grössten Genres der Bibliothek (ohne Hörspiele), höchstens acht.
+  /// Anlässe und Jahrzehnte (entdecken.py, THEMEN; die Suche muss dort ein Thema treffen). Monate: Saison,
+  /// passende stehen zuerst, Anlässe ausser Saison zuletzt.
+  static let anlaesse: [(HLKachel, [Int])] = [
+    (HLKachel(titel: "Weihnachten", suche: "Weihnachtslieder", bild: "christmas hits"), [11, 12]),
+    (HLKachel(titel: "Silvester", suche: "Silvester", bild: "new year party"), [11, 12, 1]),
+    (HLKachel(titel: "Après-Ski", suche: "Après-Ski", bild: "apres ski"), [12, 1, 2, 3]),
+    (HLKachel(titel: "Fasnacht", suche: "Fasnacht", bild: "karneval hits"), [1, 2, 3]),
+    (HLKachel(titel: "Sommerhits", suche: "Sommerhits", bild: "summer hits"), [6, 7, 8]),
+    (HLKachel(titel: "Oktoberfest", suche: "Oktoberfest", bild: "oktoberfest"), [9, 10]),
+    (HLKachel(titel: "Halloween", suche: "Halloween", bild: "halloween party"), [10]),
+    (HLKachel(titel: "Aktuelle Hits", suche: "Aktuelle Hits", bild: "top hits"), []),
+    (HLKachel(titel: "Mundart", suche: "Mundart", bild: "mundart"), []),
+    (HLKachel(titel: "Hochzeit", suche: "Hochzeit", bild: "wedding songs"), []),
+    (HLKachel(titel: "Geburtstag", suche: "Geburtstag", bild: "birthday party"), []),
+    (HLKachel(titel: "Hits der 80er", suche: "80er", bild: "80s hits"), []),
+    (HLKachel(titel: "Hits der 90er", suche: "90er", bild: "90s hits"), []),
+    (HLKachel(titel: "Hits der 2000er", suche: "2000er", bild: "2000s hits"), []),
+    (HLKachel(titel: "Disney", suche: "Disney", bild: "disney hits"), []),
+    (HLKachel(titel: "Filmhits", suche: "Filmhits", bild: "movie soundtrack"), []),
+  ]
+
+  static func anlaesseJetzt(_ datum: Date = Date()) -> [HLKachel] {
+    let monat = Calendar.current.component(.month, from: datum)
+    let saison = anlaesse.filter { $0.1.contains(monat) }.map(\.0)
+    let immer = anlaesse.filter { $0.1.isEmpty }.map(\.0)
+    let spaeter = anlaesse.filter { !$0.1.isEmpty && !$0.1.contains(monat) }.map(\.0)
+    return saison + immer + spaeter
+  }
+
   @MainActor static func genres(account: Account) -> [HLKachel] {
     let weg = ["hörspiel", "hörbuch", "audio drama", "audiobook", "podcast", "kinder", "children", "unknown"]
     return (UIApplication.shared.delegate as! AppDelegate).storage.main.library.getGenres(for: account)
@@ -473,11 +502,12 @@ struct HLStoebernView: View {
         }
       }
       gruppe("Stimmungen", HLKachel.stimmungen, farbeAb: 0)
-      if !genres.isEmpty { gruppe("Genres in deiner Bibliothek", genres, farbeAb: 4) }
+      gruppe("Anlässe", HLKachel.anlaesseJetzt(), farbeAb: 2)
+      if !genres.isEmpty { gruppe("Genres auf dem Server", genres, farbeAb: 4) }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, 8)
-    .task { await bilder.laden(HLKachel.stimmungen + genres) }
+    .task { await bilder.laden(HLKachel.stimmungen + HLKachel.anlaesseJetzt() + genres) }
   }
 
   private func gruppe(_ titel: String, _ liste: [HLKachel], farbeAb: Int) -> some View {
@@ -530,41 +560,102 @@ struct HLKachelBild: View {
   }
 }
 
-/// Seite zu einer Kachel: nur die erkannte Stimmung bzw. das Genre (aus der Bibliothek und neu zum Reinhören),
-/// ohne die Namens-Treffer der normalen Suche («Party» fände sonst «Knife Party»).
-struct HLStoebernSeite: View {
+/// Kategorie-Seite einer Kachel (Etappe G, wie Apples «Kategorien durchsuchen»): oben die grösste Playlist,
+/// darunter Song-Raster «Aus deiner Mediathek», «Auf dem Server» und «Neu», dann weitere Playlists und (bei
+/// Anlässen) die Künstler mit den meisten Hits. Ohne Mediathek ein Raster «Bei dir». «Alle» oben nur beim
+/// Mediathek-Raster; die anderen haben die Sammelknöpfe (Abspielen/Reinhören, zur Mediathek, wünschen).
+struct HLKategorieSeite: View {
   let titel: String
   let suche: String
+  let playlistSuche: String?
+  @Environment(\.hlOeffnen) private var oeffnen
 
   var body: some View {
-    HLLaden(laden: { try await HLAPI.shared.suche(suche) }) { d in
-      let abschnitte = d.abschnitte ?? []
-      if abschnitte.isEmpty {
-        ContentUnavailableView("Nichts gefunden", systemImage: "music.note",
-                               description: Text("Zu «\(titel)» gibt es gerade keine passenden Songs."))
-      } else {
-        List {
-          ForEach(abschnitte, id: \.self) { a in
-            Section {
-              ForEach(a.songs.indices, id: \.self) { HLSongZeile(songs: a.songs, i: $0) }
-            } header: {
-              HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 1) {
-                  Text(a.titel)
-                  if let u = a.untertitel { Text(u).font(.caption).textCase(nil) }
-                }
-                Spacer()
-                Button { HLPlayer.shared.spielen(a.songs, ab: 0) } label: {
-                  Label("Alle", systemImage: "play.fill").font(.caption.weight(.semibold))
-                }
-                .buttonStyle(HLKapsel(haupt: true))
-              }
-            }
-          }
-        }
-      }
+    HLLaden(laden: { try await HLAPI.shared.kategorie(suche, playlists: playlistSuche) }) { k in
+      inhalt(k)
     }
     .navigationTitle(titel)
+  }
+
+  @ViewBuilder private func inhalt(_ k: HLKategorie) -> some View {
+    let stufen = HLMediathekUI.stufenAktiv
+    let eigene = stufen ? k.mediathek : []
+    let server = stufen ? k.server : k.mediathek + k.server
+    if eigene.isEmpty, server.isEmpty, k.neu.isEmpty, k.playlists.isEmpty {
+      ContentUnavailableView("Nichts gefunden", systemImage: "music.note",
+                             description: Text("Zu «\(titel)» gibt es gerade keine passenden Songs."))
+    } else {
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 28) {
+          if let p = k.playlists.first { grossePlaylist(p) }
+          if !eigene.isEmpty {
+            abschnitt("Aus deiner Mediathek", songs: eigene) { HLSongRaster(songs: eigene) }
+          }
+          if !server.isEmpty {
+            abschnitt(stufen ? "Auf dem Server" : "Bei dir",
+                      stufen ? "Noch nicht in deiner Mediathek" : nil) {
+              HLSongRaster(songs: server)
+              if stufen { HLSammelKnoepfe(songs: server) }
+            }
+          }
+          if !k.neu.isEmpty {
+            abschnitt("Neu", "Zum Reinhören und Wünschen") {
+              HLSongRaster(songs: k.neu)
+              HLSammelKnoepfe(songs: k.neu)
+            }
+          }
+          if k.playlists.count > 1 {
+            abschnitt("Playlists") { HLPlaylistBand(liste: Array(k.playlists.dropFirst())) }
+          }
+          if let ks = k.kuenstler, !ks.isEmpty {
+            abschnitt("Künstler") { HLKuenstlerBand(liste: ks) }
+          }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+      }
+    }
+  }
+
+  private func grossePlaylist(_ p: HLPlaylistKurz) -> some View {
+    Button { oeffnen(.playlist(p.id)) } label: {
+      HLKachelBild(url: URL(string: p.bildGross ?? p.bild ?? ""), farbe: HLKachel.farben[0])
+        .aspectRatio(1.5, contentMode: .fit)
+        .overlay(alignment: .bottomLeading) {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Playlist").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.8))
+            Text(p.titel ?? "").font(.title2.bold()).foregroundStyle(.white).lineLimit(2)
+            Text([p.anzahl.map { "\($0) Songs" }, p.vonText].compactMap { $0 }.joined(separator: " · "))
+              .font(.subheadline).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+          }
+          .multilineTextAlignment(.leading)
+          .shadow(color: .black.opacity(0.4), radius: 3)
+          .padding(14)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .contentShape(RoundedRectangle(cornerRadius: 14))
+    }
+    .buttonStyle(.plain)
+  }
+
+  private func abschnitt(_ titel: String, _ untertitel: String? = nil, songs: [HLSong]? = nil,
+                         @ViewBuilder inhalt: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 1) {
+          Text(titel).font(.title2.bold())
+          if let untertitel { Text(untertitel).font(.subheadline).foregroundStyle(.secondary) }
+        }
+        Spacer(minLength: 0)
+        if let songs, !songs.isEmpty {
+          Button { HLPlayer.shared.spielen(songs, ab: 0) } label: {
+            Label("Alle", systemImage: "play.fill").font(.caption.weight(.semibold))
+          }
+          .buttonStyle(HLKapsel(haupt: true))
+        }
+      }
+      inhalt()
+    }
   }
 }
 

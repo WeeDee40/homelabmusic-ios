@@ -24,7 +24,7 @@ enum HLZiel: Hashable {
   case playlist(Int)                                   // öffentliche Deezer-Playlist (Suche)
   case sender(art: String, id: String)
   case bibliothek(kuenstler: String)                   // Amperfys Künstlerseite der Bibliothek
-  case stoebern(titel: String, suche: String)          // Kachel der leeren Suche
+  case stoebern(titel: String, suche: String, playlists: String? = nil) // Kachel der leeren Suche
   case wuensche                                        // alle letzten Wünsche mit Stand
 }
 
@@ -81,7 +81,7 @@ struct HLZielView: View {
     case let .playlist(id): HLPlaylistView(id: id)
     case let .sender(art, id): HLMixView(art: art, id: id)
     case .bibliothek: EmptyView()                      // läuft über HLTab.bibliothekOeffnen
-    case let .stoebern(titel, suche): HLStoebernSeite(titel: titel, suche: suche)
+    case let .stoebern(titel, suche, playlists): HLKategorieSeite(titel: titel, suche: suche, playlistSuche: playlists)
     case .wuensche: HLWuenscheView()
     }
   }
